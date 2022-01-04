@@ -1,0 +1,82 @@
+dataset:
+  name: mimic3_50
+  data_common: &data_common
+    label_file: datasets/mimic3_50/label.csv
+  params:
+    train:
+      <<: *data_common
+      data_file: datasets/mimic3_50/train.csv
+    val:
+      <<: *data_common
+      data_file: datasets/mimic3_50/val.csv
+    test:
+      <<: *data_common
+      data_file: datasets/mimic3_50/test.csv
+
+model:
+  name: CAML
+  params:
+    vocab_file: datasets/mimic3_50/vocab.csv
+    embed_file: datasets/mimic3_50/processed_full.embed
+    num_classes: 50
+    filter_size: 10
+    num_filter_maps: 50
+    dropout: 0.2
+    lmbda: 0.0  # Positive for DR-CAML
+
+trainer:
+  name: base
+  params:
+    data_loader:
+      batch_size: 16
+      num_workers: 2
+      shuffle: false
+      drop_last: true
+
+    loss:
+      name: BinaryCrossEntropy
+      params: null
+
+    optimizer:
+      name: adam
+      params:
+        lr: 0.0001
+        weight_decay: 0.0
+
+    max_epochs: 200
+
+    lr_scheduler: null
+
+    stopping_criterion:
+      criterion: prec_at_5
+      desired: max
+      patience: 10
+
+    output_dir: "results/CAML_mimic3_50"
+
+    checkpoint_saver:
+      interval: 1
+      max_to_keep: 5
+      score: prec_at_5
+      desired: max
+      best_file: "best_{}.pth"
+      final_file: "final_{}.pth"
+
+    eval_metrics: &eval_metrics
+      - prec_at_5
+      - macro_f1
+      - micro_f1
+      - macro_auc
+      - micro_auc
+
+    logger:
+      name: tensorboard
+      train:
+        interval: 100
+        interval_unit: step
+        metric:
+          - loss
+      val:
+        interval: 1
+        interval_unit: epoch
+        metric: *eval_metrics
