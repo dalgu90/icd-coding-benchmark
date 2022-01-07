@@ -3,7 +3,7 @@
 import torch
 from torchtext.vocab import GloVe
 from torchtext.data import Field, TabularDataset
-from src.utils.mapper import configmapper
+from src.utils.mapper import ConfigMapper
 from transformers import AutoTokenizer
 
 
@@ -14,7 +14,7 @@ class Tokenizer:
         """Abstract Method for tokenization."""
 
 
-@configmapper.map("tokenizers", "glove")
+@ConfigMapper.map("tokenizers", "glove")
 class GloveTokenizer(Tokenizer):
     """Implement GloveTokenizer for tokenizing text for Glove Embeddings.
 
@@ -101,7 +101,7 @@ class GloveTokenizer(Tokenizer):
         return x_output
 
 
-@configmapper.map("tokenizers", "AutoTokenizer")
+@ConfigMapper.map("tokenizers", "AutoTokenizer")
 class AutoTokenizer(AutoTokenizer):
     def __init__(self, *args):
         super(AutoTokenizer, self).__init__()

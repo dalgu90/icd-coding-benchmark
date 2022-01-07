@@ -127,3 +127,10 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
+
+# Dataset
+datasets/*
+!datasets/mimicdata
+
+# Results
+results/*

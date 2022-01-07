@@ -2,71 +2,51 @@
     CAML model (Mullenbach et al. 2018)
     https://github.com/jamesmullenbach/caml-mimic
 """
-import torch
-import torch.nn as nn
-import torch.nn.functional as F
-from torch.nn.init import xavier_uniform
-from torch.autograd import Variable
 
-import numpy as np
-
+from collections import defaultdict
+import csv
 from math import floor
 import random
 import sys
 import time
 
+from src.utils.mapper import ConfigMapper
+from src.utils.caml_utils import load_lookups
+from src.utils.caml_utils import load_embeddings
+
+import numpy as np
+import torch
+import torch.nn as nn
+import torch.nn.functional as F
+from torch.nn.init import xavier_uniform
+from torch.autograd import Variable
 from gensim.models import KeyedVectors
 
-from src.utils.mapper import configmapper
-
-
-# From constant.py
-PAD_CHAR = "**PAD**"
-EMBEDDING_SIZE = 100
-MAX_LENGTH = 2500
-
-
-# From dataproc/extract_wvs.py
-def load_embeddings(embed_file):
-    #also normalizes the embeddings
-    W = []
-    with open(embed_file) as ef:
-        for line in ef:
-            line = line.rstrip().split()
-            vec = np.array(line[1:]).astype(np.float)
-            vec = vec / float(np.linalg.norm(vec) + 1e-6)
-            W.append(vec)
-        #UNK embedding, gaussian randomly initialized·
-        print("adding unk embedding")
-        vec = np.random.randn(len(W[-1]))
-        vec = vec / float(np.linalg.norm(vec) + 1e-6)
-        W.append(vec)
-    W = np.array(W)
-    return W
 
 # From learn/models.py
 class BaseModel(nn.Module):
 
-    def __init__(self, Y, embed_file, dicts, lmbda=0, dropout=0.5, gpu=True, embed_size=100):
+    def __init__(self, Y, dataset_dir, embed_file, version='mimic3', lmbda=0, dropout=0.5, embed_size=100):
         super(BaseModel, self).__init__()
-        torch.manual_seed(1337)
-        self.gpu = gpu
+        # torch.manual_seed(1337)
+        # self.gpu = gpu
         self.Y = Y
         self.embed_size = embed_size
         self.embed_drop = nn.Dropout(p=dropout)
         self.lmbda = lmbda
 
+        self.dicts = load_lookups(Y, dataset_dir, version, desc_embed=lmbda>0)
+
         #make embedding layer
         if embed_file:
             print("loading pretrained embeddings...")
-            # W = torch.Tensor(extract_wvs.load_embeddings(embed_file))
             W = torch.Tensor(load_embeddings(embed_file))
 
             self.embed = nn.Embedding(W.size()[0], W.size()[1], padding_idx=0)
             self.embed.weight.data = W.clone()
         else:
             #add 2 to include UNK and PAD
-            vocab_size = len(dicts['ind2w'])
+            vocab_size = len(self.dicts['ind2w'])
             self.embed = nn.Embedding(vocab_size+2, embed_size, padding_idx=0)
 
 
@@ -118,27 +98,27 @@ class BaseModel(nn.Module):
         return diffs
 
 
-@configmapper.map("models", "CAML")
+@ConfigMapper.map("models", "CAML")
 class ConvAttnPool(BaseModel):
 
-    def __init__(self, Y, embed_file, kernel_size, num_filter_maps, lmbda, gpu, dicts, embed_size=100, dropout=0.5, code_emb=None):
-        super(ConvAttnPool, self).__init__(Y, embed_file, dicts, lmbda, dropout=dropout, gpu=gpu, embed_size=embed_size)
+    def __init__(self, num_classes=50, dataset_dir=None, version='mimic3', embed_file=None, kernel_size=10, num_filter_maps=50, lmbda=0.0, embed_size=100, dropout=0.5, code_emb=None, **kwargs):
+        super(ConvAttnPool, self).__init__(Y=num_classes, dataset_dir=dataset_dir, version=version, embed_file=embed_file, lmbda=lmbda, dropout=dropout, embed_size=embed_size)
 
         #initialize conv layer as in 2.1
         self.conv = nn.Conv1d(self.embed_size, num_filter_maps, kernel_size=kernel_size, padding=int(floor(kernel_size/2)))
         xavier_uniform(self.conv.weight)
 
         #context vectors for computing attention as in 2.2
-        self.U = nn.Linear(num_filter_maps, Y)
+        self.U = nn.Linear(num_filter_maps, self.Y)
         xavier_uniform(self.U.weight)
 
         #final layer: create a matrix to use for the L binary classifiers as in 2.3
-        self.final = nn.Linear(num_filter_maps, Y)
+        self.final = nn.Linear(num_filter_maps, self.Y)
         xavier_uniform(self.final.weight)
 
         #initialize with trained code embeddings if applicable
         if code_emb:
-            self._code_emb_init(code_emb, dicts)
+            self._code_emb_init(code_emb, self.dicts)
             #also set conv weights to do sum of inputs
             weights = torch.eye(self.embed_size).unsqueeze(2).expand(-1,-1,kernel_size)/kernel_size
             self.conv.weight.data = weights.clone()
@@ -193,3 +173,65 @@ class ConvAttnPool(BaseModel):
         yhat = y
         loss = self._get_loss(yhat, target, diffs)
         return yhat, loss, alpha
+
+
+@ConfigMapper.map("models", "CNN")
+class VanillaConv(BaseModel):
+
+    def __init__(self, num_classes=50, dataset_dir=None, version='mimic3', embed_file=None, kernel_size=10, num_filter_maps=50, embed_size=100, dropout=0.5, **kwargs):
+        super(VanillaConv, self).__init__(Y=num_classes, dataset_dir=dataset_dir, version=version, embed_file=embed_file, dropout=dropout, embed_size=embed_size)
+        #initialize conv layer as in 2.1
+        self.conv = nn.Conv1d(self.embed_size, num_filter_maps, kernel_size=kernel_size)
+        xavier_uniform(self.conv.weight)
+
+        #linear output
+        self.fc = nn.Linear(num_filter_maps, self.Y)
+        xavier_uniform(self.fc.weight)
+
+    def forward(self, x, target, desc_data=None, get_attention=False):
+        #embed
+        x = self.embed(x)
+        x = self.embed_drop(x)
+        x = x.transpose(1, 2)
+
+        #conv/max-pooling
+        c = self.conv(x)
+        if get_attention:
+            #get argmax vector too
+            x, argmax = F.max_pool1d(F.tanh(c), kernel_size=c.size()[2], return_indices=True)
+            attn = self.construct_attention(argmax, c.size()[2])
+        else:
+            x = F.max_pool1d(F.tanh(c), kernel_size=c.size()[2])
+            attn = None
+        x = x.squeeze(dim=2)
+
+        #linear output
+        x = self.fc(x)
+
+        #final sigmoid to get predictions
+        yhat = x
+        loss = self._get_loss(yhat, target)
+        return yhat, loss, attn
+
+    def construct_attention(self, argmax, num_windows):
+        attn_batches = []
+        for argmax_i in argmax:
+            attns = []
+            for i in range(num_windows):
+                #generate mask to select indices of conv features where max was i
+                mask = (argmax_i == i).repeat(1,self.Y).t()
+                #apply mask to every label's weight vector and take the sum to get the 'attention' score
+                weights = self.fc.weight[mask].view(-1,self.Y)
+                if len(weights.size()) > 0:
+                    window_attns = weights.sum(dim=0)
+                    attns.append(window_attns)
+                else:
+                    #this window was never a max
+                    attns.append(Variable(torch.zeros(self.Y)).cuda())
+            #combine
+            attn = torch.stack(attns)
+            attn_batches.append(attn)
+        attn_full = torch.stack(attn_batches)
+        #put it in the right form for passing to interpret
+        attn_full = attn_full.transpose(1,2)
+        return attn_full

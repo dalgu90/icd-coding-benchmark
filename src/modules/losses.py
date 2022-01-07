@@ -1,6 +1,6 @@
 "All criterion functions."
 from torch.nn import MSELoss, CrossEntropyLoss
-from src.utils.mapper import configmapper
+from src.utils.mapper import ConfigMapper
 
-configmapper.map("losses", "mse")(MSELoss)
-configmapper.map("losses", "CrossEntropyLoss")(CrossEntropyLoss)
+ConfigMapper.map("losses", "mse")(MSELoss)
+ConfigMapper.map("losses", "CrossEntropyLoss")(CrossEntropyLoss)

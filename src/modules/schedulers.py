@@ -5,10 +5,10 @@ from torch.optim.lr_scheduler import (
     CyclicLR,
     CosineAnnealingWarmRestarts,
 )
-from src.utils.mapper import configmapper
+from src.utils.mapper import ConfigMapper
 
-configmapper.map("schedulers", "step")(StepLR)
-configmapper.map("schedulers", "cosineanneal")(CosineAnnealingLR)
-configmapper.map("schedulers", "reduceplateau")(ReduceLROnPlateau)
-configmapper.map("schedulers", "cyclic")(CyclicLR)
-configmapper.map("schedulers", "cosineannealrestart")(CosineAnnealingWarmRestarts)
+ConfigMapper.map("schedulers", "step")(StepLR)
+ConfigMapper.map("schedulers", "cosineanneal")(CosineAnnealingLR)
+ConfigMapper.map("schedulers", "reduceplateau")(ReduceLROnPlateau)
+ConfigMapper.map("schedulers", "cyclic")(CyclicLR)
+ConfigMapper.map("schedulers", "cosineannealrestart")(CosineAnnealingWarmRestarts)

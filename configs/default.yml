@@ -16,10 +16,11 @@ dataset:
 model:
   name: CAML
   params:
-    vocab_file: datasets/mimic3_50/vocab.csv
+    dataset_dir: datasets/mimic3_50
+    version: mimic3
     embed_file: datasets/mimic3_50/processed_full.embed
     num_classes: 50
-    filter_size: 10
+    kernel_size: 10
     num_filter_maps: 50
     dropout: 0.2
     lmbda: 0.0  # Positive for DR-CAML
@@ -80,3 +81,5 @@ trainer:
         interval: 1
         interval_unit: epoch
         metric: *eval_metrics
+
+    seed: 1337

@@ -1,6 +1,6 @@
 import torch.nn as nn
-from src.utils.mapper import configmapper
+from src.utils.mapper import ConfigMapper
 
-configmapper.map("activations", "relu")(nn.ReLU)
-configmapper.map("activations", "logsoftmax")(nn.LogSoftmax)
-configmapper.map("activations", "softmax")(nn.Softmax)
+ConfigMapper.map("activations", "relu")(nn.ReLU)
+ConfigMapper.map("activations", "logsoftmax")(nn.LogSoftmax)
+ConfigMapper.map("activations", "softmax")(nn.Softmax)
