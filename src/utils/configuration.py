@@ -1,6 +1,6 @@
 import yaml
 import copy
-from src.utils.mapper import configmapper
+from src.utils.mapper import ConfigMapper
 
 
 def load_yaml(path):
@@ -33,7 +33,7 @@ def convert_params_to_dict(params):
     dic = {}
     for k, v in params.as_dict():
         try:
-            obj = configmapper.get_object("params", v)
+            obj = ConfigMapper.get_object("params", v)
             dic[k] = v
         except:
             print(

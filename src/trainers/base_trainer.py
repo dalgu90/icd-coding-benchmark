@@ -9,19 +9,19 @@ from src.modules.metrics import *
 from src.modules.losses import *
 from src.utils.misc import *
 from src.utils.logger import Logger
-from src.utils.mapper import configmapper
+from src.utils.mapper import ConfigMapper
 from src.utils.configuration import Config
 
 from torch.utils.data import DataLoader
 from tqdm import tqdm
 
 
-@configmapper.map("trainers", "base")
+@ConfigMapper.map("trainers", "base")
 class BaseTrainer:
     def __init__(self, config):
         self._config = config
         self.metrics = {
-            configmapper.get_object("metrics", metric["type"]): metric["params"]
+            ConfigMapper.get_object("metrics", metric["type"]): metric["params"]
             for metric in self._config.main_config.metrics
         }
         self.train_config = self._config.train
@@ -36,32 +36,32 @@ class BaseTrainer:
         model.to(device)
         optim_params = self.train_config.optimizer.params
         if optim_params:
-            optimizer = configmapper.get_object(
+            optimizer = ConfigMapper.get_object(
                 "optimizers", self.train_config.optimizer.type
             )(model.parameters(), **optim_params.as_dict())
         else:
-            optimizer = configmapper.get_object(
+            optimizer = ConfigMapper.get_object(
                 "optimizers", self.train_config.optimizer.type
             )(model.parameters())
 
         if self.train_config.scheduler is not None:
             scheduler_params = self.train_config.scheduler.params
             if scheduler_params:
-                scheduler = configmapper.get_object(
+                scheduler = ConfigMapper.get_object(
                     "schedulers", self.train_config.scheduler.type
                 )(optimizer, **scheduler_params.as_dict())
             else:
-                scheduler = configmapper.get_object(
+                scheduler = ConfigMapper.get_object(
                     "schedulers", self.train_config.scheduler.type
                 )(optimizer)
 
         criterion_params = self.train_config.criterion.params
         if criterion_params:
-            criterion = configmapper.get_object(
+            criterion = ConfigMapper.get_object(
                 "losses", self.train_config.criterion.type
             )(**criterion_params.as_dict())
         else:
-            criterion = configmapper.get_object(
+            criterion = ConfigMapper.get_object(
                 "losses", self.train_config.criterion.type
             )()
         if "custom_collate_fn" in dir(train_dataset):

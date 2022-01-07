@@ -59,6 +59,3 @@ class ConfigMapper:
             return cls.dicts[key][name]
         except:
             raise NotImplementedError("Key:{name} Undefined".format(name=name))
-
-
-configmapper = ConfigMapper()

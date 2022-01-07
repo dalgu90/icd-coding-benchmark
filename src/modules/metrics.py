@@ -7,11 +7,11 @@ from sklearn.metrics import (
     roc_auc_score,
     accuracy_score,
 )
-from src.utils.mapper import configmapper
+from src.utils.mapper import ConfigMapper
 
-configmapper.map("metrics", "sklearn_f1")(f1_score)
-configmapper.map("metrics", "sklearn_p")(precision_score)
-configmapper.map("metrics", "sklearn_r")(recall_score)
-configmapper.map("metrics", "sklearn_roc")(roc_auc_score)
-configmapper.map("metrics", "sklearn_acc")(accuracy_score)
-configmapper.map("metrics", "sklearn_mse")(mean_squared_error)
+ConfigMapper.map("metrics", "sklearn_f1")(f1_score)
+ConfigMapper.map("metrics", "sklearn_p")(precision_score)
+ConfigMapper.map("metrics", "sklearn_r")(recall_score)
+ConfigMapper.map("metrics", "sklearn_roc")(roc_auc_score)
+ConfigMapper.map("metrics", "sklearn_acc")(accuracy_score)
+ConfigMapper.map("metrics", "sklearn_mse")(mean_squared_error)

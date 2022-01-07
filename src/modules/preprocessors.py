@@ -1,6 +1,6 @@
 from src.modules.tokenizers import *
 from src.modules.embeddings import *
-from src.utils.mapper import configmapper
+from src.utils.mapper import ConfigMapper
 
 
 class Preprocessor:
@@ -8,7 +8,7 @@ class Preprocessor:
         pass
 
 
-@configmapper.map("preprocessors", "glove")
+@ConfigMapper.map("preprocessors", "glove")
 class GlovePreprocessor(Preprocessor):
     """GlovePreprocessor."""
 
@@ -19,7 +19,7 @@ class GlovePreprocessor(Preprocessor):
         """
         super(GlovePreprocessor, self).__init__()
         self.config = config
-        self.tokenizer = configmapper.get_object(
+        self.tokenizer = ConfigMapper.get_object(
             "tokenizers", self.config.main.preprocessor.tokenizer.name
         )(**self.config.main.preprocessor.tokenizer.init_params.as_dict())
         self.tokenizer_params = (
@@ -27,7 +27,7 @@ class GlovePreprocessor(Preprocessor):
         )
 
         self.tokenizer.initialize_vectors(**self.tokenizer_params)
-        self.embeddings = configmapper.get_object(
+        self.embeddings = ConfigMapper.get_object(
             "embeddings", self.config.main.preprocessor.embedding.name
         )(
             self.tokenizer.text_field.vocab.vectors,
@@ -35,20 +35,20 @@ class GlovePreprocessor(Preprocessor):
         )
 
     def preprocess(self, model_config, data_config):
-        train_dataset = configmapper.get_object("datasets", data_config.main.name)(
+        train_dataset = ConfigMapper.get_object("datasets", data_config.main.name)(
             data_config.train, self.tokenizer
         )
-        val_dataset = configmapper.get_object("datasets", data_config.main.name)(
+        val_dataset = ConfigMapper.get_object("datasets", data_config.main.name)(
             data_config.val, self.tokenizer
         )
-        model = configmapper.get_object("models", model_config.name)(
+        model = ConfigMapper.get_object("models", model_config.name)(
             self.embeddings, **model_config.params.as_dict()
         )
 
         return model, train_dataset, val_dataset
 
 
-@configmapper.map("preprocessors", "clozePreprocessor")
+@ConfigMapper.map("preprocessors", "clozePreprocessor")
 class ClozePreprocessor(Preprocessor):
     """GlovePreprocessor."""
 
@@ -59,27 +59,27 @@ class ClozePreprocessor(Preprocessor):
         """
         super(ClozePreprocessor, self).__init__()
         self.config = config
-        self.tokenizer = configmapper.get_object(
+        self.tokenizer = ConfigMapper.get_object(
             "tokenizers", self.config.main.preprocessor.tokenizer.name
         ).from_pretrained(
             **self.config.main.preprocessor.tokenizer.init_params.as_dict()
         )
 
     def preprocess(self, model_config, data_config):
-        train_dataset = configmapper.get_object("datasets", data_config.main.name)(
+        train_dataset = ConfigMapper.get_object("datasets", data_config.main.name)(
             data_config.train, self.tokenizer
         )
-        val_dataset = configmapper.get_object("datasets", data_config.main.name)(
+        val_dataset = ConfigMapper.get_object("datasets", data_config.main.name)(
             data_config.val, self.tokenizer
         )
-        model = configmapper.get_object("models", model_config.name).from_pretrained(
+        model = ConfigMapper.get_object("models", model_config.name).from_pretrained(
             **model_config.params.as_dict()
         )
 
         return model, train_dataset, val_dataset
 
 
-@configmapper.map("preprocessors", "transformersConcretenessPreprocessor")
+@ConfigMapper.map("preprocessors", "transformersConcretenessPreprocessor")
 class TransformersConcretenessPreprocessor(Preprocessor):
     """BertConcretenessPreprocessor."""
 
@@ -90,7 +90,7 @@ class TransformersConcretenessPreprocessor(Preprocessor):
         """
         super(TransformersConcretenessPreprocessor, self).__init__()
         self.config = config
-        self.tokenizer = configmapper.get_object(
+        self.tokenizer = ConfigMapper.get_object(
             "tokenizers", self.config.main.preprocessor.tokenizer.name
         ).from_pretrained(
             **self.config.main.preprocessor.tokenizer.init_params.as_dict()
@@ -98,14 +98,14 @@ class TransformersConcretenessPreprocessor(Preprocessor):
 
     def preprocess(self, model_config, data_config):
 
-        train_dataset = configmapper.get_object("datasets", data_config.main.name)(
+        train_dataset = ConfigMapper.get_object("datasets", data_config.main.name)(
             data_config.train, self.tokenizer
         )
-        val_dataset = configmapper.get_object("datasets", data_config.main.name)(
+        val_dataset = ConfigMapper.get_object("datasets", data_config.main.name)(
             data_config.val, self.tokenizer
         )
 
-        model = configmapper.get_object("models", model_config.name)(
+        model = ConfigMapper.get_object("models", model_config.name)(
             **model_config.params.as_dict()
         )
 
