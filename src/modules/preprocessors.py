@@ -1,112 +1,50 @@
+from nltk.tokenize import RegexpTokenizer
+
 from src.modules.tokenizers import *
 from src.modules.embeddings import *
 from src.utils.mapper import ConfigMapper
 
 
-class Preprocessor:
-    def preprocess(self):
+# Clinical Note preprocessing
+
+# Ref.: CAML
+class ToLowerCase():
+    def __init__(self):
         pass
 
+    def __call__(self, text):
+        return text.lower()
 
-@ConfigMapper.map("preprocessors", "glove")
-class GlovePreprocessor(Preprocessor):
-    """GlovePreprocessor."""
+# Ref.: CAML
+# Remove punctuation and numeric-only tokens, removing 500 but keeping 250mg
+class RemoveNumericOnlyTokens():
+    def __init__(self):
+        self.tokenizer = RegexpTokenizer(r'\w+')
+        
+    def __call__(self, text):
+        tokens = [t for t in self.tokenizer.tokenize(text) if not t.isnumeric()]
+        text = '"' + ' '.join(tokens) + '"'
+        return text
 
-    def __init__(self, config):
-        """
-        Args:
-            config (src.utils.module.Config): configuration for preprocessor
-        """
-        super(GlovePreprocessor, self).__init__()
-        self.config = config
-        self.tokenizer = ConfigMapper.get_object(
-            "tokenizers", self.config.main.preprocessor.tokenizer.name
-        )(**self.config.main.preprocessor.tokenizer.init_params.as_dict())
-        self.tokenizer_params = (
-            self.config.main.preprocessor.tokenizer.init_vector_params.as_dict()
-        )
-
-        self.tokenizer.initialize_vectors(**self.tokenizer_params)
-        self.embeddings = ConfigMapper.get_object(
-            "embeddings", self.config.main.preprocessor.embedding.name
-        )(
-            self.tokenizer.text_field.vocab.vectors,
-            self.tokenizer.text_field.vocab.stoi[self.tokenizer.text_field.pad_token],
-        )
-
-    def preprocess(self, model_config, data_config):
-        train_dataset = ConfigMapper.get_object("datasets", data_config.main.name)(
-            data_config.train, self.tokenizer
-        )
-        val_dataset = ConfigMapper.get_object("datasets", data_config.main.name)(
-            data_config.val, self.tokenizer
-        )
-        model = ConfigMapper.get_object("models", model_config.name)(
-            self.embeddings, **model_config.params.as_dict()
-        )
-
-        return model, train_dataset, val_dataset
+# ICD-code preprocessing
 
 
-@ConfigMapper.map("preprocessors", "clozePreprocessor")
-class ClozePreprocessor(Preprocessor):
-    """GlovePreprocessor."""
+# Put a period in the right place because the MIMIC-3 data files exclude them.
+# Generally, procedure codes have dots after the first two digits, 
+# while diagnosis codes have dots after the first three digits.
+class ReformatICDCode():
+    def __init__(self):
+        pass
 
-    def __init__(self, config):
-        """
-        Args:
-            config (src.utils.module.Config): configuration for preprocessor
-        """
-        super(ClozePreprocessor, self).__init__()
-        self.config = config
-        self.tokenizer = ConfigMapper.get_object(
-            "tokenizers", self.config.main.preprocessor.tokenizer.name
-        ).from_pretrained(
-            **self.config.main.preprocessor.tokenizer.init_params.as_dict()
-        )
-
-    def preprocess(self, model_config, data_config):
-        train_dataset = ConfigMapper.get_object("datasets", data_config.main.name)(
-            data_config.train, self.tokenizer
-        )
-        val_dataset = ConfigMapper.get_object("datasets", data_config.main.name)(
-            data_config.val, self.tokenizer
-        )
-        model = ConfigMapper.get_object("models", model_config.name).from_pretrained(
-            **model_config.params.as_dict()
-        )
-
-        return model, train_dataset, val_dataset
-
-
-@ConfigMapper.map("preprocessors", "transformersConcretenessPreprocessor")
-class TransformersConcretenessPreprocessor(Preprocessor):
-    """BertConcretenessPreprocessor."""
-
-    def __init__(self, config):
-        """
-        Args:
-            config (src.utils.module.Config): configuration for preprocessor
-        """
-        super(TransformersConcretenessPreprocessor, self).__init__()
-        self.config = config
-        self.tokenizer = ConfigMapper.get_object(
-            "tokenizers", self.config.main.preprocessor.tokenizer.name
-        ).from_pretrained(
-            **self.config.main.preprocessor.tokenizer.init_params.as_dict()
-        )
-
-    def preprocess(self, model_config, data_config):
-
-        train_dataset = ConfigMapper.get_object("datasets", data_config.main.name)(
-            data_config.train, self.tokenizer
-        )
-        val_dataset = ConfigMapper.get_object("datasets", data_config.main.name)(
-            data_config.val, self.tokenizer
-        )
-
-        model = ConfigMapper.get_object("models", model_config.name)(
-            **model_config.params.as_dict()
-        )
-
-        return model, train_dataset, val_dataset
+    def __call__(self, icd_code, is_diagnosis_code):
+        code = ''.join(icd_code.split('.'))
+        if is_diagnosis_code:
+            if code.startswith('E'):
+                if len(code) > 4:
+                    code = code[:4] + '.' + code[4:]
+            else:
+                if len(code) > 3:
+                    code = code[:3] + '.' + code[3:]
+        else:
+            code = code[:2] + '.' + code[2:]
+        return code
