@@ -1,6 +1,9 @@
 dataset:
-  name: mimic3_50
+  name: base_dataset
   data_common: &data_common
+    column_names:
+      clinical_note: "TEXT"
+      label: "LABEL"
     label_file: datasets/mimic3_50/label.csv
   params:
     train:
