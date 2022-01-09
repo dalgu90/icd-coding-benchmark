@@ -75,7 +75,9 @@ def generate_grid_search_configs(main_config, grid_config, root="hyperparams"):
         flag = 0
         # print(visited)
         # print(stack)
-        if not isinstance(root, dict) and "hparams" not in stack:  # Meaning it is a leaf node
+        if (
+            not isinstance(root, dict) and "hparams" not in stack
+        ):  # Meaning it is a leaf node
             # print(stack)
             if isinstance(root, list):
                 locations_values_pair[

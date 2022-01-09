@@ -26,11 +26,15 @@ class GloveTokenizer(Tokenizer):
     Methods:
         __init__(self, name='840B', dim='300', cache='../embeddings/') :
           Constructor method
-        initialize_vectors(fix_length=4, tokenize='spacy', file_path="../data/imperceptibility
+        initialize_vectors(fix_length=4, tokenize='spacy',
+                           file_path="../data/imperceptibility
                            /Concreteness Ratings/train/forty.csv",
-                           file_format='tsv', fields=None): Initialize vocab vectors based on data.
+                           file_format='tsv', fields=None): Initialize vocab
+                                                            vectors based on
+                                                            data.
 
-        tokenize(x_input, **initializer_params): Tokenize given input and return the output.
+        tokenize(x_input, **initializer_params): Tokenize given input and return
+                                                 the output.
     """
 
     def __init__(self, name="840B", dim="300", cache="../embeddings/"):
@@ -56,20 +60,21 @@ class GloveTokenizer(Tokenizer):
         """Initialize words/sequences based on GloVe embedding.
 
         Args:
-            fields (list): The list containing the fields to be taken
-                                     and processed from the file (see
-                                        documentation for
-                                        torchtext.data.TabularDataset)
-            fix_length (int): The length of the tokenized text,
-                              padding or cropping is done accordingly
-            tokenize (function or string): Method to tokenize the data.
-                                           If 'spacy' uses spacy tokenizer,
-                                           else the specified method.
+            fields (list): The list containing the fields to be taken and
+                           processed from the file (see documentation for
+                           torchtext.data.TabularDataset)
+            fix_length (int): The length of the tokenized text padding or
+                              cropping is done accordingly.
+            tokenize (function or string): Method to tokenize the data. If
+                                           'spacy' uses spacy tokenizer, else
+                                           the specified method.
             tokenizer_file_paths (list of str): The paths of the files
-                                                containing the data
+                                                containing the data.
             format (str): The format of the file : 'csv', 'tsv' or 'json'
         """
-        text_field = Field(batch_first=True, fix_length=fix_length, tokenize=tokenize)
+        text_field = Field(
+            batch_first=True, fix_length=fix_length, tokenize=tokenize
+        )
         tab_dats = [
             TabularDataset(
                 i,
@@ -88,8 +93,9 @@ class GloveTokenizer(Tokenizer):
         Initialize the vectors with given parameters if not already initialized.
 
         Args:
-            x_input (str): Unprocessed input text to be tokenized
-            **initializer_params (Keyword arguments): Parameters to initialize vectors
+            x_input (str): Unprocessed input text to be tokenized.
+            **initializer_params (Keyword arguments): Parameters to initialize
+                                                      vectors.
 
         Returns:
             x_output (str): Processed and tokenized text
@@ -97,7 +103,9 @@ class GloveTokenizer(Tokenizer):
         if self.text_field is None:
             self.initialize_vectors(**init_vector__params)
         try:
-            x_output = torch.squeeze(self.text_field.process([self.text_field.preprocess(x_input)]))
+            x_output = torch.squeeze(
+                self.text_field.process([self.text_field.preprocess(x_input)])
+            )
         except Exception as e:
             print(x_input)
             print(self.text_field.preprocess(x_input))
