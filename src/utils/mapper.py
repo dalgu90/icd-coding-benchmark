@@ -2,10 +2,9 @@ class ConfigMapper:
     """Class for creating ConfigMapper objects.
 
     This class can be used to create custom configuration names using YAML
-    files.
-    For each class or object instantiated in any modules,
-    the ConfigMapper object can be used either with the functions,
-    or as a decorator to store the mapping in the function.
+    files.For each class or object instantiated in any modules, the ConfigMapper
+    object can be used either with the functions, or as a decorator to store the
+    mapping in the function.
 
     Attributes
     ----------

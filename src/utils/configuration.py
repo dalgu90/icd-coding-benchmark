@@ -38,7 +38,10 @@ def convert_params_to_dict(params):
             obj = ConfigMapper.get_object("params", v)
             dic[k] = v
         except:
-            print(f"Undefined {v} for the given key: {k} in mapper, storing original value")
+            print(
+                f"Undefined {v} for the given key: {k} in mapper,"
+                " storing original value"
+            )
             dic[k] = v
         return value
 
@@ -104,11 +107,11 @@ class Config:
 
         Returns
         -------
-        self._config[attr]: object or Config object
-            The value of the given key if it exists.
-            If the value is a dict object,
-            a Config object of that dict is returned.
-            Otherwise, the exact value is returned.
+        self._config[attr]: object or Config object. The value of the given key
+                            if it exists.
+                            If the value is a dict object, a Config object of
+                            that dict is returned. Otherwise, the exact value is
+                            returned.
 
         Raises
         ------

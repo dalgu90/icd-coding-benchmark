@@ -90,7 +90,11 @@ class BaseTrainer:
             train_logger = logger
 
         train_log_values = self.train_config.log.values.as_dict()
-        best_score = -math.inf if self.train_config.save_on.desired == "max" else math.inf
+        best_score = (
+            -math.inf
+            if self.train_config.save_on.desired == "max"
+            else math.inf
+        )
         save_on_score = self.train_config.save_on.score
         best_step = -1
         best_model = None
@@ -105,7 +109,11 @@ class BaseTrainer:
 
         global_step = 0
         for epoch in range(1, max_epochs + 1):
-            print("Epoch: {}/{}, Global Step: {}".format(epoch, max_epochs, global_step))
+            print(
+                "Epoch: {}/{}, Global Step: {}".format(
+                    epoch, max_epochs, global_step
+                )
+            )
             train_loss = 0
             val_loss = 0
 
@@ -129,7 +137,9 @@ class BaseTrainer:
                 optimizer.zero_grad()
                 inputs, labels = batch
 
-                if self.train_config.label_type == "float":  # Specific to Float Type
+                if (
+                    self.train_config.label_type == "float"
+                ):  # Specific to Float Type
                     labels = labels.float()
 
                 for key in inputs:
@@ -144,7 +154,9 @@ class BaseTrainer:
                 if self.train_config.label_type == "float":
                     all_outputs = torch.cat((all_outputs, outputs), 0)
                 else:
-                    all_outputs = torch.cat((all_outputs, torch.argmax(outputs, axis=1)), 0)
+                    all_outputs = torch.cat(
+                        (all_outputs, torch.argmax(outputs, axis=1)), 0
+                    )
 
                 train_loss += loss.item()
                 optimizer.step()
@@ -230,7 +242,10 @@ class BaseTrainer:
                         )
                         for metric in self.metrics
                     ]
-                    metric_name_list = [metric["type"] for metric in self._config.main_config.metrics]
+                    metric_name_list = [
+                        metric["type"]
+                        for metric in self._config.main_config.metrics
+                    ]
 
                     train_scores = self.log(
                         train_loss / (step + 1),
@@ -281,7 +296,9 @@ class BaseTrainer:
                 )
                 for metric in self.metrics
             ]
-            metric_name_list = [metric["type"] for metric in self._config.main_config.metrics]
+            metric_name_list = [
+                metric["type"] for metric in self._config.main_config.metrics
+            ]
 
             train_scores = self.log(
                 train_loss / len(train_loader),
@@ -393,7 +410,9 @@ class BaseTrainer:
             )
             for metric in self.metrics
         ]
-        metric_name_list = [metric["type"] for metric in self._config.main_config.metrics]
+        metric_name_list = [
+            metric["type"] for metric in self._config.main_config.metrics
+        ]
 
         return dict(
             zip(
@@ -591,7 +610,9 @@ class BaseTrainer:
                 )
                 for metric in self.metrics
             ]
-            metric_name_list = [metric["type"] for metric in self._config.main_config.metrics]
+            metric_name_list = [
+                metric["type"] for metric in self._config.main_config.metrics
+            ]
             return_dic = dict(
                 zip(
                     [

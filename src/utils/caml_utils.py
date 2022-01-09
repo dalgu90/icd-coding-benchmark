@@ -38,7 +38,8 @@ def load_lookups(Y, dataset_dir, version="mimic3", desc_embed=False):
         args: Input arguments
         desc_embed: true if using DR-CAML
     Outputs:
-        vocab lookups, ICD code lookups, description lookup, description one-hot vector lookup
+        vocab lookups, ICD code lookups, description lookup, description one-hot
+        vector lookup
     """
     vocab_file = "%s/vocab.csv" % dataset_dir
     label_file = "%s/label.csv" % dataset_dir

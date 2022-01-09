@@ -113,7 +113,9 @@ class Logger:
             )
 
     def save_fig(self, fig, fig_name, epoch, batch_size, batch=None):
-        self.writer.add_figure(fig_name, fig, Logger._global_step(epoch, batch_size, batch))
+        self.writer.add_figure(
+            fig_name, fig, Logger._global_step(epoch, batch_size, batch)
+        )
 
     def close(self):
         self.writer.close()
