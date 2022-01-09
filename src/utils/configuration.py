@@ -1,5 +1,7 @@
-import yaml
 import copy
+
+import yaml
+
 from src.utils.mapper import ConfigMapper
 
 
@@ -89,7 +91,9 @@ class Config:
         elif dict:
             self._config = dic
         else:
-            raise Exception("Need either path or dict object to instantiate object.")
+            raise Exception(
+                "Need either path or dict object to instantiate object."
+            )
         # self.keys = self._config.keys()
 
     def __getattr__(self, attr):

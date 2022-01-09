@@ -1,10 +1,11 @@
 """Miscellaneous utility functions."""
 
-import random
-import numpy as np
-import torch
 import copy
 import itertools
+import random
+
+import numpy as np
+import torch
 
 
 def seed(value=42):
@@ -36,7 +37,7 @@ def map_dict_to_obj(dic):
 
 
 def get_item_in_config(config, path):
-    ## config is a dictionary
+    # config is a dictionary
     curr = config
     if isinstance(config, dict):
         for step in path:
@@ -58,7 +59,7 @@ def get_item_in_config(config, path):
 
 
 def generate_grid_search_configs(main_config, grid_config, root="hyperparams"):
-    ## DFS
+    # DFS
     locations_values_pair = {}
     init = grid_config.as_dict()
     # print(init)
@@ -76,18 +77,18 @@ def generate_grid_search_configs(main_config, grid_config, root="hyperparams"):
         # print(stack)
         if (
             not isinstance(root, dict) and "hparams" not in stack
-        ):  ## Meaning it is a leaf node
+        ):  # Meaning it is a leaf node
             # print(stack)
             if isinstance(root, list):
                 locations_values_pair[
                     tuple(copy.deepcopy(stack))
-                ] = root  ## Append the current stack, and the list values
+                ] = root  # Append the current stack, and the list values
             else:
                 locations_values_pair[tuple(copy.deepcopy(stack))] = [
                     root,
-                ]  ## Append the current stack, and the list values
+                ]  # Append the current stack, and the list values
 
-            _ = stack.pop()  ## Pop this root because we don't need it.
+            _ = stack.pop()  # Pop this root because we don't need it.
         else:
             if isinstance(root, list) and "hparams" in stack:
                 hparams_path = copy.deepcopy(stack)
@@ -96,34 +97,18 @@ def generate_grid_search_configs(main_config, grid_config, root="hyperparams"):
                 continue
 
             if "log_label" in root.keys():
-                log_label_path = copy.deepcopy(
-                    stack
-                    + [
-                        "log_label",
-                    ]
-                )
+                log_label_path = copy.deepcopy(stack + ["log_label",])
 
             if "log_label" in root.keys():
-                log_label_path = copy.deepcopy(
-                    stack
-                    + [
-                        "log_label",
-                    ]
-                )
-            parent = root  ## Otherwise it has children
+                log_label_path = copy.deepcopy(stack + ["log_label",])
+            parent = root  # Otherwise it has children
 
-        for key in parent.keys():  ## For the children
+        for key in parent.keys():  # For the children
             if (
-                ".".join(
-                    stack
-                    + [
-                        key,
-                    ]
-                )
-                not in visited
-            ):  ## Check if I have visited these children
-                flag = 1  ## If not, we need to repeat the process for this key
-                stack.append(key)  ## Append this key to the stack
+                ".".join(stack + [key,]) not in visited
+            ):  # Check if I have visited these children
+                flag = 1  # If not, we need to repeat the process for this key
+                stack.append(key)  # Append this key to the stack
                 visited.append(".".join(stack))
                 break
         if flag == 0:

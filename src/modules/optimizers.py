@@ -1,5 +1,6 @@
 " Method containing activation functions"
-from torch.optim import Adam, AdamW, SGD
+from torch.optim import SGD, Adam, AdamW
+
 from src.utils.mapper import ConfigMapper
 
 ConfigMapper.map("optimizers", "adam")(Adam)

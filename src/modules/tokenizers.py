@@ -1,10 +1,11 @@
 """Contains tokenizers like GloveTokenizers and BERT Tokenizer."""
 
 import torch
-from torchtext.vocab import GloVe
 from torchtext.data import Field, TabularDataset
-from src.utils.mapper import ConfigMapper
+from torchtext.vocab import GloVe
 from transformers import AutoTokenizer
+
+from src.utils.mapper import ConfigMapper
 
 
 class Tokenizer:
@@ -65,10 +66,14 @@ class GloveTokenizer(Tokenizer):
             tokenizer_file_paths (list of str): The paths of the files containing the data
             format (str): The format of the file : 'csv', 'tsv' or 'json'
         """
-        text_field = Field(batch_first=True, fix_length=fix_length, tokenize=tokenize)
+        text_field = Field(
+            batch_first=True, fix_length=fix_length, tokenize=tokenize
+        )
         tab_dats = [
             TabularDataset(
-                i, format=file_format, fields={k: (k, text_field) for k in fields}
+                i,
+                format=file_format,
+                fields={k: (k, text_field) for k in fields},
             )
             for i in tokenizer_file_paths
         ]
