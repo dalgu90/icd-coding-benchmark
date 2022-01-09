@@ -4,12 +4,18 @@ repos:
     hooks:
       - id: end-of-file-fixer
       - id: trailing-whitespace
+      - id: check-yaml
 
   - repo: https://github.com/python/black
-    rev: 21.7b0
+    rev: 21.12b0
     hooks:
       - id: black
-        language_version: python3
+        language_version: python3.7
+
+  - repo: https://github.com/asottile/seed-isort-config
+    rev: v2.2.0
+    hooks:
+      - id: seed-isort-config
 
   - repo: https://github.com/pycqa/isort
     rev: 5.9.3

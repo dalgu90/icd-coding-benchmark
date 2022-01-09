@@ -1,6 +1,7 @@
 """Contains various kinds of embeddings like Glove, BERT, etc."""
 
-from torch.nn import Module, Embedding, Flatten
+from torch.nn import Embedding, Flatten, Module
+
 from src.utils.mapper import ConfigMapper
 
 
