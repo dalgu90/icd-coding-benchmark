@@ -54,9 +54,7 @@ class Logger:
                         Logger._global_step(epoch, batch_size, batch),
                     )
                 else:
-                    self.writer.add_scalar(
-                        param_name_list[i], param_list[i], global_step
-                    )
+                    self.writer.add_scalar(param_name_list[i], param_list[i], global_step)
 
         else:
             scalar_dict = dict(zip(param_name_list, param_list))
@@ -93,9 +91,7 @@ class Logger:
             Logger._global_step(epoch, batch_size, batch),
         )
 
-    def save_hyperparams(
-        self, hparam_list, hparam_name_list, metric_list, metric_name_list
-    ):
+    def save_hyperparams(self, hparam_list, hparam_name_list, metric_list, metric_name_list):
 
         for i in range(len(hparam_list)):
             if isinstance(hparam_list[i], list):
@@ -117,24 +113,7 @@ class Logger:
             )
 
     def save_fig(self, fig, fig_name, epoch, batch_size, batch=None):
-        self.writer.add_figure(
-            fig_name, fig, Logger._global_step(epoch, batch_size, batch)
-        )
-
-    # def display_params(self,
-    #     params_list, params_name_list, epoch, num_epochs, batch_size, batch
-    # ):
-    #     for i in range(len(params_list)):
-    #         if isinstance(params_list[i], Variable):
-    #             params_list[i] = params_list[i].data.cpu().numpy()
-    #     print("Epoch: {}/{}, Batch: {}/{}".format(epoch, num_epochs, batch, batch_size))
-    #     for i in range(len(params_list)):
-    #         print("{}:{}".format(params_name_list[i], params_list[i]))
-    #
-    # def draw_model_architecture(self,model, output, input, input_name, save_name):
-    #     make_dot(
-    #         output, params=dict(list(model.named_parameters())) + [(input_name, input)]
-    #     )
+        self.writer.add_figure(fig_name, fig, Logger._global_step(epoch, batch_size, batch))
 
     def close(self):
         self.writer.close()

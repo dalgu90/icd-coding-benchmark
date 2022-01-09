@@ -38,9 +38,7 @@ def convert_params_to_dict(params):
             obj = ConfigMapper.get_object("params", v)
             dic[k] = v
         except:
-            print(
-                f"Undefined {v} for the given key: {k} in mapper        ,storing original value"
-            )
+            print(f"Undefined {v} for the given key: {k} in mapper, storing original value")
             dic[k] = v
         return value
 
