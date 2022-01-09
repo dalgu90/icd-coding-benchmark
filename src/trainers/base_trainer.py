@@ -37,34 +37,28 @@ class BaseTrainer:
         model.to(device)
         optim_params = self.train_config.optimizer.params
         if optim_params:
-            optimizer = ConfigMapper.get_object(
-                "optimizers", self.train_config.optimizer.type
-            )(model.parameters(), **optim_params.as_dict())
+            optimizer = ConfigMapper.get_object("optimizers", self.train_config.optimizer.type)(
+                model.parameters(), **optim_params.as_dict()
+            )
         else:
-            optimizer = ConfigMapper.get_object(
-                "optimizers", self.train_config.optimizer.type
-            )(model.parameters())
+            optimizer = ConfigMapper.get_object("optimizers", self.train_config.optimizer.type)(model.parameters())
 
         if self.train_config.scheduler is not None:
             scheduler_params = self.train_config.scheduler.params
             if scheduler_params:
-                scheduler = ConfigMapper.get_object(
-                    "schedulers", self.train_config.scheduler.type
-                )(optimizer, **scheduler_params.as_dict())
+                scheduler = ConfigMapper.get_object("schedulers", self.train_config.scheduler.type)(
+                    optimizer, **scheduler_params.as_dict()
+                )
             else:
-                scheduler = ConfigMapper.get_object(
-                    "schedulers", self.train_config.scheduler.type
-                )(optimizer)
+                scheduler = ConfigMapper.get_object("schedulers", self.train_config.scheduler.type)(optimizer)
 
         criterion_params = self.train_config.criterion.params
         if criterion_params:
-            criterion = ConfigMapper.get_object(
-                "losses", self.train_config.criterion.type
-            )(**criterion_params.as_dict())
+            criterion = ConfigMapper.get_object("losses", self.train_config.criterion.type)(
+                **criterion_params.as_dict()
+            )
         else:
-            criterion = ConfigMapper.get_object(
-                "losses", self.train_config.criterion.type
-            )()
+            criterion = ConfigMapper.get_object("losses", self.train_config.criterion.type)()
         if "custom_collate_fn" in dir(train_dataset):
             train_loader = DataLoader(
                 dataset=train_dataset,
@@ -89,19 +83,13 @@ class BaseTrainer:
             log_interval = self.train_config.log.log_interval
 
         if logger is None:
-            train_logger = Logger(
-                **self.train_config.log.logger_params.as_dict()
-            )
+            train_logger = Logger(**self.train_config.log.logger_params.as_dict())
         else:
             train_logger = logger
 
         train_log_values = self.train_config.log.values.as_dict()
 
-        best_score = (
-            -math.inf
-            if self.train_config.save_on.desired == "max"
-            else math.inf
-        )
+        best_score = -math.inf if self.train_config.save_on.desired == "max" else math.inf
         save_on_score = self.train_config.save_on.score
         best_step = -1
         best_model = None
@@ -116,11 +104,7 @@ class BaseTrainer:
 
         global_step = 0
         for epoch in range(1, max_epochs + 1):
-            print(
-                "Epoch: {}/{}, Global Step: {}".format(
-                    epoch, max_epochs, global_step
-                )
-            )
+            print("Epoch: {}/{}, Global Step: {}".format(epoch, max_epochs, global_step))
             train_loss = 0
             val_loss = 0
 
@@ -144,9 +128,7 @@ class BaseTrainer:
                 optimizer.zero_grad()
                 inputs, labels = batch
 
-                if (
-                    self.train_config.label_type == "float"
-                ):  # Specific to Float Type
+                if self.train_config.label_type == "float":  # Specific to Float Type
                     labels = labels.float()
 
                 for key in inputs:
@@ -161,9 +143,7 @@ class BaseTrainer:
                 if self.train_config.label_type == "float":
                     all_outputs = torch.cat((all_outputs, outputs), 0)
                 else:
-                    all_outputs = torch.cat(
-                        (all_outputs, torch.argmax(outputs, axis=1)), 0
-                    )
+                    all_outputs = torch.cat((all_outputs, torch.argmax(outputs, axis=1)), 0)
 
                 train_loss += loss.item()
                 optimizer.step()
@@ -184,10 +164,7 @@ class BaseTrainer:
 
                 # Need to check if we want global_step or local_step
 
-                if (
-                    val_dataset is not None
-                    and (global_step - 1) % val_interval == 0
-                ):
+                if val_dataset is not None and (global_step - 1) % val_interval == 0:
                     # print("\nEvaluating\n")
                     val_scores = self.val(
                         model,
@@ -223,24 +200,17 @@ class BaseTrainer:
                             "save_on_score": save_on_score,
                         }
 
-                        path = self.train_config.save_on.best_path.format(
-                            self.log_label
-                        )
+                        path = self.train_config.save_on.best_path.format(self.log_label)
 
                         self.save(store_dict, path, save_flag)
 
-                        if (
-                            save_flag
-                            and train_log_values["hparams"] is not None
-                        ):
+                        if save_flag and train_log_values["hparams"] is not None:
                             (
                                 best_hparam_list,
                                 best_hparam_name_list,
                                 best_metrics_list,
                                 best_metrics_name_list,
-                            ) = self.update_hparams(
-                                train_scores, val_scores, desc="best_val"
-                            )
+                            ) = self.update_hparams(train_scores, val_scores, desc="best_val")
                 # pbar.close()
                 if (global_step - 1) % log_interval == 0:
                     # print("\nLogging\n")
@@ -253,10 +223,7 @@ class BaseTrainer:
                         )
                         for metric in self.metrics
                     ]
-                    metric_name_list = [
-                        metric["type"]
-                        for metric in self._config.main_config.metrics
-                    ]
+                    metric_name_list = [metric["type"] for metric in self._config.main_config.metrics]
 
                     train_scores = self.log(
                         train_loss / (step + 1),
@@ -277,7 +244,11 @@ class BaseTrainer:
                     "model_state_dict": model.state_dict(),
                 }
 
-                path = f"{self.train_config.checkpoint.checkpoint_dir}_{str(self.train_config.log.log_label)}_{str(epoch)}.pth"
+                path = (
+                    f"{self.train_config.checkpoint.checkpoint_dir}_"
+                    f"{str(self.train_config.log.log_label)}_"
+                    f"{str(epoch)}.pth"
+                )
 
                 self.save(store_dict, path, save_flag=1)
 
@@ -303,9 +274,7 @@ class BaseTrainer:
                 )
                 for metric in self.metrics
             ]
-            metric_name_list = [
-                metric["type"] for metric in self._config.main_config.metrics
-            ]
+            metric_name_list = [metric["type"] for metric in self._config.main_config.metrics]
 
             train_scores = self.log(
                 train_loss / len(train_loader),
@@ -330,9 +299,7 @@ class BaseTrainer:
                     all_labels,
                 )
 
-                best_score, best_step, save_flag = self.check_best(
-                    val_scores, save_on_score, best_score, global_step
-                )
+                best_score, best_step, save_flag = self.check_best(val_scores, save_on_score, best_score, global_step)
 
                 store_dict = {
                     "model_state_dict": model.state_dict(),
@@ -341,9 +308,7 @@ class BaseTrainer:
                     "save_on_score": save_on_score,
                 }
 
-                path = self.train_config.save_on.best_path.format(
-                    self.log_label
-                )
+                path = self.train_config.save_on.best_path.format(self.log_label)
 
                 self.save(store_dict, path, save_flag)
 
@@ -353,9 +318,7 @@ class BaseTrainer:
                         best_hparam_name_list,
                         best_metrics_list,
                         best_metrics_name_list,
-                    ) = self.update_hparams(
-                        train_scores, val_scores, desc="best_val"
-                    )
+                    ) = self.update_hparams(train_scores, val_scores, desc="best_val")
 
                 # FINAL SCORES UPDATING + STORING
                 train_scores = self.get_scores(
@@ -373,9 +336,7 @@ class BaseTrainer:
                     "save_on_score": save_on_score,
                 }
 
-                path = self.train_config.save_on.final_path.format(
-                    self.log_label
-                )
+                path = self.train_config.save_on.final_path.format(self.log_label)
 
                 self.save(store_dict, path, save_flag=1)
                 if train_log_values["hparams"] is not None:
@@ -384,22 +345,25 @@ class BaseTrainer:
                         final_hparam_name_list,
                         final_metrics_list,
                         final_metrics_name_list,
-                    ) = self.update_hparams(
-                        train_scores, val_scores, desc="final"
-                    )
+                    ) = self.update_hparams(train_scores, val_scores, desc="final")
                     train_logger.save_hyperparams(
                         best_hparam_list,
                         best_hparam_name_list,
-                        [int(self.log_label),]
+                        [
+                            int(self.log_label),
+                        ]
                         + best_metrics_list
                         + final_metrics_list,
-                        ["hparams/log_label",]
+                        [
+                            "hparams/log_label",
+                        ]
                         + best_metrics_name_list
                         + final_metrics_name_list,
                     )
                     #
 
-    # Need to check if we want same loggers of different loggers for train and eval
+    # Need to check if we want same loggers of different loggers for train and
+    # eval
     # Evaluate
 
     def get_scores(self, loss, divisor, loss_name, all_outputs, all_labels):
@@ -414,12 +378,19 @@ class BaseTrainer:
             )
             for metric in self.metrics
         ]
-        metric_name_list = [
-            metric["type"] for metric in self._config.main_config.metrics
-        ]
+        metric_name_list = [metric["type"] for metric in self._config.main_config.metrics]
 
         return dict(
-            zip([loss_name,] + metric_name_list, [avg_loss,] + metric_list,)
+            zip(
+                [
+                    loss_name,
+                ]
+                + metric_name_list,
+                [
+                    avg_loss,
+                ]
+                + metric_list,
+            )
         )
 
     def check_best(self, val_scores, save_on_score, best_score, global_step):
@@ -456,7 +427,9 @@ class BaseTrainer:
             val_keys[i] = f"hparams/{desc}_val_" + val_keys[i]
         for i, key in enumerate(train_keys):
             train_keys[i] = f"hparams/{desc}_train_" + train_keys[i]
-        # train_logger.save_hyperparams(hparam_list, hparam_name_list,train_values+val_values,train_keys+val_keys, )
+        # train_logger.save_hyperparams(
+        #       hparam_list,
+        #       hparam_name_list,train_values+val_values,train_keys+val_keys, )
         return (
             hparam_list,
             hparam_name_list,
@@ -484,7 +457,16 @@ class BaseTrainer:
     ):
 
         return_dic = dict(
-            zip([loss_name,] + metric_name_list, [loss,] + metric_list,)
+            zip(
+                [
+                    loss_name,
+                ]
+                + metric_name_list,
+                [
+                    loss,
+                ]
+                + metric_list,
+            )
         )
 
         loss_name = f"{append_text}_{self.log_label}_{loss_name}"
@@ -498,9 +480,7 @@ class BaseTrainer:
             )
 
         for i in range(len(metric_name_list)):
-            metric_name_list[
-                i
-            ] = f"{append_text}_{self.log_label}_{metric_name_list[i]}"
+            metric_name_list[i] = f"{append_text}_{self.log_label}_{metric_name_list[i]}"
         if log_values["metrics"]:
             logger.save_params(
                 metric_list,
@@ -546,9 +526,7 @@ class BaseTrainer:
                 **self.val_config.loader_params.as_dict(),
             )
         else:
-            val_loader = DataLoader(
-                dataset=dataset, **self.val_config.loader_params.as_dict()
-            )
+            val_loader = DataLoader(dataset=dataset, **self.val_config.loader_params.as_dict())
 
         all_outputs = torch.Tensor().to(device)
         if self.train_config.label_type == "float":
@@ -581,9 +559,7 @@ class BaseTrainer:
                 if self.train_config.label_type == "float":
                     all_outputs = torch.cat((all_outputs, outputs), 0)
                 else:
-                    all_outputs = torch.cat(
-                        (all_outputs, torch.argmax(outputs, axis=1)), 0
-                    )
+                    all_outputs = torch.cat((all_outputs, torch.argmax(outputs, axis=1)), 0)
 
             val_loss = val_loss / len(val_loader)
 
@@ -598,13 +574,17 @@ class BaseTrainer:
                 )
                 for metric in self.metrics
             ]
-            metric_name_list = [
-                metric["type"] for metric in self._config.main_config.metrics
-            ]
+            metric_name_list = [metric["type"] for metric in self._config.main_config.metrics]
             return_dic = dict(
                 zip(
-                    [val_loss_name,] + metric_name_list,
-                    [val_loss,] + metric_list,
+                    [
+                        val_loss_name,
+                    ]
+                    + metric_name_list,
+                    [
+                        val_loss,
+                    ]
+                    + metric_list,
                 )
             )
             if log:

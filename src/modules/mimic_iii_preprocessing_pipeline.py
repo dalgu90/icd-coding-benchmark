@@ -2,8 +2,11 @@ import os
 
 import pandas as pd
 
-from src.modules.preprocessors import (ReformatICDCode,
-                                       RemoveNumericOnlyTokens, ToLowerCase)
+from src.modules.preprocessors import (
+    ReformatICDCode,
+    RemoveNumericOnlyTokens,
+    ToLowerCase,
+)
 from src.utils.file_loaders import load_csv_as_df
 
 
@@ -18,12 +21,8 @@ class MimiciiiPreprocessingPipeline:
         code_type = self.code_config.code_type
         add_period_in_correct_pos = self.code_config.add_period_in_correct_pos
 
-        diagnosis_code_csv_path = os.path.join(
-            self.MIMIC_DIR, self.config.dirs.diagnosis_code_csv_name
-        )
-        procedure_code_csv_path = os.path.join(
-            self.MIMIC_DIR, self.config.dirs.procedure_code_csv_name
-        )
+        diagnosis_code_csv_path = os.path.join(self.MIMIC_DIR, self.config.dirs.diagnosis_code_csv_name)
+        procedure_code_csv_path = os.path.join(self.MIMIC_DIR, self.config.dirs.procedure_code_csv_name)
         assert code_type in [
             "diagnosis",
             "procedure",
@@ -68,23 +67,15 @@ class MimiciiiPreprocessingPipeline:
 
     def preprocess_clinical_notes(self):
         print("Processing Clinical Notes")  # To-do: Add a progress bar
-        notes_file_path = os.path.join(
-            self.MIMIC_DIR, self.config.dirs.noteevents_csv_name
-        )
+        notes_file_path = os.path.join(self.MIMIC_DIR, self.config.dirs.noteevents_csv_name)
 
         noteevents_df = pd.read_csv(notes_file_path)
         # To-do: Add other categories later, based on args provided by the user
-        noteevents_df = noteevents_df[
-            noteevents_df["CATEGORY"] == "Discharge summary"
-        ]
+        noteevents_df = noteevents_df[noteevents_df["CATEGORY"] == "Discharge summary"]
         # Preprocess clinical notes
-        noteevents_df = noteevents_df["TEXT"].apply(
-            self.preprocess_clinical_note
-        )
+        noteevents_df = noteevents_df["TEXT"].apply(self.preprocess_clinical_note)
         # Delete unnecessary columns
-        noteevents_df = noteevents_df[
-            ["SUBJECT_ID", "HADM_ID", "CHARTTIME", "TEXT"]
-        ]
+        noteevents_df = noteevents_df[["SUBJECT_ID", "HADM_ID", "CHARTTIME", "TEXT"]]
         return noteevents_df
 
     def combine_code_and_notes(self, code_df, noteevents_df):
@@ -92,20 +83,12 @@ class MimiciiiPreprocessingPipeline:
         noteevents_df = noteevents_df.sort_values(["SUBJECT_ID", "HADM_ID"])
         code_df = code_df.sort_values(["SUBJECT_ID", "HADM_ID"])
 
-        subj_id_hadm_id_list = list(
-            zip(code_df["SUBJECT_ID"], code_df["HADM_ID"])
-        )
-        final_df = pd.DataFrame(
-            columns=["SUBJECT_ID", "HADM_ID", "TEXT", "LABEL"]
-        )
+        subj_id_hadm_id_list = list(zip(code_df["SUBJECT_ID"], code_df["HADM_ID"]))
+        final_df = pd.DataFrame(columns=["SUBJECT_ID", "HADM_ID", "TEXT", "LABEL"])
         for subj_id, hadm_id in subj_id_hadm_id_list:
-            code_df_rows = code_df[
-                (code_df["SUBJECT_ID"] == subj_id)
-                & (code_df["HADM_ID"] == hadm_id)
-            ]
+            code_df_rows = code_df[(code_df["SUBJECT_ID"] == subj_id) & (code_df["HADM_ID"] == hadm_id)]
             noteevents_df_rows = noteevents_df[
-                (noteevents_df["SUBJECT_ID"] == subj_id)
-                & (noteevents_df["HADM_ID"] == hadm_id)
+                (noteevents_df["SUBJECT_ID"] == subj_id) & (noteevents_df["HADM_ID"] == hadm_id)
             ]
 
             codes = []
@@ -128,8 +111,6 @@ class MimiciiiPreprocessingPipeline:
     def preprocess(self):
         code_df = self.extract_df_based_on_code_type()
         noteevents_df = self.preprocess_clinical_notes()
-        code_df = self.filter_icd_codes_based_on_clinical_notes(
-            code_df, noteevents_df
-        )
+        code_df = self.filter_icd_codes_based_on_clinical_notes(code_df, noteevents_df)
         combined_df = self.combine_code_and_notes(code_df, noteevents_df)
         return combined_df

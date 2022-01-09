@@ -66,9 +66,7 @@ class GloveTokenizer(Tokenizer):
             tokenizer_file_paths (list of str): The paths of the files containing the data
             format (str): The format of the file : 'csv', 'tsv' or 'json'
         """
-        text_field = Field(
-            batch_first=True, fix_length=fix_length, tokenize=tokenize
-        )
+        text_field = Field(batch_first=True, fix_length=fix_length, tokenize=tokenize)
         tab_dats = [
             TabularDataset(
                 i,
@@ -96,9 +94,7 @@ class GloveTokenizer(Tokenizer):
         if self.text_field is None:
             self.initialize_vectors(**init_vector__params)
         try:
-            x_output = torch.squeeze(
-                self.text_field.process([self.text_field.preprocess(x_input)])
-            )
+            x_output = torch.squeeze(self.text_field.process([self.text_field.preprocess(x_input)]))
         except Exception as e:
             print(x_input)
             print(self.text_field.preprocess(x_input))

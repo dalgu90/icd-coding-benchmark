@@ -68,7 +68,8 @@ class BaseModel(nn.Module):
 
     def embed_descriptions(self, desc_data, gpu):
         # label description embedding via convolutional layer
-        # number of labels is inconsistent across instances, so have to iterate over the batch
+        # number of labels is inconsistent across instances, so have to iterate
+        # over the batch
         b_batch = []
         for inst in desc_data:
             if len(inst) > 0:
@@ -99,7 +100,8 @@ class BaseModel(nn.Module):
             zi = self.final.weight[inds, :]
             diff = (zi - bi).mul(zi - bi).mean()
 
-            # multiply by number of labels to make sure overall mean is balanced with regard to number of labels
+            # multiply by number of labels to make sure overall mean is balanced
+            # with regard to number of labels
             diffs.append(self.lmbda * diff * bi.size()[0])
         return diffs
 
@@ -143,7 +145,8 @@ class ConvAttnPool(BaseModel):
         self.U = nn.Linear(num_filter_maps, self.Y)
         xavier_uniform(self.U.weight)
 
-        # final layer: create a matrix to use for the L binary classifiers as in 2.3
+        # final layer: create a matrix to use for the L binary classifiers as in
+        # 2.3
         self.final = nn.Linear(num_filter_maps, self.Y)
         xavier_uniform(self.final.weight)
 
@@ -151,12 +154,7 @@ class ConvAttnPool(BaseModel):
         if code_emb:
             self._code_emb_init(code_emb, self.dicts)
             # also set conv weights to do sum of inputs
-            weights = (
-                torch.eye(self.embed_size)
-                .unsqueeze(2)
-                .expand(-1, -1, kernel_size)
-                / kernel_size
-            )
+            weights = torch.eye(self.embed_size).unsqueeze(2).expand(-1, -1, kernel_size) / kernel_size
             self.conv.weight.data = weights.clone()
             self.conv.bias.data.zero_()
 
@@ -164,9 +162,7 @@ class ConvAttnPool(BaseModel):
         # description module has its own embedding and convolution layers
         if lmbda > 0:
             W = self.embed.weight.data
-            self.desc_embedding = nn.Embedding(
-                W.size()[0], W.size()[1], padding_idx=0
-            )
+            self.desc_embedding = nn.Embedding(W.size()[0], W.size()[1], padding_idx=0)
             self.desc_embedding.weight.data = W.clone()
 
             self.label_conv = nn.Conv1d(
@@ -199,7 +195,8 @@ class ConvAttnPool(BaseModel):
         x = F.tanh(self.conv(x).transpose(1, 2))
         # apply attention
         alpha = F.softmax(self.U.weight.matmul(x.transpose(1, 2)), dim=2)
-        # document representations are weighted sums using the attention. Can compute all at once as a matmul
+        # document representations are weighted sums using the attention. Can
+        # compute all at once as a matmul
         m = alpha.matmul(x)
         # final layer classification
         y = self.final.weight.mul(m).sum(dim=2).add(self.final.bias)
@@ -241,9 +238,7 @@ class VanillaConv(BaseModel):
             embed_size=embed_size,
         )
         # initialize conv layer as in 2.1
-        self.conv = nn.Conv1d(
-            self.embed_size, num_filter_maps, kernel_size=kernel_size
-        )
+        self.conv = nn.Conv1d(self.embed_size, num_filter_maps, kernel_size=kernel_size)
         xavier_uniform(self.conv.weight)
 
         # linear output
@@ -260,9 +255,7 @@ class VanillaConv(BaseModel):
         c = self.conv(x)
         if get_attention:
             # get argmax vector too
-            x, argmax = F.max_pool1d(
-                F.tanh(c), kernel_size=c.size()[2], return_indices=True
-            )
+            x, argmax = F.max_pool1d(F.tanh(c), kernel_size=c.size()[2], return_indices=True)
             attn = self.construct_attention(argmax, c.size()[2])
         else:
             x = F.max_pool1d(F.tanh(c), kernel_size=c.size()[2])
@@ -282,9 +275,11 @@ class VanillaConv(BaseModel):
         for argmax_i in argmax:
             attns = []
             for i in range(num_windows):
-                # generate mask to select indices of conv features where max was i
+                # generate mask to select indices of conv features where max was
+                # i
                 mask = (argmax_i == i).repeat(1, self.Y).t()
-                # apply mask to every label's weight vector and take the sum to get the 'attention' score
+                # apply mask to every label's weight vector and take the sum to
+                # get the 'attention' score
                 weights = self.fc.weight[mask].view(-1, self.Y)
                 if len(weights.size()) > 0:
                     window_attns = weights.sum(dim=0)

@@ -13,7 +13,8 @@ class GloveEmbedding(Module):
         """Construct GloveEmbedding.
 
         Args:
-            embedding_matrix (torch.Tensor): The matrix contrainining the embedding weights
+            embedding_matrix (torch.Tensor): The matrix contrainining the
+                                             embedding weights
             padding_idx (int): The padding index in the tokenizer.
             static (bool): Whether or not to freeze embeddings.
         """
