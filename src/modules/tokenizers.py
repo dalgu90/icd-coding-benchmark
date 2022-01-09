@@ -24,7 +24,8 @@ class GloveTokenizer(Tokenizer):
         text_field (torchtext.data.Field): Text_field for vector creation.
 
     Methods:
-        __init__(self, name='840B', dim='300', cache='../embeddings/') : Constructor method
+        __init__(self, name='840B', dim='300', cache='../embeddings/') :
+          Constructor method
         initialize_vectors(fix_length=4, tokenize='spacy', file_path="../data/imperceptibility
                            /Concreteness Ratings/train/forty.csv",
                            file_format='tsv', fields=None): Initialize vocab vectors based on data.
@@ -56,14 +57,16 @@ class GloveTokenizer(Tokenizer):
 
         Args:
             fields (list): The list containing the fields to be taken
-                                     and processed from the file (see documentation for
-                                      torchtext.data.TabularDataset)
+                                     and processed from the file (see
+                                        documentation for
+                                        torchtext.data.TabularDataset)
             fix_length (int): The length of the tokenized text,
                               padding or cropping is done accordingly
             tokenize (function or string): Method to tokenize the data.
                                            If 'spacy' uses spacy tokenizer,
                                            else the specified method.
-            tokenizer_file_paths (list of str): The paths of the files containing the data
+            tokenizer_file_paths (list of str): The paths of the files
+                                                containing the data
             format (str): The format of the file : 'csv', 'tsv' or 'json'
         """
         text_field = Field(batch_first=True, fix_length=fix_length, tokenize=tokenize)
