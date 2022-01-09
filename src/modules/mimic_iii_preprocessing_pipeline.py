@@ -2,24 +2,25 @@ import os
 import pandas as pd
 
 from src.modules.preprocessors import ReformatICDCode, ToLowerCase, RemoveNumericOnlyTokens
+from src.utils.file_loaders import load_csv_as_df
 
-
-class PreprocessingPipeline():
+class MimiciiiPreprocessingPipeline():
     def __init__(self, config):
+        self.config = config
+        self.MIMIC_DIR = config.dirs.mimic_dir
         self.clinical_note_config = config.clinical_note_preprocessing
         self.code_config = config.code_preprocessing
-        self.MIMIC_DIR = config.mimic_dir
 
     def extract_df_based_on_code_type(self):
         code_type = self.code_config.code_type
         add_period_in_correct_pos = self.code_config.add_period_in_correct_pos
 
-        diagnosis_code_csv_path = os.path.join(self.MIMIC_DIR, "DIAGNOSES_ICD.csv")
-        procedure_code_csv_path = os.path.join(self.MIMIC_DIR, "PROCEDURES_ICD.csv")
+        diagnosis_code_csv_path = os.path.join(self.MIMIC_DIR, self.config.dirs.diagnosis_code_csv_name)
+        procedure_code_csv_path = os.path.join(self.MIMIC_DIR, self.config.dirs.procedure_code_csv_name)
         assert code_type in ["diagnosis", "procedure", "both"], "code_type should be one of [\"diagnosis\", \"procedure\", \"both\"]"
 
-        diagnosis_code_df = pd.read_csv(diagnosis_code_csv_path)
-        procedure_code_df = pd.read_csv(procedure_code_csv_path)
+        diagnosis_code_df = load_csv_as_df(diagnosis_code_csv_path)
+        procedure_code_df = load_csv_as_df(procedure_code_csv_path)
 
         if add_period_in_correct_pos:
             reformat_icd_code = ReformatICDCode()
@@ -52,7 +53,7 @@ class PreprocessingPipeline():
 
     def preprocess_clinical_notes(self):
         print("Processing Clinical Notes") # To-do: Add a progress bar
-        notes_file_path = os.path.join(self.MIMIC_DIR, "NOTEEVENTS.csv")
+        notes_file_path = os.path.join(self.MIMIC_DIR, self.config.dirs.noteevents_csv_name)
 
         noteevents_df = pd.read_csv(notes_file_path)
         # To-do: Add other categories later, based on args provided by the user
@@ -75,13 +76,12 @@ class PreprocessingPipeline():
             noteevents_df_rows = noteevents_df[(noteevents_df["SUBJECT_ID"] == subj_id) & (noteevents_df["HADM_ID"] == hadm_id)]
 
             codes = []
-            notes = ""
+            notes = []
             for _, row in code_df_rows.iterrows():
                 codes.append(row["ICD9_CODE"])
             for _, row in noteevents_df_rows.iterrows():
-                notes += row["TEXT"] + " "
-            new_row = {"SUBJECT_ID": subj_id, "HADM_ID": hadm_id, "TEXT": notes.strip(), "LABEL": ";".join(codes)}
-            final_df.append(new_row, ignore_index=True)
+                notes.append(row["TEXT"])
+            final_df.append({"SUBJECT_ID": subj_id, "HADM_ID": hadm_id, "TEXT": " ".join(notes).strip(), "LABEL": ";".join(codes)}, ignore_index=True)
         return final_df
 
     def preprocess(self):

@@ -1,6 +1,10 @@
 preprocessing:
   name: mimic_iii_preprocessing_pipeline
-  mimic_dir: datasets/mimic_iii/1.4
+  dirs:
+    mimic_dir: datasets/mimic_iii/1.4
+    diagnosis_code_csv_name: DIAGNOSES_ICD.csv.gz
+    procedure_code_csv_name: PROCEDURES_ICD.csv.gz
+    noteevents_csv_name: NOTEEVENTS.csv.gz
   clinical_note_preprocessing:
     to_lower:
       perform: true
