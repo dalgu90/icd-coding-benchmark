@@ -1,79 +1,92 @@
-import copy
-import csv
 import os
 import pandas as pd
 
-from tqdm.auto import tqdm
-
 from src.modules.preprocessors import ReformatICDCode, ToLowerCase, RemoveNumericOnlyTokens
+
 
 class PreprocessingPipeline():
     def __init__(self, config):
-        self._config = config
+        self.clinical_note_config = config.clinical_note_preprocessing
+        self.code_config = config.code_preprocessing
         self.MIMIC_DIR = config.mimic_dir
 
-    def extract_csv_based_on_code_type(self, code_type, add_period_in_correct_pos=True):
-        # Which kind of codes do we want? [Diagnosis, Procedure, Both]
-        columns = ["ROW_ID", "SUBJECT_ID", "HADM_ID","SEQ_NUM", "ICD9_CODE"]
-        header = copy.deepcopy(columns)
+    def extract_df_based_on_code_type(self):
+        code_type = self.code_config.code_type
+        add_period_in_correct_pos = self.code_config.add_period_in_correct_pos
+
         diagnosis_code_csv_path = os.path.join(self.MIMIC_DIR, "DIAGNOSES_ICD.csv")
         procedure_code_csv_path = os.path.join(self.MIMIC_DIR, "PROCEDURES_ICD.csv")
         assert code_type in ["diagnosis", "procedure", "both"], "code_type should be one of [\"diagnosis\", \"procedure\", \"both\"]"
 
         diagnosis_code_df = pd.read_csv(diagnosis_code_csv_path)
         procedure_code_df = pd.read_csv(procedure_code_csv_path)
+
         if add_period_in_correct_pos:
             reformat_icd_code = ReformatICDCode()
-            diagnosis_code_df['ABSOLUTE_CODE'] = diagnosis_code_df.apply(lambda row: str(reformat_icd_code(str(row[4]), True)), axis=1)
-            procedure_code_df['ABSOLUTE_CODE'] = procedure_code_df.apply(lambda row: str(reformat_icd_code(str(row[4]), False)), axis=1)
-            columns.pop()
-            columns += ["ABSOLUTE_CODE"]
+            diagnosis_code_df["ICD9_CODE"] = diagnosis_code_df.apply(lambda row: str(reformat_icd_code(str(row[4]), True)), axis=1)
+            procedure_code_df["ICD9_CODE"] = procedure_code_df.apply(lambda row: str(reformat_icd_code(str(row[4]), False)), axis=1)
 
-        if self._config.code_type == "diagnosis":
+        if code_type == "diagnosis":
             code_df = diagnosis_code_df
-        elif self._config.code_type == "procedure":
+        elif code_type == "procedure":
             code_df = procedure_code_df
         else:
             code_df = pd.concat([diagnosis_code_df, procedure_code_df])
-        code_df.to_csv(os.path.join(self.MIMIC_DIR, "ALL_ICD_CODES.csv"),
-                       index=False,
-                       columns=columns,
-                       header=header)
+        return code_df
+
+    def filter_icd_codes_based_on_clinical_notes(self, code_df, noteevents_df):
+        hadm_ids = set(noteevents_df["HADM_ID"])
+        code_df = code_df[code_df["HADM_ID"].isin(hadm_ids)]
         return code_df
 
     def preprocess_clinical_note(self, clinical_note):
-        if(self._config.lower_case):
+        if(self.clinical_note_config.lower_case.perform):
             to_lower_case = ToLowerCase()
             clinical_note = to_lower_case(clinical_note)
 
-        if(self._config.remove_punc_numeric_tokens):
+        if(self.clinical_note_config.remove_punc_numeric_tokens.perform):
             remove_numeric_only_tokens =  RemoveNumericOnlyTokens()
             clinical_note = remove_numeric_only_tokens(clinical_note)
 
-        return clinical_note       
+        return clinical_note
 
     def preprocess_clinical_notes(self):
-        print("Processing Discharge Summaries") # To-do: Add a progress bar
+        print("Processing Clinical Notes") # To-do: Add a progress bar
         notes_file_path = os.path.join(self.MIMIC_DIR, "NOTEEVENTS.csv")
-        output_file_path = os.path.join(self.MIMIC_DIR, "PREPROCESSED_NOTEEVENTS.csv")
 
-        with open(notes_file_path, 'r') as  notes_file:
-            with open(output_file_path, 'w') as preprocessed_notes_file:
-                notes_file_reader = csv.reader(notes_file)
+        noteevents_df = pd.read_csv(notes_file_path)
+        # To-do: Add other categories later, based on args provided by the user
+        noteevents_df = noteevents_df[noteevents_df["CATEGORY"] == "Discharge summary"]
+        # Preprocess clinical notes
+        noteevents_df = noteevents_df["TEXT"].apply(self.preprocess_clinical_note)
+        # Delete unnecessary columns
+        noteevents_df = noteevents_df[["SUBJECT_ID", "HADM_ID", "CHARTTIME", "TEXT"]]
+        return noteevents_df
 
-                # skip header
-                next(notes_file_reader)
+    def combine_code_and_notes(self, code_df, noteevents_df):
+        # Sort by SUBJECT_ID and HADM_ID
+        noteevents_df = noteevents_df.sort_values(["SUBJECT_ID", "HADM_ID"])
+        code_df = code_df.sort_values(["SUBJECT_ID", "HADM_ID"])
 
-                preprocessed_notes_file.write(','.join(["SUBJECT_ID", "HADM_ID", "CHARTTIME", "TEXT"]) + "\n")
+        subj_id_hadm_id_list = list(zip(code_df["SUBJECT_ID"], code_df["HADM_ID"]))
+        final_df = pd.DataFrame(columns=["SUBJECT_ID", "HADM_ID", "TEXT", "LABEL"])
+        for subj_id, hadm_id in subj_id_hadm_id_list:
+            code_df_rows = code_df[(code_df["SUBJECT_ID"] == subj_id) & (code_df["HADM_ID"] == hadm_id)]
+            noteevents_df_rows = noteevents_df[(noteevents_df["SUBJECT_ID"] == subj_id) & (noteevents_df["HADM_ID"] == hadm_id)]
 
-                for line in tqdm(notes_file_reader):
-                    subject = line[1]
-                    hadm_id = line[2]
-                    charttime = line[4]
-                    category = line[6]
+            codes = []
+            notes = ""
+            for _, row in code_df_rows.iterrows():
+                codes.append(row["ICD9_CODE"])
+            for _, row in noteevents_df_rows.iterrows():
+                notes += row["TEXT"] + " "
+            new_row = {"SUBJECT_ID": subj_id, "HADM_ID": hadm_id, "TEXT": notes.strip(), "LABEL": ";".join(codes)}
+            final_df.append(new_row, ignore_index=True)
+        return final_df
 
-                    # To-do: Add other categories later, based on args provided by the user
-                    if category == "Discharge summary":
-                        clinical_note = line[10]
-                        clinical_note = self.preprocess_clinical_note(clinical_note)
-                        preprocessed_notes_file.write(','.join([subject, hadm_id, charttime, clinical_note]) + "\n")
+    def preprocess(self):
+        code_df = self.extract_df_based_on_code_type()
+        noteevents_df = self.preprocess_clinical_notes()
+        code_df = self.filter_icd_codes_based_on_clinical_notes(code_df, noteevents_df)
+        combined_df = self.combine_code_and_notes(code_df, noteevents_df)
+        return combined_df

@@ -8,7 +8,7 @@ from src.utils.mapper import configmapper
 @configmapper("datasets", "base_dataset")
 class BaseDataset(Dataset):
     def __init__(self, config):
-        self._config = config.dataset
+        self._config = config
         data_path = self._config.data_file
 
         # To-do: This class currently deals with only CSV files. We can extend

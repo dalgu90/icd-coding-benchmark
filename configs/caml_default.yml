@@ -1,3 +1,15 @@
+preprocessing:
+  name: mimic_iii_preprocessing_pipeline
+  mimic_dir: datasets/mimic_iii/1.4
+  clinical_note_preprocessing:
+    to_lower:
+      perform: true
+    remove_punc_numeric_tokens:
+      perform: true
+  code_preprocessing:
+    code_type: both
+    add_period_in_correct_pos: true
+
 dataset:
   name: base_dataset
   data_common: &data_common
