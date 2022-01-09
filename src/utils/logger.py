@@ -108,7 +108,9 @@ class Logger:
 
     def save_models(self, model_list, model_names_list, epoch):
         for model_name, model in zip(model_names_list, model_list):
-            torch.save(model.state_dict(), os.path.join(self.model_path, model_name))
+            torch.save(
+                model.state_dict(), os.path.join(self.model_path, model_name)
+            )
 
     def save_fig(self, fig, fig_name, epoch, batch_size, batch=None):
         self.writer.add_figure(fig_name, fig, Logger._global_step(epoch, batch_size, batch))

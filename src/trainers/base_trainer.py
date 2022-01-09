@@ -83,12 +83,13 @@ class BaseTrainer:
             log_interval = self.train_config.log.log_interval
 
         if logger is None:
-            train_logger = Logger(**self.train_config.log.logger_params.as_dict())
+            train_logger = Logger(
+                **self.train_config.log.logger_params.as_dict()
+            )
         else:
             train_logger = logger
 
         train_log_values = self.train_config.log.values.as_dict()
-
         best_score = -math.inf if self.train_config.save_on.desired == "max" else math.inf
         save_on_score = self.train_config.save_on.score
         best_step = -1
@@ -164,7 +165,10 @@ class BaseTrainer:
 
                 # Need to check if we want global_step or local_step
 
-                if val_dataset is not None and (global_step - 1) % val_interval == 0:
+                if (
+                    val_dataset is not None
+                    and (global_step - 1) % val_interval == 0
+                ):
                     # print("\nEvaluating\n")
                     val_scores = self.val(
                         model,
@@ -204,7 +208,10 @@ class BaseTrainer:
 
                         self.save(store_dict, path, save_flag)
 
-                        if save_flag and train_log_values["hparams"] is not None:
+                        if (
+                            save_flag
+                            and train_log_values["hparams"] is not None
+                        ):
                             (
                                 best_hparam_list,
                                 best_hparam_name_list,
@@ -308,7 +315,9 @@ class BaseTrainer:
                     "save_on_score": save_on_score,
                 }
 
-                path = self.train_config.save_on.best_path.format(self.log_label)
+                path = self.train_config.save_on.best_path.format(
+                    self.log_label
+                )
 
                 self.save(store_dict, path, save_flag)
 
@@ -318,7 +327,9 @@ class BaseTrainer:
                         best_hparam_name_list,
                         best_metrics_list,
                         best_metrics_name_list,
-                    ) = self.update_hparams(train_scores, val_scores, desc="best_val")
+                    ) = self.update_hparams(
+                        train_scores, val_scores, desc="best_val"
+                    )
 
                 # FINAL SCORES UPDATING + STORING
                 train_scores = self.get_scores(
@@ -336,7 +347,9 @@ class BaseTrainer:
                     "save_on_score": save_on_score,
                 }
 
-                path = self.train_config.save_on.final_path.format(self.log_label)
+                path = self.train_config.save_on.final_path.format(
+                    self.log_label
+                )
 
                 self.save(store_dict, path, save_flag=1)
                 if train_log_values["hparams"] is not None:
@@ -345,7 +358,9 @@ class BaseTrainer:
                         final_hparam_name_list,
                         final_metrics_list,
                         final_metrics_name_list,
-                    ) = self.update_hparams(train_scores, val_scores, desc="final")
+                    ) = self.update_hparams(
+                        train_scores, val_scores, desc="final"
+                    )
                     train_logger.save_hyperparams(
                         best_hparam_list,
                         best_hparam_name_list,
@@ -559,7 +574,9 @@ class BaseTrainer:
                 if self.train_config.label_type == "float":
                     all_outputs = torch.cat((all_outputs, outputs), 0)
                 else:
-                    all_outputs = torch.cat((all_outputs, torch.argmax(outputs, axis=1)), 0)
+                    all_outputs = torch.cat(
+                        (all_outputs, torch.argmax(outputs, axis=1)), 0
+                    )
 
             val_loss = val_loss / len(val_loader)
 

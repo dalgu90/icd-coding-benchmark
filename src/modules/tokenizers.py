@@ -69,7 +69,9 @@ class GloveTokenizer(Tokenizer):
                                                 containing the data
             format (str): The format of the file : 'csv', 'tsv' or 'json'
         """
-        text_field = Field(batch_first=True, fix_length=fix_length, tokenize=tokenize)
+        text_field = Field(
+            batch_first=True, fix_length=fix_length, tokenize=tokenize
+        )
         tab_dats = [
             TabularDataset(
                 i,

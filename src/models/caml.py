@@ -155,6 +155,7 @@ class ConvAttnPool(BaseModel):
             self._code_emb_init(code_emb, self.dicts)
             # also set conv weights to do sum of inputs
             weights = torch.eye(self.embed_size).unsqueeze(2).expand(-1, -1, kernel_size) / kernel_size
+
             self.conv.weight.data = weights.clone()
             self.conv.bias.data.zero_()
 
@@ -162,7 +163,9 @@ class ConvAttnPool(BaseModel):
         # description module has its own embedding and convolution layers
         if lmbda > 0:
             W = self.embed.weight.data
-            self.desc_embedding = nn.Embedding(W.size()[0], W.size()[1], padding_idx=0)
+            self.desc_embedding = nn.Embedding(
+                W.size()[0], W.size()[1], padding_idx=0
+            )
             self.desc_embedding.weight.data = W.clone()
 
             self.label_conv = nn.Conv1d(
