@@ -37,34 +37,28 @@ class BaseTrainer:
         model.to(device)
         optim_params = self.train_config.optimizer.params
         if optim_params:
-            optimizer = ConfigMapper.get_object(
-                "optimizers", self.train_config.optimizer.type
-            )(model.parameters(), **optim_params.as_dict())
+            optimizer = ConfigMapper.get_object("optimizers", self.train_config.optimizer.type)(
+                model.parameters(), **optim_params.as_dict()
+            )
         else:
-            optimizer = ConfigMapper.get_object(
-                "optimizers", self.train_config.optimizer.type
-            )(model.parameters())
+            optimizer = ConfigMapper.get_object("optimizers", self.train_config.optimizer.type)(model.parameters())
 
         if self.train_config.scheduler is not None:
             scheduler_params = self.train_config.scheduler.params
             if scheduler_params:
-                scheduler = ConfigMapper.get_object(
-                    "schedulers", self.train_config.scheduler.type
-                )(optimizer, **scheduler_params.as_dict())
+                scheduler = ConfigMapper.get_object("schedulers", self.train_config.scheduler.type)(
+                    optimizer, **scheduler_params.as_dict()
+                )
             else:
-                scheduler = ConfigMapper.get_object(
-                    "schedulers", self.train_config.scheduler.type
-                )(optimizer)
+                scheduler = ConfigMapper.get_object("schedulers", self.train_config.scheduler.type)(optimizer)
 
         criterion_params = self.train_config.criterion.params
         if criterion_params:
-            criterion = ConfigMapper.get_object(
-                "losses", self.train_config.criterion.type
-            )(**criterion_params.as_dict())
+            criterion = ConfigMapper.get_object("losses", self.train_config.criterion.type)(
+                **criterion_params.as_dict()
+            )
         else:
-            criterion = ConfigMapper.get_object(
-                "losses", self.train_config.criterion.type
-            )()
+            criterion = ConfigMapper.get_object("losses", self.train_config.criterion.type)()
         if "custom_collate_fn" in dir(train_dataset):
             train_loader = DataLoader(
                 dataset=train_dataset,
@@ -96,7 +90,6 @@ class BaseTrainer:
             train_logger = logger
 
         train_log_values = self.train_config.log.values.as_dict()
-
         best_score = (
             -math.inf
             if self.train_config.save_on.desired == "max"
@@ -223,9 +216,7 @@ class BaseTrainer:
                             "save_on_score": save_on_score,
                         }
 
-                        path = self.train_config.save_on.best_path.format(
-                            self.log_label
-                        )
+                        path = self.train_config.save_on.best_path.format(self.log_label)
 
                         self.save(store_dict, path, save_flag)
 
@@ -238,9 +229,7 @@ class BaseTrainer:
                                 best_hparam_name_list,
                                 best_metrics_list,
                                 best_metrics_name_list,
-                            ) = self.update_hparams(
-                                train_scores, val_scores, desc="best_val"
-                            )
+                            ) = self.update_hparams(train_scores, val_scores, desc="best_val")
                 # pbar.close()
                 if (global_step - 1) % log_interval == 0:
                     # print("\nLogging\n")
@@ -334,9 +323,7 @@ class BaseTrainer:
                     all_labels,
                 )
 
-                best_score, best_step, save_flag = self.check_best(
-                    val_scores, save_on_score, best_score, global_step
-                )
+                best_score, best_step, save_flag = self.check_best(val_scores, save_on_score, best_score, global_step)
 
                 store_dict = {
                     "model_state_dict": model.state_dict(),
@@ -527,9 +514,7 @@ class BaseTrainer:
             )
 
         for i in range(len(metric_name_list)):
-            metric_name_list[
-                i
-            ] = f"{append_text}_{self.log_label}_{metric_name_list[i]}"
+            metric_name_list[i] = f"{append_text}_{self.log_label}_{metric_name_list[i]}"
         if log_values["metrics"]:
             logger.save_params(
                 metric_list,
@@ -575,9 +560,7 @@ class BaseTrainer:
                 **self.val_config.loader_params.as_dict(),
             )
         else:
-            val_loader = DataLoader(
-                dataset=dataset, **self.val_config.loader_params.as_dict()
-            )
+            val_loader = DataLoader(dataset=dataset, **self.val_config.loader_params.as_dict())
 
         all_outputs = torch.Tensor().to(device)
         if self.train_config.label_type == "float":

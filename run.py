@@ -1,6 +1,7 @@
 # Imports
 import argparse
 import os
+import pudb
 
 from src.datasets import *
 from src.models import *
@@ -12,9 +13,7 @@ from src.utils.misc import seed
 
 # Command line arguments
 parser = argparse.ArgumentParser(description="Train or test the model")
-parser.add_argument(
-    "--config_path", type=str, action="store", help="Path to the config file"
-)
+parser.add_argument("--config_path", type=str, action="store", help="Path to the config file")
 parser.add_argument(
     "--test",
     action="store_true",
@@ -36,8 +35,6 @@ logger = None
 # )
 # )
 
-
-import pudb
 
 pudb.set_trace()
 if not args.test:  # Training

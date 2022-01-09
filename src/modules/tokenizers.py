@@ -103,9 +103,7 @@ class GloveTokenizer(Tokenizer):
         if self.text_field is None:
             self.initialize_vectors(**init_vector__params)
         try:
-            x_output = torch.squeeze(
-                self.text_field.process([self.text_field.preprocess(x_input)])
-            )
+            x_output = torch.squeeze(self.text_field.process([self.text_field.preprocess(x_input)]))
         except Exception as e:
             print(x_input)
             print(self.text_field.preprocess(x_input))
