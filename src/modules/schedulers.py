@@ -12,4 +12,6 @@ ConfigMapper.map("schedulers", "step")(StepLR)
 ConfigMapper.map("schedulers", "cosineanneal")(CosineAnnealingLR)
 ConfigMapper.map("schedulers", "reduceplateau")(ReduceLROnPlateau)
 ConfigMapper.map("schedulers", "cyclic")(CyclicLR)
-ConfigMapper.map("schedulers", "cosineannealrestart")(CosineAnnealingWarmRestarts)
+ConfigMapper.map("schedulers", "cosineannealrestart")(
+    CosineAnnealingWarmRestarts
+)

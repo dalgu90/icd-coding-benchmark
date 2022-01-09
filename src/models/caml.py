@@ -152,7 +152,9 @@ class ConvAttnPool(BaseModel):
             self._code_emb_init(code_emb, self.dicts)
             # also set conv weights to do sum of inputs
             weights = (
-                torch.eye(self.embed_size).unsqueeze(2).expand(-1, -1, kernel_size)
+                torch.eye(self.embed_size)
+                .unsqueeze(2)
+                .expand(-1, -1, kernel_size)
                 / kernel_size
             )
             self.conv.weight.data = weights.clone()
@@ -162,7 +164,9 @@ class ConvAttnPool(BaseModel):
         # description module has its own embedding and convolution layers
         if lmbda > 0:
             W = self.embed.weight.data
-            self.desc_embedding = nn.Embedding(W.size()[0], W.size()[1], padding_idx=0)
+            self.desc_embedding = nn.Embedding(
+                W.size()[0], W.size()[1], padding_idx=0
+            )
             self.desc_embedding.weight.data = W.clone()
 
             self.label_conv = nn.Conv1d(
@@ -237,7 +241,9 @@ class VanillaConv(BaseModel):
             embed_size=embed_size,
         )
         # initialize conv layer as in 2.1
-        self.conv = nn.Conv1d(self.embed_size, num_filter_maps, kernel_size=kernel_size)
+        self.conv = nn.Conv1d(
+            self.embed_size, num_filter_maps, kernel_size=kernel_size
+        )
         xavier_uniform(self.conv.weight)
 
         # linear output
