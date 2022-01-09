@@ -69,9 +69,7 @@ class GloveTokenizer(Tokenizer):
         text_field = Field(batch_first=True, fix_length=fix_length, tokenize=tokenize)
         tab_dats = [
             TabularDataset(
-                i,
-                format=file_format,
-                fields={k: (k, text_field) for k in fields},
+                i, format=file_format, fields={k: (k, text_field) for k in fields},
             )
             for i in tokenizer_file_paths
         ]

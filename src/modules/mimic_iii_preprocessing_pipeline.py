@@ -2,8 +2,11 @@ import os
 
 import pandas as pd
 
-from src.modules.preprocessors import (ReformatICDCode,
-                                       RemoveNumericOnlyTokens, ToLowerCase)
+from src.modules.preprocessors import (
+    ReformatICDCode,
+    RemoveNumericOnlyTokens,
+    ToLowerCase,
+)
 from src.utils.file_loaders import load_csv_as_df
 
 

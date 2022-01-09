@@ -70,13 +70,7 @@ class Logger:
                 self.writer.add_scalars(combine_name, scalar_dict, global_step)
 
     def save_batch_images(
-        self,
-        image_name,
-        image_batch,
-        epoch,
-        batch_size,
-        batch=None,
-        dataformats="CHW",
+        self, image_name, image_batch, epoch, batch_size, batch=None, dataformats="CHW",
     ):
         self.writer.add_images(
             image_name,
@@ -87,10 +81,7 @@ class Logger:
 
     def save_prcurve(self, labels, preds, epoch, batch_size, batch=None):
         self.writer.add_pr_curve(
-            "pr_curve",
-            labels,
-            preds,
-            Logger._global_step(epoch, batch_size, batch),
+            "pr_curve", labels, preds, Logger._global_step(epoch, batch_size, batch),
         )
 
     def save_hyperparams(

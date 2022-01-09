@@ -73,8 +73,7 @@ class BaseTrainer:
             )
         else:
             train_loader = DataLoader(
-                dataset=train_dataset,
-                **self.train_config.loader_params.as_dict(),
+                dataset=train_dataset, **self.train_config.loader_params.as_dict(),
             )
         # train_logger = Logger(**self.train_config.log.logger_params.as_dict())
 
@@ -367,14 +366,8 @@ class BaseTrainer:
                     train_logger.save_hyperparams(
                         best_hparam_list,
                         best_hparam_name_list,
-                        [
-                            int(self.log_label),
-                        ]
-                        + best_metrics_list
-                        + final_metrics_list,
-                        [
-                            "hparams/log_label",
-                        ]
+                        [int(self.log_label),] + best_metrics_list + final_metrics_list,
+                        ["hparams/log_label",]
                         + best_metrics_name_list
                         + final_metrics_name_list,
                     )
@@ -389,9 +382,7 @@ class BaseTrainer:
 
         metric_list = [
             metric(
-                all_labels.cpu(),
-                all_outputs.detach().cpu(),
-                **self.metrics[metric],
+                all_labels.cpu(), all_outputs.detach().cpu(), **self.metrics[metric],
             )
             for metric in self.metrics
         ]
@@ -399,18 +390,7 @@ class BaseTrainer:
             metric["type"] for metric in self._config.main_config.metrics
         ]
 
-        return dict(
-            zip(
-                [
-                    loss_name,
-                ]
-                + metric_name_list,
-                [
-                    avg_loss,
-                ]
-                + metric_list,
-            )
-        )
+        return dict(zip([loss_name,] + metric_name_list, [avg_loss,] + metric_list,))
 
     def check_best(self, val_scores, save_on_score, best_score, global_step):
         save_flag = 0
@@ -473,18 +453,7 @@ class BaseTrainer:
         append_text,
     ):
 
-        return_dic = dict(
-            zip(
-                [
-                    loss_name,
-                ]
-                + metric_name_list,
-                [
-                    loss,
-                ]
-                + metric_list,
-            )
-        )
+        return_dic = dict(zip([loss_name,] + metric_name_list, [loss,] + metric_list,))
 
         loss_name = f"{append_text}_{self.log_label}_{loss_name}"
         if log_values["loss"]:
@@ -601,16 +570,7 @@ class BaseTrainer:
                 metric["type"] for metric in self._config.main_config.metrics
             ]
             return_dic = dict(
-                zip(
-                    [
-                        val_loss_name,
-                    ]
-                    + metric_name_list,
-                    [
-                        val_loss,
-                    ]
-                    + metric_list,
-                )
+                zip([val_loss_name,] + metric_name_list, [val_loss,] + metric_list,)
             )
             if log:
                 val_scores = self.log(

@@ -97,31 +97,15 @@ def generate_grid_search_configs(main_config, grid_config, root="hyperparams"):
                 continue
 
             if "log_label" in root.keys():
-                log_label_path = copy.deepcopy(
-                    stack
-                    + [
-                        "log_label",
-                    ]
-                )
+                log_label_path = copy.deepcopy(stack + ["log_label",])
 
             if "log_label" in root.keys():
-                log_label_path = copy.deepcopy(
-                    stack
-                    + [
-                        "log_label",
-                    ]
-                )
+                log_label_path = copy.deepcopy(stack + ["log_label",])
             parent = root  # Otherwise it has children
 
         for key in parent.keys():  # For the children
             if (
-                ".".join(
-                    stack
-                    + [
-                        key,
-                    ]
-                )
-                not in visited
+                ".".join(stack + [key,]) not in visited
             ):  # Check if I have visited these children
                 flag = 1  # If not, we need to repeat the process for this key
                 stack.append(key)  # Append this key to the stack
