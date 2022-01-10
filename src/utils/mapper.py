@@ -25,7 +25,7 @@ class ConfigMapper:
         "embeddings": {},
         "params": {},
         "datasets": {},
-        "preprocessors": {},
+        "preprocessing_pipelines": {},
         "tokenizers": {},
     }
 

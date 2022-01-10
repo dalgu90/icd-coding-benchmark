@@ -130,3 +130,18 @@ dmypy.json
 
 # Results
 results/*
+
+# toml files
+*.toml
+
+# config files
+*.cfg
+
+# YAML files in the root directory
+*.yaml
+
+# Dataset CSV files
+datasets/mimic_iii/1.4/*.csv.gz
+
+# temporary files
+temp.py

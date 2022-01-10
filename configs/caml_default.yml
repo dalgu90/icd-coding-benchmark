@@ -1,18 +1,32 @@
 preprocessing:
   name: mimic_iii_preprocessing_pipeline
-  dirs:
-    mimic_dir: datasets/mimic_iii/1.4
-    diagnosis_code_csv_name: DIAGNOSES_ICD.csv.gz
-    procedure_code_csv_name: PROCEDURES_ICD.csv.gz
-    noteevents_csv_name: NOTEEVENTS.csv.gz
-  clinical_note_preprocessing:
-    to_lower:
-      perform: true
-    remove_punc_numeric_tokens:
-      perform: true
-  code_preprocessing:
-    code_type: both
-    add_period_in_correct_pos: true
+  params:
+    dirs:
+      mimic_dir: datasets/mimic_iii/1.4
+      diagnosis_code_csv_name: DIAGNOSES_ICD.csv.gz
+      procedure_code_csv_name: PROCEDURES_ICD.csv.gz
+      noteevents_csv_name: NOTEEVENTS.csv.gz
+    dataset_metadata:
+      column_names:
+        subject_id: SUBJECT_ID
+        hadm_id: HADM_ID
+        chartdate: CHARTDATE
+        charttime: CHARTTIME
+        storetime: STORETIME
+        category: CATEGORY
+        description: DESCRIPTION
+        cgid: CGID
+        iserror: ISERROR
+        text: TEXT
+        icd9_code: ICD9_CODE
+    clinical_note_preprocessing:
+      to_lower:
+        perform: true
+      remove_punc_numeric_tokens:
+        perform: true
+    code_preprocessing:
+      code_type: both
+      add_period_in_correct_pos: true
 
 dataset:
   name: base_dataset
