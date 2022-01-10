@@ -1,8 +1,8 @@
 from nltk.tokenize import RegexpTokenizer
 
-from src.modules.embeddings import *
-from src.modules.tokenizers import *
-from src.utils.mapper import ConfigMapper
+# from src.modules.embeddings import *
+# from src.modules.tokenizers import *
+# from src.utils.mapper import ConfigMapper
 
 # Clinical Note preprocessing
 
