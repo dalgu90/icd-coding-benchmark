@@ -22,7 +22,7 @@ class MimiciiiPreprocessingPipeline:
         self.code_config = config.code_preprocessing
 
         self.top_k_codes = TopKCodes(self.code_config.top_k_codes)
-        self.split = ConfigMapper.get_object(
+        self.split_data = ConfigMapper.get_object(
             "dataset_splitters", config.dataset_splitting_method.name
         )(config.dataset_splitting_method.params)
 
