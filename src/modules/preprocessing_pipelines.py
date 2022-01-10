@@ -7,6 +7,7 @@ from src.modules.preprocessors import (
     RemoveNumericOnlyTokens,
     ToLowerCase,
 )
+from src.utils.code_based_filtering import TopKCodes
 from src.utils.file_loaders import load_csv_as_df
 from src.utils.mapper import ConfigMapper
 
@@ -19,6 +20,11 @@ class MimiciiiPreprocessingPipeline:
         self.cols = config.dataset_metadata.column_names
         self.clinical_note_config = config.clinical_note_preprocessing
         self.code_config = config.code_preprocessing
+
+        self.top_k_codes = TopKCodes(self.code_config.top_k_codes)
+        self.split = ConfigMapper.get_object(
+            "dataset_splitters", config.dataset_splitting_method.name
+        )(config.dataset_splitting_method.params)
 
     def extract_df_based_on_code_type(self):
         code_type = self.code_config.code_type
@@ -151,6 +157,9 @@ class MimiciiiPreprocessingPipeline:
         code_df = self.filter_icd_codes_based_on_clinical_notes(
             code_df, noteevents_df
         )
-
         combined_df = self.combine_code_and_notes(code_df, noteevents_df)
-        return combined_df
+        combined_df = self.top_k_codes(self.cols.label, combined_df)
+        train_df, val_df, test_df = self.split_data(
+            combined_df, self.cols.hadm_id
+        )
+        return (train_df, val_df, test_df)

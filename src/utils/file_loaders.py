@@ -1,3 +1,5 @@
+import json
+
 import pandas as pd
 
 
@@ -9,3 +11,9 @@ def load_csv_as_df(file_path):
             file_path, compression="gzip", on_bad_lines="skip", low_memory=True
         )
     return df
+
+
+def load_json(file_path):
+    with open(file_path, "r") as f:
+        ret_dict = json.load(f)
+    return ret_dict

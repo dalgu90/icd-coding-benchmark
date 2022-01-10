@@ -19,12 +19,19 @@ preprocessing:
         iserror: ISERROR
         text: TEXT
         icd9_code: ICD9_CODE
+    dataset_splitting_method:
+      name: caml_official_split
+      params:
+        train_hadm_ids_path: datasets/mimic_iii/train_split.json
+        val_hadm_ids_path: datasets/mimic_iii/val_split.json
+        test_hadm_ids_path: datasets/mimic_iii/test_split.json
     clinical_note_preprocessing:
       to_lower:
         perform: true
       remove_punc_numeric_tokens:
         perform: true
     code_preprocessing:
+      top_k: 50
       code_type: both
       add_period_in_correct_pos: true
 
