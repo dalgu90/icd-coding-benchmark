@@ -1,7 +1,9 @@
 import os
 
 import pandas as pd
+from tqdm import tqdm
 
+from src.modules.dataset_splitters import *
 from src.modules.preprocessors import (
     ReformatICDCode,
     RemoveNumericOnlyTokens,
@@ -10,6 +12,8 @@ from src.modules.preprocessors import (
 from src.utils.code_based_filtering import TopKCodes
 from src.utils.file_loaders import load_csv_as_df
 from src.utils.mapper import ConfigMapper
+
+tqdm.pandas()
 
 
 @ConfigMapper.map("preprocessing_pipelines", "mimic_iii_preprocessing_pipeline")
@@ -21,7 +25,7 @@ class MimiciiiPreprocessingPipeline:
         self.clinical_note_config = config.clinical_note_preprocessing
         self.code_config = config.code_preprocessing
 
-        self.top_k_codes = TopKCodes(self.code_config.top_k_codes)
+        self.top_k_codes = TopKCodes(self.code_config.top_k)
         self.split_data = ConfigMapper.get_object(
             "dataset_splitters", config.dataset_splitting_method.name
         )(config.dataset_splitting_method.params)
@@ -79,7 +83,7 @@ class MimiciiiPreprocessingPipeline:
         return clinical_note
 
     def preprocess_clinical_notes(self):
-        print("Processing Clinical Notes")  # To-do: Add a progress bar
+        print("\nProcessing Clinical Notes...")
         notes_file_path = os.path.join(
             self.MIMIC_DIR, self.config.dirs.noteevents_csv_name
         )
@@ -90,9 +94,9 @@ class MimiciiiPreprocessingPipeline:
             noteevents_df[self.cols.category] == "Discharge summary"
         ]
         # Preprocess clinical notes
-        noteevents_df[self.cols.text] = noteevents_df[self.cols.text].map(
-            self.preprocess_clinical_note
-        )
+        noteevents_df[self.cols.text] = noteevents_df[
+            self.cols.text
+        ].progress_map(self.preprocess_clinical_note)
         # Delete unnecessary columns
         noteevents_df = noteevents_df[
             [
@@ -105,6 +109,7 @@ class MimiciiiPreprocessingPipeline:
         return noteevents_df
 
     def combine_code_and_notes(self, code_df, noteevents_df):
+        print("\nForming Text-Label Dataframe...")
         # Sort by SUBJECT_ID and HADM_ID
         noteevents_df = noteevents_df.sort_values(
             [self.cols.subject_id, self.cols.hadm_id]
@@ -112,7 +117,16 @@ class MimiciiiPreprocessingPipeline:
         code_df = code_df.sort_values([self.cols.subject_id, self.cols.hadm_id])
 
         subj_id_hadm_id_list = list(
-            zip(code_df[self.cols.subject_id], code_df[self.cols.hadm_id])
+            set(
+                zip(code_df[self.cols.subject_id], code_df[self.cols.hadm_id])
+            ).intersection(
+                set(
+                    zip(
+                        noteevents_df[self.cols.subject_id],
+                        code_df[self.cols.hadm_id],
+                    )
+                )
+            )
         )
         final_df = pd.DataFrame(
             columns=[
@@ -122,7 +136,7 @@ class MimiciiiPreprocessingPipeline:
                 "label",
             ]
         )
-        for subj_id, hadm_id in subj_id_hadm_id_list:
+        for subj_id, hadm_id in tqdm(subj_id_hadm_id_list):
             code_df_rows = code_df[
                 (code_df[self.cols.subject_id] == subj_id)
                 & (code_df[self.cols.hadm_id] == hadm_id)
@@ -158,7 +172,7 @@ class MimiciiiPreprocessingPipeline:
             code_df, noteevents_df
         )
         combined_df = self.combine_code_and_notes(code_df, noteevents_df)
-        combined_df = self.top_k_codes(self.cols.label, combined_df)
+        combined_df = self.top_k_codes("label", combined_df)
         train_df, val_df, test_df = self.split_data(
             combined_df, self.cols.hadm_id
         )

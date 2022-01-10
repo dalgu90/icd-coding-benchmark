@@ -7,6 +7,7 @@ class TopKCodes:
         self.top_k_codes = []
 
     def __call__(self, label_col_name, code_df):
+        print(f"\nFiltering Dataset Samples Based on Top-{self.k} Codes...")
         counts = self.find_top_k_codes(label_col_name, code_df)
         self.top_k_codes = [code for code, _ in counts]
         indices_to_delete = []
