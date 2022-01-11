@@ -10,7 +10,7 @@ from src.modules.preprocessors import (
     ToLowerCase,
 )
 from src.utils.code_based_filtering import TopKCodes
-from src.utils.file_loaders import load_csv_as_df
+from src.utils.file_loaders import load_csv_as_df, save_df
 from src.utils.mapper import ConfigMapper
 
 tqdm.pandas()
@@ -20,12 +20,25 @@ tqdm.pandas()
 class MimiciiiPreprocessingPipeline:
     def __init__(self, config):
         self.config = config
-        self.MIMIC_DIR = config.dirs.mimic_dir
+        self.MIMIC_DIR = config.paths.mimic_dir
         self.cols = config.dataset_metadata.column_names
         self.clinical_note_config = config.clinical_note_preprocessing
         self.code_config = config.code_preprocessing
 
-        self.top_k_codes = TopKCodes(self.code_config.top_k)
+        self.train_csv_name = os.path.join(
+            self.MIMIC_DIR, config.paths.train_csv_name
+        )
+        self.val_csv_name = os.path.join(
+            self.MIMIC_DIR, config.paths.val_csv_name
+        )
+        self.test_csv_name = os.path.join(
+            self.MIMIC_DIR, config.paths.test_csv_name
+        )
+
+        self.top_k_codes = TopKCodes(
+            self.code_config.top_k,
+            os.path.join(self.MIMIC_DIR, config.paths.labels_json_name),
+        )
         self.split_data = ConfigMapper.get_object(
             "dataset_splitters", config.dataset_splitting_method.name
         )(config.dataset_splitting_method.params)
@@ -35,10 +48,10 @@ class MimiciiiPreprocessingPipeline:
         add_period_in_correct_pos = self.code_config.add_period_in_correct_pos
 
         diagnosis_code_csv_path = os.path.join(
-            self.MIMIC_DIR, self.config.dirs.diagnosis_code_csv_name
+            self.MIMIC_DIR, self.config.paths.diagnosis_code_csv_name
         )
         procedure_code_csv_path = os.path.join(
-            self.MIMIC_DIR, self.config.dirs.procedure_code_csv_name
+            self.MIMIC_DIR, self.config.paths.procedure_code_csv_name
         )
         assert code_type in [
             "diagnosis",
@@ -85,7 +98,7 @@ class MimiciiiPreprocessingPipeline:
     def preprocess_clinical_notes(self):
         print("\nProcessing Clinical Notes...")
         notes_file_path = os.path.join(
-            self.MIMIC_DIR, self.config.dirs.noteevents_csv_name
+            self.MIMIC_DIR, self.config.paths.noteevents_csv_name
         )
 
         noteevents_df = load_csv_as_df(notes_file_path)
@@ -176,4 +189,6 @@ class MimiciiiPreprocessingPipeline:
         train_df, val_df, test_df = self.split_data(
             combined_df, self.cols.hadm_id
         )
-        return (train_df, val_df, test_df)
+        save_df(train_df, self.train_csv_name)
+        save_df(val_df, self.val_csv_name)
+        save_df(test_df, self.test_csv_name)

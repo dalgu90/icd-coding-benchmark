@@ -1,11 +1,15 @@
 preprocessing:
   name: mimic_iii_preprocessing_pipeline
   params:
-    dirs:
+    paths:
       mimic_dir: datasets/mimic_iii/1.4
       diagnosis_code_csv_name: DIAGNOSES_ICD.csv.gz
       procedure_code_csv_name: PROCEDURES_ICD.csv.gz
       noteevents_csv_name: NOTEEVENTS.csv.gz
+      train_csv_name: train.csv         # will be saved
+      val_csv_name: val.csv             # will be saved
+      test_csv_name: test.csv           # will be saved
+      labels_json_name: labels.json     # will be computed and saved
     dataset_metadata:
       column_names:
         subject_id: SUBJECT_ID
@@ -31,7 +35,7 @@ preprocessing:
       remove_punc_numeric_tokens:
         perform: true
     code_preprocessing:
-      top_k: 50
+      top_k: 50                       # enter 0 for all codes
       code_type: both
       add_period_in_correct_pos: true
 
@@ -41,17 +45,17 @@ dataset:
     column_names:
       clinical_note: "TEXT"
       label: "LABEL"
-    label_file: datasets/mimic3_50/label.csv
+    label_file: datasets/mimic_iii/1.4/labels.json
   params:
     train:
       <<: *data_common
-      data_file: datasets/mimic3_50/train.csv
+      data_file: datasets/mimic_iii/1.4/train.csv
     val:
       <<: *data_common
-      data_file: datasets/mimic3_50/val.csv
+      data_file: datasets/mimic_iii/1.4/val.csv
     test:
       <<: *data_common
-      data_file: datasets/mimic3_50/test.csv
+      data_file: datasets/mimic_iii/1.4/test.csv
 
 model:
   name: CAML
