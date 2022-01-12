@@ -1,7 +1,7 @@
 import os
 
 import pandas as pd
-from tqdm import tqdm
+from tqdm.auto import tqdm
 
 from src.modules.dataset_splitters import *
 from src.modules.preprocessors import (
@@ -136,7 +136,7 @@ class MimiciiiPreprocessingPipeline:
                 set(
                     zip(
                         noteevents_df[self.cols.subject_id],
-                        code_df[self.cols.hadm_id],
+                        noteevents_df[self.cols.hadm_id],
                     )
                 )
             )
@@ -180,7 +180,13 @@ class MimiciiiPreprocessingPipeline:
 
     def preprocess(self):
         code_df = self.extract_df_based_on_code_type()
+        if code_df[self.cols.hadm_id].dtype == float:
+            code_df[self.cols.hadm_id] = code_df[self.cols.hadm_id].astype(int)
         noteevents_df = self.preprocess_clinical_notes()
+        if noteevents_df[self.cols.hadm_id].dtype == float:
+            noteevents_df[self.cols.hadm_id] = noteevents_df[
+                self.cols.hadm_id
+            ].astype(int)
         code_df = self.filter_icd_codes_based_on_clinical_notes(
             code_df, noteevents_df
         )
