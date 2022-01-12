@@ -25,4 +25,4 @@ def load_json(file_path):
 
 def save_json(d, file_path):
     with open(file_path, "w") as f:
-        json.dump(d, f)
+        json.dump(d, f, indent=4)
