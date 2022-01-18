@@ -70,7 +70,7 @@ model:
     lmbda: 0.0  # Positive for DR-CAML
 
 trainer:
-  name: base
+  name: base_trainer
   params:
     data_loader:
       batch_size: 16

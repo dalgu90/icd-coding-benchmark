@@ -17,7 +17,7 @@ from src.utils.mapper import ConfigMapper
 from src.utils.misc import *
 
 
-@ConfigMapper.map("trainers", "base")
+@ConfigMapper.map("trainers", "base_trainer")
 class BaseTrainer:
     def __init__(self, config):
         self._config = config
