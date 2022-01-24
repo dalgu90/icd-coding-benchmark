@@ -20,9 +20,12 @@ class TopKCodes:
             return code_df
         indices_to_delete = []
         for idx, row in code_df.iterrows():
-            if set(row[label_col_name].split(",")).issubset(
+            filtered_indices = set(row[label_col_name].split(";")).intersection(
                 set(self.top_k_codes)
-            ):
+            )
+            if len(filtered_indices) > 0:
+                row[label_col_name] = ";".join(filtered_indices)
+            else:
                 indices_to_delete.append(idx)
         code_df.drop(indices_to_delete, inplace=True)
         return code_df

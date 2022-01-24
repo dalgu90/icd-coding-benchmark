@@ -125,14 +125,10 @@ class MimiciiiPreprocessingPipeline:
         print("\nForming Text-Label Dataframe...")
         # Sort by SUBJECT_ID and HADM_ID
         noteevents_df = noteevents_df.sort_values(
-            [self.cols.subject_id, self.cols.hadm_id]
+            [self.cols.subject_id, self.cols.hadm_id], ignore_index=True
         )
-        code_df = code_df.sort_values([self.cols.subject_id, self.cols.hadm_id])
-
-        hadm_id_list = list(
-            set(code_df[self.cols.hadm_id]).intersection(
-                set(noteevents_df[self.cols.hadm_id])
-            )
+        code_df = code_df.sort_values(
+            [self.cols.subject_id, self.cols.hadm_id], ignore_index=True
         )
 
         final_df = pd.DataFrame(
