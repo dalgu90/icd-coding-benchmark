@@ -11,9 +11,12 @@ from src.modules.preprocessors import (
 )
 from src.utils.code_based_filtering import TopKCodes
 from src.utils.file_loaders import load_csv_as_df, save_df
+from src.utils.import_related_ops import pandas_related_ops
 from src.utils.mapper import ConfigMapper
 
 tqdm.pandas()
+
+pandas_related_ops()
 
 
 @ConfigMapper.map("preprocessing_pipelines", "mimic_iii_preprocessing_pipeline")
@@ -43,6 +46,17 @@ class MimiciiiPreprocessingPipeline:
             "dataset_splitters", config.dataset_splitting_method.name
         )(config.dataset_splitting_method.params)
 
+        self.code_csv_dtypes = {
+            self.cols.subject_id: "string",
+            self.cols.hadm_id: "string",
+            self.cols.icd9_code: "string",
+        }
+        self.noteevents_csv_dtypes = {
+            self.cols.subject_id: "string",
+            self.cols.hadm_id: "string",
+            self.cols.text: "string",
+        }
+
     def extract_df_based_on_code_type(self):
         code_type = self.code_config.code_type
         add_period_in_correct_pos = self.code_config.add_period_in_correct_pos
@@ -59,8 +73,12 @@ class MimiciiiPreprocessingPipeline:
             "both",
         ], 'code_type should be one of ["diagnosis", "procedure", "both"]'
 
-        diagnosis_code_df = load_csv_as_df(diagnosis_code_csv_path)
-        procedure_code_df = load_csv_as_df(procedure_code_csv_path)
+        diagnosis_code_df = load_csv_as_df(
+            diagnosis_code_csv_path, dtype=self.code_csv_dtypes
+        )
+        procedure_code_df = load_csv_as_df(
+            procedure_code_csv_path, dtype=self.code_csv_dtypes
+        )
 
         if add_period_in_correct_pos:
             reformat_icd_code = ReformatICDCode()
@@ -101,7 +119,9 @@ class MimiciiiPreprocessingPipeline:
             self.MIMIC_DIR, self.config.paths.noteevents_csv_name
         )
 
-        noteevents_df = load_csv_as_df(notes_file_path)
+        noteevents_df = load_csv_as_df(
+            notes_file_path, dtype=self.noteevents_csv_dtypes
+        )
         # To-do: Add other categories later, based on args provided by the user
         noteevents_df = noteevents_df[
             noteevents_df[self.cols.category] == "Discharge summary"
@@ -207,13 +227,7 @@ class MimiciiiPreprocessingPipeline:
 
     def preprocess(self):
         code_df = self.extract_df_based_on_code_type()
-        if code_df[self.cols.hadm_id].dtype == float:
-            code_df[self.cols.hadm_id] = code_df[self.cols.hadm_id].astype(int)
         noteevents_df = self.preprocess_clinical_notes()
-        if noteevents_df[self.cols.hadm_id].dtype == float:
-            noteevents_df[self.cols.hadm_id] = noteevents_df[
-                self.cols.hadm_id
-            ].astype(int)
         code_df = self.filter_icd_codes_based_on_clinical_notes(
             code_df, noteevents_df
         )

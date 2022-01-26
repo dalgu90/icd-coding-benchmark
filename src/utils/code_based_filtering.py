@@ -1,6 +1,11 @@
 from collections import Counter
 
+import pandas as pd
+
 from src.utils.file_loaders import save_json
+from src.utils.import_related_ops import pandas_related_ops
+
+pandas_related_ops()
 
 
 class TopKCodes:
