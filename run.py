@@ -1,19 +1,27 @@
 # Imports
 import argparse
 import os
+
+import pandas
 import pudb
 
 from src.datasets import *
 from src.models import *
 from src.trainers import *
 from src.utils.configuration import Config
+from src.utils.import_related_ops import pandas_related_ops
 from src.utils.logger import Logger
 from src.utils.mapper import ConfigMapper
 from src.utils.misc import seed
 
+pandas_related_ops()
+
+
 # Command line arguments
 parser = argparse.ArgumentParser(description="Train or test the model")
-parser.add_argument("--config_path", type=str, action="store", help="Path to the config file")
+parser.add_argument(
+    "--config_path", type=str, action="store", help="Path to the config file"
+)
 parser.add_argument(
     "--test",
     action="store_true",

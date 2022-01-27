@@ -11,12 +11,9 @@ from src.modules.preprocessors import (
 )
 from src.utils.code_based_filtering import TopKCodes
 from src.utils.file_loaders import load_csv_as_df, save_df
-from src.utils.import_related_ops import pandas_related_ops
 from src.utils.mapper import ConfigMapper
 
 tqdm.pandas()
-
-pandas_related_ops()
 
 
 @ConfigMapper.map("preprocessing_pipelines", "mimic_iii_preprocessing_pipeline")

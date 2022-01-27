@@ -2,10 +2,6 @@ import json
 
 import pandas as pd
 
-from src.utils.import_related_ops import pandas_related_ops
-
-pandas_related_ops()
-
 
 def load_csv_as_df(file_path, dtype=None):
     if file_path.endswith(".csv"):
