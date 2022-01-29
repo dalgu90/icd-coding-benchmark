@@ -45,6 +45,7 @@ class MimiciiiPreprocessingPipeline:
 
         self.code_csv_dtypes = {
             self.cols.hadm_id: "string",
+            self.cols.icd9_code: "string",
         }
         self.noteevents_csv_dtypes = {
             self.cols.hadm_id: "string",
