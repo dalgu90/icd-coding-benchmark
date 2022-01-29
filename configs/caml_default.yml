@@ -23,6 +23,7 @@ preprocessing:
         iserror: ISERROR
         text: TEXT
         icd9_code: ICD9_CODE
+        labels: LABELS
     dataset_splitting_method:
       name: caml_official_split
       params:

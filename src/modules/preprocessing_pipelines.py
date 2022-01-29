@@ -44,11 +44,9 @@ class MimiciiiPreprocessingPipeline:
         )(config.dataset_splitting_method.params)
 
         self.code_csv_dtypes = {
-            self.cols.subject_id: "string",
             self.cols.hadm_id: "string",
         }
         self.noteevents_csv_dtypes = {
-            self.cols.subject_id: "string",
             self.cols.hadm_id: "string",
             self.cols.text: "string",
         }
@@ -99,7 +97,6 @@ class MimiciiiPreprocessingPipeline:
         # Delete unnecessary columns.
         code_df = code_df[
             [
-                self.cols.subject_id,
                 self.cols.hadm_id,
                 self.cols.icd9_code,
             ]
@@ -142,7 +139,6 @@ class MimiciiiPreprocessingPipeline:
         # Delete unnecessary columns
         noteevents_df = noteevents_df[
             [
-                self.cols.subject_id,
                 self.cols.hadm_id,
                 self.cols.text,
             ]
@@ -151,87 +147,27 @@ class MimiciiiPreprocessingPipeline:
 
     def combine_code_and_notes(self, code_df, noteevents_df):
         print("\nForming Text-Label Dataframe...")
-        # Sort by SUBJECT_ID and HADM_ID
-        noteevents_df = noteevents_df.sort_values(
-            [self.cols.subject_id, self.cols.hadm_id], ignore_index=True
+
+        noteevents_grouped = noteevents_df.groupby(self.cols.hadm_id)[
+            self.cols.text
+        ].apply(lambda texts: " ".join(texts))
+        noteevents_df = pd.DataFrame(noteevents_grouped)
+        noteevents_df.reset_index(inplace=True)
+
+        codes_grouped = code_df.groupby(self.cols.hadm_id)[
+            self.cols.icd9_code
+        ].apply(lambda codes: ";".join(map(str, codes)))
+        code_df = pd.DataFrame(codes_grouped)
+        code_df.reset_index(inplace=True)
+
+        combined_df = pd.merge(noteevents_df, code_df, on=self.cols.hadm_id)
+        combined_df.sort_values([self.cols.hadm_id], inplace=True)
+        combined_df.reset_index(inplace=True)
+        combined_df.rename(
+            columns={self.cols.icd9_code: self.cols.labels}, inplace=True
         )
-        code_df = code_df.sort_values(
-            [self.cols.subject_id, self.cols.hadm_id], ignore_index=True
-        )
 
-        final_df = pd.DataFrame(
-            columns=[
-                self.cols.subject_id,
-                self.cols.hadm_id,
-                self.cols.text,
-                "label",
-            ]
-        )
-
-        code_df_iter = code_df.iterrows()
-        code_df_idx, code_df_sample = next(code_df_iter)
-        code_df_size = len(code_df)
-        code_df_flag = True
-
-        noteevents_df_iter = noteevents_df.iterrows()
-        noteevents_df_idx, noteevents_df_sample = next(noteevents_df_iter)
-        noteevents_df_size = len(noteevents_df)
-        noteevents_df_flag = True
-
-        curr_subj_id = code_df_sample[self.cols.subject_id]
-        curr_hadm_id = code_df_sample[self.cols.hadm_id]
-
-        while True:
-            codes = []
-            notes = []
-            while True:
-                # If the current row has its hadm_id = curr_hadm_id, then append
-                # to list. Otherwise, break.
-                if code_df_sample[self.cols.hadm_id] != curr_hadm_id:
-                    break
-                else:
-                    codes.append(code_df_sample[self.cols.icd9_code])
-
-                # Iterate to the next row.
-                if code_df_idx < code_df_size - 1:
-                    code_df_idx, code_df_sample = next(code_df_iter)
-                else:
-                    code_df_flag = False
-                    break
-
-            while True:
-                # If the current row has its hadm_id = curr_hadm_id, then append
-                # to list. Otherwise, break.
-                if noteevents_df_sample[self.cols.hadm_id] != curr_hadm_id:
-                    break
-                else:
-                    notes.append(noteevents_df_sample[self.cols.text])
-
-                # Iterate to the next row.
-                if noteevents_df_idx < noteevents_df_size - 1:
-                    noteevents_df_idx, noteevents_df_sample = next(
-                        noteevents_df_iter
-                    )
-                else:
-                    noteevents_df_flag = False
-                    break
-
-            if len(codes) > 0 and len(notes) > 0:
-                final_df = final_df.append(
-                    {
-                        self.cols.subject_id: curr_subj_id,
-                        self.cols.hadm_id: curr_hadm_id,
-                        self.cols.text: " ".join(notes).strip(),
-                        "label": ";".join(codes),
-                    },
-                    ignore_index=True,
-                )
-            curr_hadm_id = code_df_sample[self.cols.hadm_id]
-            curr_subj_id = code_df_sample[self.cols.subject_id]
-            if not (code_df_flag and noteevents_df_flag):
-                break
-
-        return final_df
+        return combined_df
 
     def preprocess(self):
         code_df = self.extract_df_based_on_code_type()
@@ -240,7 +176,7 @@ class MimiciiiPreprocessingPipeline:
             code_df, noteevents_df
         )
         combined_df = self.combine_code_and_notes(code_df, noteevents_df)
-        combined_df = self.top_k_codes("label", combined_df)
+        combined_df = self.top_k_codes(self.cols.labels, combined_df)
         train_df, val_df, test_df = self.split_data(
             combined_df, self.cols.hadm_id
         )
