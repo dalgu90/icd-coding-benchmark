@@ -153,17 +153,18 @@ class MimiciiiPreprocessingPipeline:
             self.cols.text
         ].apply(lambda texts: " ".join(texts))
         noteevents_df = pd.DataFrame(noteevents_grouped)
-        noteevents_df.reset_index(inplace=True, drop=True)
+        noteevents_df.reset_index(inplace=True)
 
         codes_grouped = code_df.groupby(self.cols.hadm_id)[
             self.cols.icd9_code
         ].apply(lambda codes: ";".join(map(str, codes)))
         code_df = pd.DataFrame(codes_grouped)
-        code_df.reset_index(inplace=True, drop=True)
+        code_df.reset_index(inplace=True)
 
         combined_df = pd.merge(noteevents_df, code_df, on=self.cols.hadm_id)
-        combined_df.sort_values([self.cols.hadm_id], inplace=True)
-        combined_df.reset_index(inplace=True, drop=True)
+        combined_df.sort_values(
+            [self.cols.hadm_id], inplace=True, ignore_index=True
+        )
         combined_df.rename(
             columns={self.cols.icd9_code: self.cols.labels}, inplace=True
         )
