@@ -157,7 +157,7 @@ class MimiciiiPreprocessingPipeline:
 
         codes_grouped = code_df.groupby(self.cols.hadm_id)[
             self.cols.icd9_code
-        ].apply(lambda codes: ";".join(map(str, codes)))
+        ].apply(lambda codes: ";".join(map(str, list(dict.fromkeys(codes)))))
         code_df = pd.DataFrame(codes_grouped)
         code_df.reset_index(inplace=True)
 

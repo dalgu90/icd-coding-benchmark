@@ -44,6 +44,7 @@ dataset:
   name: base_dataset
   data_common: &data_common
     column_names:
+      hadm_id: "HADM_ID"
       clinical_note: "TEXT"
       label: "LABEL"
     label_file: datasets/mimic_iii/1.4/labels.json

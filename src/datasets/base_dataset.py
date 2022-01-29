@@ -18,6 +18,7 @@ class BaseDataset(Dataset):
         self.df = load_csv_as_df(
             data_path,
             dtype={
+                self._config.column_names.hadm_id: "string",
                 self._config.column_names.clinical_note: "string",
                 self._config.column_names.label: "string",
             },
