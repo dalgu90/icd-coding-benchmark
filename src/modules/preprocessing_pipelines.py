@@ -46,7 +46,6 @@ class MimiciiiPreprocessingPipeline:
         self.code_csv_dtypes = {
             self.cols.subject_id: "string",
             self.cols.hadm_id: "string",
-            self.cols.icd9_code: "string",
         }
         self.noteevents_csv_dtypes = {
             self.cols.subject_id: "string",
@@ -79,11 +78,17 @@ class MimiciiiPreprocessingPipeline:
 
         if add_period_in_correct_pos:
             reformat_icd_code = ReformatICDCode()
-            diagnosis_code_df[self.cols.icd9_code] = diagnosis_code_df.apply(
-                lambda row: str(reformat_icd_code(str(row[4]), True)), axis=1
+            diagnosis_code_df[self.cols.icd9_code] = diagnosis_code_df[
+                self.cols.icd9_code
+            ].apply(
+                lambda x: str(reformat_icd_code(str(x).lstrip("0"), True)),
+                axis=1,
             )
-            procedure_code_df[self.cols.icd9_code] = procedure_code_df.apply(
-                lambda row: str(reformat_icd_code(str(row[4]), False)), axis=1
+            procedure_code_df[self.cols.icd9_code] = procedure_code_df[
+                self.cols.icd9_code
+            ].apply(
+                lambda x: str(reformat_icd_code(str(x).lstrip("0"), False)),
+                axis=1,
             )
 
         if code_type == "diagnosis":
@@ -92,6 +97,15 @@ class MimiciiiPreprocessingPipeline:
             code_df = procedure_code_df
         else:
             code_df = pd.concat([diagnosis_code_df, procedure_code_df])
+
+        # Delete unnecessary columns.
+        code_df = code_df[
+            [
+                self.cols.subject_id,
+                self.cols.hadm_id,
+                self.cols.icd9_code,
+            ]
+        ]
         return code_df
 
     def filter_icd_codes_based_on_clinical_notes(self, code_df, noteevents_df):
@@ -132,7 +146,6 @@ class MimiciiiPreprocessingPipeline:
             [
                 self.cols.subject_id,
                 self.cols.hadm_id,
-                self.cols.charttime,
                 self.cols.text,
             ]
         ]
