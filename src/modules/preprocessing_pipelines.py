@@ -81,14 +81,12 @@ class MimiciiiPreprocessingPipeline:
             diagnosis_code_df[self.cols.icd9_code] = diagnosis_code_df[
                 self.cols.icd9_code
             ].apply(
-                lambda x: str(reformat_icd_code(str(x).lstrip("0"), True)),
-                axis=1,
+                lambda x: str(reformat_icd_code(str(x), True)),
             )
             procedure_code_df[self.cols.icd9_code] = procedure_code_df[
                 self.cols.icd9_code
             ].apply(
-                lambda x: str(reformat_icd_code(str(x).lstrip("0"), False)),
-                axis=1,
+                lambda x: str(reformat_icd_code(str(x), False)),
             )
 
         if code_type == "diagnosis":

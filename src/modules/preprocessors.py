@@ -47,5 +47,6 @@ class ReformatICDCode:
                 if len(code) > 3:
                     code = code[:3] + "." + code[3:]
         else:
-            code = code[:2] + "." + code[2:]
+            if len(code) > 2:
+                code = code[:2] + "." + code[2:]
         return code
