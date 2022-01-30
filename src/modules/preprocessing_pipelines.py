@@ -4,11 +4,7 @@ import pandas as pd
 from tqdm.auto import tqdm
 
 from src.modules.dataset_splitters import *
-from src.modules.preprocessors import (
-    ReformatICDCode,
-    RemoveNumericOnlyTokens,
-    ToLowerCase,
-)
+from src.modules.preprocessors import ClinicalNotePreprocessor, CodeProcessor
 from src.utils.code_based_filtering import TopKCodes
 from src.utils.file_loaders import load_csv_as_df, save_df
 from src.utils.mapper import ConfigMapper
@@ -35,6 +31,11 @@ class MimiciiiPreprocessingPipeline:
             self.MIMIC_DIR, config.paths.test_csv_name
         )
 
+        self.clinical_note_preprocessor = ClinicalNotePreprocessor(
+            self.clinical_note_config
+        )
+        self.code_preprocessor = CodeProcessor(self.code_config)
+
         self.top_k_codes = TopKCodes(
             self.code_config.top_k,
             os.path.join(self.MIMIC_DIR, config.paths.labels_json_name),
@@ -54,7 +55,6 @@ class MimiciiiPreprocessingPipeline:
 
     def extract_df_based_on_code_type(self):
         code_type = self.code_config.code_type
-        add_period_in_correct_pos = self.code_config.add_period_in_correct_pos
 
         diagnosis_code_csv_path = os.path.join(
             self.MIMIC_DIR, self.config.paths.diagnosis_code_csv_name
@@ -75,18 +75,16 @@ class MimiciiiPreprocessingPipeline:
             procedure_code_csv_path, dtype=self.code_csv_dtypes
         )
 
-        if add_period_in_correct_pos:
-            reformat_icd_code = ReformatICDCode()
-            diagnosis_code_df[self.cols.icd9_code] = diagnosis_code_df[
-                self.cols.icd9_code
-            ].apply(
-                lambda x: str(reformat_icd_code(str(x), True)),
-            )
-            procedure_code_df[self.cols.icd9_code] = procedure_code_df[
-                self.cols.icd9_code
-            ].apply(
-                lambda x: str(reformat_icd_code(str(x), False)),
-            )
+        diagnosis_code_df[self.cols.icd9_code] = diagnosis_code_df[
+            self.cols.icd9_code
+        ].apply(
+            lambda x: str(self.code_preprocessor(str(x), True)),
+        )
+        procedure_code_df[self.cols.icd9_code] = procedure_code_df[
+            self.cols.icd9_code
+        ].apply(
+            lambda x: str(self.code_preprocessor(str(x), False)),
+        )
 
         if code_type == "diagnosis":
             code_df = diagnosis_code_df
@@ -110,14 +108,7 @@ class MimiciiiPreprocessingPipeline:
         return code_df
 
     def preprocess_clinical_note(self, clinical_note):
-        if self.clinical_note_config.to_lower.perform:
-            to_lower_case = ToLowerCase()
-            clinical_note = to_lower_case(clinical_note)
-
-        if self.clinical_note_config.remove_punc_numeric_tokens.perform:
-            remove_numeric_only_tokens = RemoveNumericOnlyTokens()
-            clinical_note = remove_numeric_only_tokens(clinical_note)
-
+        clinical_note = self.clinical_note_preprocessor(clinical_note)
         return clinical_note
 
     def preprocess_clinical_notes(self):

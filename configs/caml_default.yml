@@ -33,12 +33,24 @@ preprocessing:
     clinical_note_preprocessing:
       to_lower:
         perform: true
-      remove_punc_numeric_tokens:
+      remove_punctuation:
         perform: true
+      remove_numeric:
+        perform: true
+      remove_stopwords:
+        perform: true
+        params:
+          stopwords_file_path: null
+          remove_common_medical_terms: true
+      stem_or_lemmatize:
+        perform: true
+        params:
+          stemmer_name: nltk.WordNetLemmatizer
     code_preprocessing:
       top_k: 50                       # enter 0 for all codes
       code_type: both
-      add_period_in_correct_pos: true
+      add_period_in_correct_pos:
+        perform: true
 
 dataset:
   name: base_dataset

@@ -1,43 +1,127 @@
+import re
+
+from nltk.corpus import stopwords
+from nltk.stem import (
+    LancasterStemmer,
+    PorterStemmer,
+    RSLPStemmer,
+    SnowballStemmer,
+    WordNetLemmatizer,
+)
 from nltk.tokenize import RegexpTokenizer
 
-# from src.modules.embeddings import *
-# from src.modules.tokenizers import *
-# from src.utils.mapper import ConfigMapper
+from src.utils.file_loaders import load_json
 
 # Clinical Note preprocessing
+AVAILABLE_STEMMERS_LEMMATIZERS = {
+    "nltk.LancasterStemmer": LancasterStemmer,
+    "nltk.PorterStemmer": PorterStemmer,
+    "nltk.RSLPStemmer": RSLPStemmer,
+    "nltk.SnowballStemmer": SnowballStemmer,
+    "nltk.WordNetLemmatizer": WordNetLemmatizer,
+}
 
 
-class ToLowerCase:
-    def __init__(self):
-        pass
+class ClinicalNotePreprocessor:
+    def __init__(self, config):
+        self._config = config
 
-    def __call__(self, text):
+        self.punct_tokenizer = RegexpTokenizer(r"\w+")
+
+        if config.remove_stopwords.perform:
+            stopwords_file_path = (
+                config.remove_stopwords.params.stopwords_file_path
+            )
+            if stopwords_file_path:
+                self.stopword_list = set(load_json(stopwords_file_path))
+            else:
+                self.stopword_list = set(stopwords.words("english"))
+            if config.remove_stopwords.params.remove_common_medical_terms:
+                # add a few common terms used in medicine
+                self.stopword_list.update(
+                    {
+                        "admission",
+                        "birth",
+                        "date",
+                        "discharge",
+                        "service",
+                        "sex",
+                        "patient",
+                        "name",
+                        "history",
+                        "hospital",
+                        "last",
+                        "first",
+                        "course",
+                        "past",
+                        "day",
+                        "one",
+                        "family",
+                        "chief",
+                        "complaint",
+                    }
+                )
+
+        if config.stem_or_lemmatize.perform:
+            self.stemmer = AVAILABLE_STEMMERS_LEMMATIZERS[
+                config.stem_or_lemmatize.params.stemmer_name
+            ]()
+
+    def _call__(self, text):
+        # Remove extra spaces from text
+        text = re.sub(" +", " ", text).strip()
+        if self._config.to_lower.perform:
+            text = self.to_lower(text)
+
+        if self._config.remove_punctuation.perform:
+            tokens = self.remove_punctuation(text)
+        else:
+            tokens = text.split(" ")
+
+        if self._config.remove_numeric.perform:
+            tokens = self.remove_numeric(tokens)
+
+        if self._config.remove_stopwords.perform:
+            tokens = self.remove_stopwords(tokens)
+
+        if self._config.stem_or_lemmatize.perform:
+            tokens = self.stem_or_lemmatize(tokens)
+
+        return " ".join(tokens)
+
+    def to_lower_case(self, text):
         return text.lower()
 
+    def remove_punctuation(self, text):
+        tokens = self.punct_tokenizer.tokenize(text)
+        return tokens
 
-# Ref.: CAML
-# Remove punctuation and numeric-only tokens, removing 500 but keeping 250mg
-class RemoveNumericOnlyTokens:
-    def __init__(self):
-        self.tokenizer = RegexpTokenizer(r"\w+")
+    def remove_numeric(self, tokens):
+        return [t for t in tokens if not t.isnumeric()]
 
-    def __call__(self, text):
-        tokens = [t for t in self.tokenizer.tokenize(text) if not t.isnumeric()]
-        text = '"' + " ".join(tokens) + '"'
-        return text
+    def remove_stopwords(self, tokens):
+        return [t for t in tokens if t not in self.stopword_list]
+
+    def stem_or_lemmatize(self, tokens):
+        if (
+            self._config.stem_or_lemmatize.params.stemmer_name
+            == "nltk.WordNetLemmatizer"
+        ):
+            return [self.stemmer.lemmatize(t) for t in tokens]
+        else:
+            return [self.stemmer.stem(t) for t in tokens]
 
 
-# ICD-code preprocessing
+class CodeProcessor:
+    def __init__(self, config):
+        self._config = config
 
+    def _call__(self, icd_code, is_diagnosis_code):
+        if self._config.add_period_in_correct_pos.perform:
+            icd_code = self.reformat_icd_code(icd_code, is_diagnosis_code)
+        return icd_code
 
-# Put a period in the right place because the MIMIC-3 data files exclude them.
-# Generally, procedure codes have dots after the first two digits,
-# while diagnosis codes have dots after the first three digits.
-class ReformatICDCode:
-    def __init__(self):
-        pass
-
-    def __call__(self, icd_code, is_diagnosis_code):
+    def reformat_icd_code(self, icd_code, is_diagnosis_code):
         code = "".join(icd_code.split("."))
         if is_diagnosis_code:
             if code.startswith("E"):
