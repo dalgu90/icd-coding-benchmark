@@ -7,24 +7,21 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from torch.nn.init import xavier_uniform_ as xavier_uniform
-from modules.elmo.elmo import Elmo
+from elmo.elmo import Elmo
 import json
-from src.utils.multiResCNN_utils import load_embeddings, load_lookups, build_pretrain_embedding
+from utils import build_pretrain_embedding, load_embeddings
 from math import floor
-from src.utils.mapper import ConfigMapper
 
 class WordRep(nn.Module):
-    def __init__(self, args, Y, dataset_dir, version="mimic3",
-        lmbda=0):
+    def __init__(self, args, Y, dicts):
         super(WordRep, self).__init__()
 
         self.gpu = args.gpu
-        self.dicts = load_lookups(args)
 
         if args.embed_file:
             print("loading pretrained embeddings from {}".format(args.embed_file))
             if args.use_ext_emb:
-                pretrain_word_embedding, pretrain_emb_dim = build_pretrain_embedding(args.embed_file, self.dicts['w2ind'],
+                pretrain_word_embedding, pretrain_emb_dim = build_pretrain_embedding(args.embed_file, dicts['w2ind'],
                                                                                      True)
                 W = torch.from_numpy(pretrain_word_embedding)
             else:
@@ -34,7 +31,7 @@ class WordRep(nn.Module):
             self.embed.weight.data = W.clone()
         else:
             # add 2 to include UNK and PAD
-            self.embed = nn.Embedding(len(self.dicts['w2ind']) + 2, args.embed_size, padding_idx=0)
+            self.embed = nn.Embedding(len(dicts['w2ind']) + 2, args.embed_size, padding_idx=0)
         self.feature_size = self.embed.embedding_dim
 
         self.use_elmo = args.use_elmo
@@ -97,14 +94,10 @@ class OutputLayer(nn.Module):
 
 @ConfigMapper.map("models", "MultiCNN")
 class MultiCNN(nn.Module):
-    def __init__(self, args, Y, dataset_dir, 
-        version="mimic3",
-        lmbda=0):
+    def __init__(self, args, Y, dicts):
         super(MultiCNN, self).__init__()
 
-        self.dicts = load_lookups(args)
-        self.word_rep = WordRep(args, Y, self.dicts)
-        
+        self.word_rep = WordRep(args, Y, dicts)
 
         if args.filter_size.find(',') == -1:
             self.filter_num = 1
@@ -123,7 +116,7 @@ class MultiCNN(nn.Module):
                 xavier_uniform(tmp.weight)
                 self.conv.add_module('conv-{}'.format(filter_size), tmp)
 
-        self.output_layer = OutputLayer(args, Y, self.dicts, self.filter_num * args.num_filter_maps)
+        self.output_layer = OutputLayer(args, Y, dicts, self.filter_num * args.num_filter_maps)
 
 
 
@@ -183,20 +176,18 @@ class ResidualBlock(nn.Module):
 @ConfigMapper.map("models", "ResCNN")
 class ResCNN(nn.Module):
 
-    def __init__(self, args, Y, dataset_dir, 
-        version="mimic3",
-        lmbda=0,):
+    def __init__(self, args, Y, dicts):
         super(ResCNN, self).__init__()
 
-        self.dicts = load_lookups(args)
-        self.word_rep = WordRep(args, Y, self.dicts)        
+        self.word_rep = WordRep(args, Y, dicts)
+
         self.conv = nn.ModuleList()
         conv_dimension = self.word_rep.conv_dict[args.conv_layer]
         for idx in range(args.conv_layer):
             tmp = ResidualBlock(conv_dimension[idx], conv_dimension[idx + 1], int(args.filter_size), 1, True, args.dropout)
             self.conv.add_module('conv-{}'.format(idx), tmp)
 
-        self.output_layer = OutputLayer(args, Y, self.dicts, args.num_filter_maps)
+        self.output_layer = OutputLayer(args, Y, dicts, args.num_filter_maps)
 
 
     def forward(self, x, target, text_inputs):
@@ -221,13 +212,11 @@ class ResCNN(nn.Module):
 @ConfigMapper.map("models", "MultiResCNN")
 class MultiResCNN(nn.Module):
 
-    def __init__(self, args, Y, dataset_dir, 
-        version="mimic3",
-        lmbda=0):
+    def __init__(self, args, Y, dicts):
         super(MultiResCNN, self).__init__()
 
-        self.dicts = load_lookups(args)
-        self.word_rep = WordRep(args, Y, self.dicts)        
+        self.word_rep = WordRep(args, Y, dicts)
+
         self.conv = nn.ModuleList()
         filter_sizes = args.filter_size.split(',')
 
@@ -248,7 +237,7 @@ class MultiResCNN(nn.Module):
 
             self.conv.add_module('channel-{}'.format(filter_size), one_channel)
 
-        self.output_layer = OutputLayer(args, Y, self.dicts, self.filter_num * args.num_filter_maps)
+        self.output_layer = OutputLayer(args, Y, dicts, self.filter_num * args.num_filter_maps)
 
 
     def forward(self, x, target, text_inputs):
@@ -277,43 +266,43 @@ class MultiResCNN(nn.Module):
         for p in self.word_rep.embed.parameters():
             p.requires_grad = False
 
-# import os
-# from pytorch_pretrained_bert.modeling import BertLayerNorm
-# from pytorch_pretrained_bert import BertModel, BertConfig
-# class Bert_seq_cls(nn.Module):
+import os
+from pytorch_pretrained_bert.modeling import BertLayerNorm
+from pytorch_pretrained_bert import BertModel, BertConfig
+class Bert_seq_cls(nn.Module):
 
-#     def __init__(self, args, Y):
-#         super(Bert_seq_cls, self).__init__()
+    def __init__(self, args, Y):
+        super(Bert_seq_cls, self).__init__()
 
-#         print("loading pretrained bert from {}".format(args.bert_dir))
-#         config_file = os.path.join(args.bert_dir, 'bert_config.json')
-#         self.config = BertConfig.from_json_file(config_file)
-#         print("Model config {}".format(self.config))
-#         self.bert = BertModel.from_pretrained(args.bert_dir)
+        print("loading pretrained bert from {}".format(args.bert_dir))
+        config_file = os.path.join(args.bert_dir, 'bert_config.json')
+        self.config = BertConfig.from_json_file(config_file)
+        print("Model config {}".format(self.config))
+        self.bert = BertModel.from_pretrained(args.bert_dir)
 
-#         self.dim_reduction = nn.Linear(self.config.hidden_size, args.num_filter_maps)
-#         self.dropout = nn.Dropout(self.config.hidden_dropout_prob)
-#         self.classifier = nn.Linear(args.num_filter_maps, Y)
-#         self.apply(self.init_bert_weights)
+        self.dim_reduction = nn.Linear(self.config.hidden_size, args.num_filter_maps)
+        self.dropout = nn.Dropout(self.config.hidden_dropout_prob)
+        self.classifier = nn.Linear(args.num_filter_maps, Y)
+        self.apply(self.init_bert_weights)
 
-#     def forward(self, input_ids, token_type_ids, attention_mask, target):
-#         _, pooled_output = self.bert(input_ids, token_type_ids, attention_mask, output_all_encoded_layers=False)
-#         x = self.dim_reduction(pooled_output)
-#         x = self.dropout(x)
-#         y = self.classifier(x)
+    def forward(self, input_ids, token_type_ids, attention_mask, target):
+        _, pooled_output = self.bert(input_ids, token_type_ids, attention_mask, output_all_encoded_layers=False)
+        x = self.dim_reduction(pooled_output)
+        x = self.dropout(x)
+        y = self.classifier(x)
 
-#         loss = F.binary_cross_entropy_with_logits(y, target)
-#         return y, loss
+        loss = F.binary_cross_entropy_with_logits(y, target)
+        return y, loss
 
-#     def init_bert_weights(self, module):
+    def init_bert_weights(self, module):
 
-#         if isinstance(module, (nn.Linear, nn.Embedding)):
-#             module.weight.data.normal_(mean=0.0, std=self.config.initializer_range)
-#         elif isinstance(module, BertLayerNorm):
-#             module.bias.data.zero_()
-#             module.weight.data.fill_(1.0)
-#         if isinstance(module, nn.Linear) and module.bias is not None:
-#             module.bias.data.zero_()
+        if isinstance(module, (nn.Linear, nn.Embedding)):
+            module.weight.data.normal_(mean=0.0, std=self.config.initializer_range)
+        elif isinstance(module, BertLayerNorm):
+            module.bias.data.zero_()
+            module.weight.data.fill_(1.0)
+        if isinstance(module, nn.Linear) and module.bias is not None:
+            module.bias.data.zero_()
 
-#     def freeze_net(self):
-#         pass
+    def freeze_net(self):
+        pass
