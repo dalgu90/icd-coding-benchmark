@@ -11,6 +11,7 @@ preprocessing:
       val_csv_name: val.csv             # will be saved
       test_csv_name: test.csv           # will be saved
       labels_json_name: labels.json     # will be computed and saved
+      vocab_file_name: vocab.txt
     dataset_metadata:
       column_names:
         subject_id: SUBJECT_ID
@@ -52,6 +53,10 @@ preprocessing:
       code_type: both
       add_period_in_correct_pos:
         perform: true
+    vocab_builder:
+      name: word_frequency_vocab_builder
+      params:
+        word_min_freq: 3
 
 dataset:
   name: base_dataset
