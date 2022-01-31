@@ -17,18 +17,19 @@ class MimiciiiPreprocessingPipeline:
     def __init__(self, config):
         self.config = config
         self.MIMIC_DIR = config.paths.mimic_dir
+        self.SAVE_DIR = config.paths.save_dir
         self.cols = config.dataset_metadata.column_names
         self.clinical_note_config = config.clinical_note_preprocessing
         self.code_config = config.code_preprocessing
 
         self.train_csv_name = os.path.join(
-            self.MIMIC_DIR, config.paths.train_csv_name
+            self.SAVE_DIR, config.paths.train_csv_name
         )
         self.val_csv_name = os.path.join(
-            self.MIMIC_DIR, config.paths.val_csv_name
+            self.SAVE_DIR, config.paths.val_csv_name
         )
         self.test_csv_name = os.path.join(
-            self.MIMIC_DIR, config.paths.test_csv_name
+            self.SAVE_DIR, config.paths.test_csv_name
         )
 
         self.clinical_note_preprocessor = ClinicalNotePreprocessor(
@@ -38,7 +39,7 @@ class MimiciiiPreprocessingPipeline:
 
         self.top_k_codes = TopKCodes(
             self.code_config.top_k,
-            os.path.join(self.MIMIC_DIR, config.paths.labels_json_name),
+            os.path.join(self.SAVE_DIR, config.paths.labels_json_name),
         )
         self.split_data = ConfigMapper.get_object(
             "dataset_splitters", config.dataset_splitting_method.name

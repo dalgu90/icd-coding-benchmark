@@ -3,6 +3,7 @@ preprocessing:
   params:
     paths:
       mimic_dir: datasets/mimic_iii/1.4
+      save_dir: datasets/mimic_iii
       diagnosis_code_csv_name: DIAGNOSES_ICD.csv.gz
       procedure_code_csv_name: PROCEDURES_ICD.csv.gz
       noteevents_csv_name: NOTEEVENTS.csv.gz
@@ -59,17 +60,17 @@ dataset:
       hadm_id: "HADM_ID"
       clinical_note: "TEXT"
       label: "LABEL"
-    label_file: datasets/mimic_iii/1.4/labels.json
+    label_file: datasets/mimic_iii/labels.json
   params:
     train:
       <<: *data_common
-      data_file: datasets/mimic_iii/1.4/train.csv
+      data_file: datasets/mimic_iii/train.csv
     val:
       <<: *data_common
-      data_file: datasets/mimic_iii/1.4/val.csv
+      data_file: datasets/mimic_iii/val.csv
     test:
       <<: *data_common
-      data_file: datasets/mimic_iii/1.4/test.csv
+      data_file: datasets/mimic_iii/test.csv
 
 model:
   name: CAML

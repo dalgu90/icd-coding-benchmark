@@ -1,5 +1,6 @@
 import re
 
+import nltk
 from nltk.corpus import stopwords
 from nltk.stem import (
     LancasterStemmer,
@@ -11,6 +12,11 @@ from nltk.stem import (
 from nltk.tokenize import RegexpTokenizer
 
 from src.utils.file_loaders import load_json
+
+nltk.download("omw-1.4")
+nltk.download("rslp")
+nltk.download("stopwords")
+nltk.download("wordnet")
 
 # Clinical Note preprocessing
 AVAILABLE_STEMMERS_LEMMATIZERS = {
@@ -63,15 +69,23 @@ class ClinicalNotePreprocessor:
                 )
 
         if config.stem_or_lemmatize.perform:
-            self.stemmer = AVAILABLE_STEMMERS_LEMMATIZERS[
+            if (
                 config.stem_or_lemmatize.params.stemmer_name
-            ]()
+                == "nltk.SnowballStemmer"
+            ):
+                self.stemmer = AVAILABLE_STEMMERS_LEMMATIZERS[
+                    config.stem_or_lemmatize.params.stemmer_name
+                ]("english")
+            else:
+                self.stemmer = AVAILABLE_STEMMERS_LEMMATIZERS[
+                    config.stem_or_lemmatize.params.stemmer_name
+                ]()
 
-    def _call__(self, text):
+    def __call__(self, text):
         # Remove extra spaces from text
         text = re.sub(" +", " ", text).strip()
         if self._config.to_lower.perform:
-            text = self.to_lower(text)
+            text = text.lower()
 
         if self._config.remove_punctuation.perform:
             tokens = self.remove_punctuation(text)
@@ -116,7 +130,7 @@ class CodeProcessor:
     def __init__(self, config):
         self._config = config
 
-    def _call__(self, icd_code, is_diagnosis_code):
+    def __call__(self, icd_code, is_diagnosis_code):
         if self._config.add_period_in_correct_pos.perform:
             icd_code = self.reformat_icd_code(icd_code, is_diagnosis_code)
         return icd_code
