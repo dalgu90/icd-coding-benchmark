@@ -46,6 +46,7 @@ dataset:
       clinical_note: "TEXT"
       label: "LABEL"
     label_file: datasets/mimic_iii/1.4/labels.json
+    vocab_file: datasets/mimic_iii/1.4/vocab.json
   params:
     train:
       <<: *data_common
@@ -74,12 +75,12 @@ trainer:
   params:
     data_loader:
       batch_size: 16
-      num_workers: 2
+      num_workers: 4
       shuffle: false
       drop_last: true
 
     loss:
-      name: BinaryCrossEntropy
+      name: BinaryCrossEntropyLoss
       params: null
 
     optimizer:
@@ -93,7 +94,8 @@ trainer:
     lr_scheduler: null
 
     stopping_criterion:
-      criterion: prec_at_5
+      metric:
+        name: prec_at_5
       desired: max
       patience: 10
 
@@ -108,11 +110,14 @@ trainer:
       final_file: "final_{}.pth"
 
     eval_metrics: &eval_metrics
-      - prec_at_5
-      - macro_f1
-      - micro_f1
-      - macro_auc
-      - micro_auc
+      - name: prec_at_5
+        class: prec_at_k
+        params:
+          k: 5
+      - name: macro_f1
+      - name: micro_f1
+      - name: macro_auc
+      - name: micro_auc
 
     logger:
       name: tensorboard
@@ -120,10 +125,11 @@ trainer:
         interval: 100
         interval_unit: step
         metric:
-          - loss
+          - name: loss
       val:
         interval: 1
         interval_unit: epoch
         metric: *eval_metrics
 
     seed: 1337
+    use_gpu: true
