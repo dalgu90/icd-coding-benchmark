@@ -184,6 +184,17 @@ def load_description_vectors(dataset_dir):
     return dv_dict
 
 
+def pad_desc_vecs(desc_vecs):
+    #pad all description vectors in a batch to have the same length
+    desc_len = max([len(dv) for dv in desc_vecs])
+    pad_vecs = []
+    for vec in desc_vecs:
+        if len(vec) < desc_len:
+            vec.extend([0] * (desc_len - len(vec)))
+        pad_vecs.append(vec)
+    return pad_vecs
+
+
 # From dataproc/extract_wvs.py
 def load_embeddings(embed_file):
     # also normalizes the embeddings
