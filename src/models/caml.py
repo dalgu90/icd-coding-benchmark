@@ -18,7 +18,7 @@ from gensim.models import KeyedVectors
 from torch.autograd import Variable
 from torch.nn.init import xavier_uniform
 
-from src.utils.caml_utils import load_embeddings, load_lookups
+from src.utils.caml_utils import load_embeddings, load_lookups, pad_desc_vecs
 from src.utils.mapper import ConfigMapper
 
 
@@ -192,7 +192,7 @@ class ConvAttnPool(BaseModel):
         self.U.weight.data = torch.Tensor(weights).clone()
         self.final.weight.data = torch.Tensor(weights).clone()
 
-    def forward(self, x, target, desc_data=None, get_attention=True):
+    def forward(self, x):
         # get embeddings and apply dropout
         x = self.embed(x)
         x = self.embed_drop(x)
@@ -208,18 +208,27 @@ class ConvAttnPool(BaseModel):
         # final layer classification
         y = self.final.weight.mul(m).sum(dim=2).add(self.final.bias)
 
-        if desc_data is not None:
-            # run descriptions through description module
-            b_batch = self.embed_descriptions(desc_data, self.gpu)
-            # get l2 similarity loss
-            diffs = self._compare_label_embeddings(target, b_batch, desc_data)
-        else:
-            diffs = None
+        return y
 
-        # final sigmoid to get predictions
-        yhat = y
-        loss = self._get_loss(yhat, target, diffs)
-        return yhat, loss, alpha
+    def regularizer(self, labels=None):
+        if not self.lmbda: return 0.0
+
+        # Retrive the description tokens of the labels
+        ind2c, dv_dict = self.dicts['ind2c'], self.dicts['dv']
+
+        desc_vecs = []
+        for label in labels:
+            desc_vecs.append([dv_dict[ind2c[i]]
+                              for i, l in enumerate(label) if l])
+        desc_data = np.array([pad_desc_vecs(dvs) for dvs in desc_vecs])
+
+        # run descriptions through description module
+        b_batch = self.embed_descriptions(desc_data, self.gpu)
+        # get l2 similarity loss
+        diffs = self._compare_label_embeddings(labels, b_batch, desc_data)
+        diff = torch.stack(diffs).mean()
+
+        return diff
 
 
 @ConfigMapper.map("models", "CNN")
@@ -254,7 +263,7 @@ class VanillaConv(BaseModel):
         self.fc = nn.Linear(num_filter_maps, self.Y)
         xavier_uniform(self.fc.weight)
 
-    def forward(self, x, target, desc_data=None, get_attention=False):
+    def forward(self, x):
         # embed
         x = self.embed(x)
         x = self.embed_drop(x)
@@ -262,24 +271,13 @@ class VanillaConv(BaseModel):
 
         # conv/max-pooling
         c = self.conv(x)
-        if get_attention:
-            # get argmax vector too
-            x, argmax = F.max_pool1d(
-                F.tanh(c), kernel_size=c.size()[2], return_indices=True
-            )
-            attn = self.construct_attention(argmax, c.size()[2])
-        else:
-            x = F.max_pool1d(F.tanh(c), kernel_size=c.size()[2])
-            attn = None
+        x = F.max_pool1d(F.tanh(c), kernel_size=c.size()[2])
         x = x.squeeze(dim=2)
 
         # linear output
         x = self.fc(x)
 
-        # final sigmoid to get predictions
-        yhat = x
-        loss = self._get_loss(yhat, target)
-        return yhat, loss, attn
+        return x
 
     def construct_attention(self, argmax, num_windows):
         attn_batches = []
@@ -305,3 +303,6 @@ class VanillaConv(BaseModel):
         # put it in the right form for passing to interpret
         attn_full = attn_full.transpose(1, 2)
         return attn_full
+
+    def regularizer(self, labels=None):
+        return 0.0
