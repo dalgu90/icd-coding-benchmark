@@ -191,6 +191,7 @@ class MimiciiiPreprocessingPipeline:
         test_df = test_df.to_dict(orient="list")
 
         # tokenize the data
+        print("\nTokenizing Data...")
         train_df[self.cols.text] = self.tokenizer.tokenize_list(
             train_df[self.cols.text]
         )
@@ -201,5 +202,6 @@ class MimiciiiPreprocessingPipeline:
             test_df[self.cols.text]
         )
 
-        # train Word2Vec model
+        # train embedding model
+        print("\nTraining Embedding Model...")
         self.embedder.train(train_df[self.cols.text])
