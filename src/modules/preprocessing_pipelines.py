@@ -45,9 +45,13 @@ class MimiciiiPreprocessingPipeline:
             "dataset_splitters", config.dataset_splitting_method.name
         )(config.dataset_splitting_method.params)
 
-        self.vocab_builder = ConfigMapper.get_object(
-            "vocab_builders", config.vocab_builder.name
-        )(config.vocab_builder.params)
+        self.tokenizer = ConfigMapper.get_object(
+            "tokenizers", config.tokenizer.name
+        )(config.tokenizer.params)
+
+        self.embedder = ConfigMapper.get_object(
+            "embeddings", config.embedding.name
+        )(config.embedding.params)
 
         self.code_csv_dtypes = {
             self.cols.hadm_id: "string",
@@ -178,13 +182,17 @@ class MimiciiiPreprocessingPipeline:
         train_df, val_df, test_df = self.split_data(
             combined_df, self.cols.hadm_id
         )
-        save_df(train_df, self.train_csv_name)
-        save_df(val_df, self.val_csv_name)
-        save_df(test_df, self.test_csv_name)
 
-        # Build vocabulary using the train set.
-        self.vocab_builder(
-            train_df,
-            self.cols.text,
-            os.path.join(self.SAVE_DIR, self.config.paths.vocab_file_name),
+        # tokenize the data
+        train_df = self.tokenizer.tokenize_list(
+            train_df.to_dict("records"), self.cols.text
         )
+        val_df = self.tokenizer.tokenize_list(
+            val_df.to_dict("records"), self.cols.text
+        )
+        test_df = self.tokenizer.tokenize_list(
+            test_df.to_dict("records"), self.cols.text
+        )
+
+        # train Word2Vec model
+        self.embedder.train(train_df)

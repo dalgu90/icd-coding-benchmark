@@ -1,39 +1,27 @@
 """Contains various kinds of embeddings like Glove, BERT, etc."""
 
-from torch.nn import Embedding, Flatten, Module
+import os
+
+import gensim
 
 from src.utils.mapper import ConfigMapper
 
 
-@ConfigMapper.map("embeddings", "glove")
-class GloveEmbedding(Module):
-    """Implement Glove based Word Embedding."""
+@ConfigMapper.map("embeddings", "word2vec")
+class Word2VecEmbedding:
+    def __init__(self, config):
+        self._config = config
+        self.save_path = os.path.join(
+            self._config.embedding_dir, self._config.model_file_name
+        )
 
-    def __init__(self, embedding_matrix, padding_idx, static=True):
-        """Construct GloveEmbedding.
+    def train(self, corpus):
+        # build vocabulary and train model
+        model = gensim.models.Word2Vec(corpus, **self._config.word2vec_params)
+        model.wv.save(self.save_path)
 
-        Args:
-            embedding_matrix (torch.Tensor): The matrix contrainining the
-                                             embedding weights.
-            padding_idx (int): The padding index in the tokenizer.
-            static (bool): Whether or not to freeze embeddings.
-        """
-        super(GloveEmbedding, self).__init__()
-        self.embedding = Embedding.from_pretrained(embedding_matrix)
-        self.embedding.padding_idx = padding_idx
-        if static:
-            self.embedding.weight.required_grad = False
-        self.flatten = Flatten(start_dim=1)
-
-    def forward(self, x_input):
-        """Pass the input through the embedding.
-
-        Args:
-            x_input (torch.Tensor): The numericalized tokenized input
-
-        Returns:
-            x_output (torch.Tensor): The output from the embedding
-        """
-        x_output = self.embedding(x_input)
-        x_output = self.flatten(x_output)
-        return x_output
+    def load_emb_matrix(self):
+        wv = gensim.models.KeyedVectors.load_word2vec_format(
+            self.save_path, mmap="r"
+        )
+        return wv

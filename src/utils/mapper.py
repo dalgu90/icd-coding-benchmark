@@ -28,7 +28,6 @@ class ConfigMapper:
         "dataset_splitters": {},
         "preprocessing_pipelines": {},
         "tokenizers": {},
-        "vocab_builders": {},
     }
 
     @classmethod
