@@ -34,6 +34,12 @@ class MimiciiiPreprocessingPipeline:
             self.SAVE_DIR, config.paths.test_csv_name
         )
 
+        if not os.path.exists(self.MIMIC_DIR):
+            os.makedirs(self.MIMIC_DIR)
+
+        if not os.path.exists(self.SAVE_DIR):
+            os.makedirs(self.SAVE_DIR)
+
         self.clinical_note_preprocessor = ClinicalNotePreprocessor(
             self.clinical_note_config
         )

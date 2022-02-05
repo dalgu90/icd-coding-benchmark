@@ -63,7 +63,8 @@ preprocessing:
       name: word2vec
       params:
         embedding_dir: datasets/mimic_iii/word2vec/
-        model_file_name: word2vec.wordvectors
+        unk_token: <unk>
+        pad_token: <pad>
         word2vec_params:
           vector_size: 100
           min_count: 3
