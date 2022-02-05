@@ -47,6 +47,10 @@ preprocessing:
         perform: true
         params:
           stemmer_name: nltk.WordNetLemmatizer
+      truncate:
+        perform: true
+        params:
+          max_length: 2000
     code_preprocessing:
       top_k: 50                       # enter 0 for all codes
       code_type: both
@@ -60,7 +64,7 @@ preprocessing:
       params:
         embedding_dir: datasets/mimic_iii/word2vec/
         model_file_name: word2vec.wordvectors
-        word2vecparams:
+        word2vec_params:
           vector_size: 100
           min_count: 3
           epochs: 5

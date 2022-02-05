@@ -4,7 +4,9 @@ import pandas as pd
 from tqdm.auto import tqdm
 
 from src.modules.dataset_splitters import *
+from src.modules.embeddings import *
 from src.modules.preprocessors import ClinicalNotePreprocessor, CodeProcessor
+from src.modules.tokenizers import *
 from src.utils.code_based_filtering import TopKCodes
 from src.utils.file_loaders import load_csv_as_df, save_df
 from src.utils.mapper import ConfigMapper
@@ -183,16 +185,21 @@ class MimiciiiPreprocessingPipeline:
             combined_df, self.cols.hadm_id
         )
 
+        # convert dataset to dictionary
+        train_df = train_df.to_dict(orient="list")
+        val_df = val_df.to_dict(orient="list")
+        test_df = test_df.to_dict(orient="list")
+
         # tokenize the data
-        train_df = self.tokenizer.tokenize_list(
-            train_df.to_dict("records"), self.cols.text
+        train_df[self.cols.text] = self.tokenizer.tokenize_list(
+            train_df[self.cols.text]
         )
-        val_df = self.tokenizer.tokenize_list(
-            val_df.to_dict("records"), self.cols.text
+        val_df[self.cols.text] = self.tokenizer.tokenize_list(
+            val_df[self.cols.text]
         )
-        test_df = self.tokenizer.tokenize_list(
-            test_df.to_dict("records"), self.cols.text
+        test_df[self.cols.text] = self.tokenizer.tokenize_list(
+            test_df[self.cols.text]
         )
 
         # train Word2Vec model
-        self.embedder.train(train_df)
+        self.embedder.train(train_df[self.cols.text])

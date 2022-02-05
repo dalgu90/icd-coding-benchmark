@@ -101,6 +101,10 @@ class ClinicalNotePreprocessor:
         if self._config.stem_or_lemmatize.perform:
             tokens = self.stem_or_lemmatize(tokens)
 
+        if self._config.truncate.perform:
+            if len(tokens) > self._config.truncate.params.max_length:
+                tokens = tokens[: self._config.truncate.params.max_length]
+
         return " ".join(tokens)
 
     def to_lower_case(self, text):

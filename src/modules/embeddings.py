@@ -17,7 +17,9 @@ class Word2VecEmbedding:
 
     def train(self, corpus):
         # build vocabulary and train model
-        model = gensim.models.Word2Vec(corpus, **self._config.word2vec_params)
+        model = gensim.models.Word2Vec(
+            corpus, **self._config.word2vec_params.as_dict()
+        )
         model.wv.save(self.save_path)
 
     def load_emb_matrix(self):
