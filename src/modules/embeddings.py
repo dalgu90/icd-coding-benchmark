@@ -17,10 +17,6 @@ class Word2VecEmbedding:
         if not os.path.exists(self._config.embedding_dir):
             os.makedirs(self._config.embedding_dir)
 
-        self.save_path = os.path.join(
-            self._config.embedding_dir, self._config.model_file_name
-        )
-
     def train(self, corpus):
         # build vocabulary and train model
         model = gensim.models.Word2Vec(
