@@ -54,6 +54,10 @@ class BaseTrainer:
                 val_loader_config['collate_fn'] = val_dataset.collate_fn
             val_loader = DataLoader(val_dataset, **val_loader_config)
         batch_size = self.config.data_loader.batch_size
+        if train_loader_config['drop_last']:
+            num_train_batch = math.floor(len(train_dataset) / batch_size)
+        else:
+            num_train_batch = math.ceil(len(train_dataset) / batch_size)
 
         # Optimizer & LR scheduler
         optimizer = ConfigMapper.get_object("optimizers",
@@ -131,7 +135,7 @@ class BaseTrainer:
             model.train()
 
             # Train for one epoch
-            pbar = tqdm(total=math.ceil(len(train_dataset) / batch_size))
+            pbar = tqdm(total=num_train_batch)
             pbar.set_description(f"Epoch {epoch}")
             for batch_train in train_loader:
                 optimizer.zero_grad()
