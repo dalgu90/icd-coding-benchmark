@@ -12,7 +12,7 @@ from src.modules.metrics import *
 from src.modules.optimizers import *
 from src.modules.schedulers import *
 from src.modules.tokenizers import *
-from src.modules.checkpoint_savers import *
+from src.utils.checkpoint_savers import *
 from src.utils.configuration import Config
 from src.utils.logger import Logger
 from src.utils.mapper import ConfigMapper
@@ -226,7 +226,9 @@ class BaseTrainer:
                         model=model, optimizer=optimizer, train_iter=epoch,
                         is_best=True, metric_val=metric_val
                     )
-                    print(f'Checkpoint saved to {ckpt_fname} ({metric_val:.6f})')
+                    print(f'Checkpoint saved to {ckpt_fname} '
+                          f'({ckpt_saver.config.metric.name}: '
+                          f'{metric_val:.6f})')
 
             # Stop training if condition met
             if val_dataset and (epoch - best_stopping_epoch >= patience):
