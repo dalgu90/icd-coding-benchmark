@@ -99,11 +99,12 @@ trainer:
       desired: max
       patience: 10
 
-    output_dir: "results/CAML_mimic3_50"
+    output_dir: &output_dir "results/CAML_mimic3_50"
 
     checkpoint_saver:
       name: base_saver
       params:
+        checkpoint_dir: *output_dir
         interval: 1
         max_to_keep: 5
         ckpt_fname_format: "ckpt-{}.pth"
@@ -125,8 +126,11 @@ trainer:
       - name: macro_auc
       - name: micro_auc
 
-    logger:
-      name: tensorboard
+    logging:
+      logger:
+        name: tensorboard
+        params:
+          log_dir: *output_dir
       train:
         interval: 100
         interval_unit: step

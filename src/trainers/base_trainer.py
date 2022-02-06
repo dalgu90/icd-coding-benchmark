@@ -72,8 +72,8 @@ class BaseTrainer:
             )(optimizer, **self.config.lr_scheduler.params.as_dict())
 
         # Add evaluation metrics for logging
-        for config_dict in (self.config.logger.train.metric
-                            + self.config.logger.val.metric):
+        for config_dict in (self.config.logging.train.metric
+                            + self.config.logging.val.metric):
             metric_name = config_dict['name']
             if metric_name not in self.eval_metrics and metric_name != 'loss':
                 self.eval_metrics[metric_name] = load_metric(config_dict)
@@ -104,13 +104,9 @@ class BaseTrainer:
             model.cuda()
 
         # Checkpoint saver
-        ckpt_saver_params = self.config.checkpoint_saver.params
-        if 'checkpoint_dir' not in ckpt_saver_params.as_dict():
-            ckpt_saver_params.set_value('checkpoint_dir',
-                                        self.config.output_dir)
         ckpt_saver = ConfigMapper.get_object(
             "checkpoint_savers", self.config.checkpoint_saver.name
-        )(ckpt_saver_params)
+        )(self.config.checkpoint_saver.params)
 
         # Load latest checkpoint
         latest_ckpt = ckpt_saver.get_latest_checkpoint()
