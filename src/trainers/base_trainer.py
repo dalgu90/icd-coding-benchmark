@@ -42,16 +42,16 @@ class BaseTrainer:
 
         # Data loader
         train_loader_config = self.config.data_loader.as_dict()
-        if 'get_collate_fn' in dir(train_dataset):
-            train_loader_config['collate_fn'] = train_dataset.get_collate_fn()
+        if 'collate_fn' in dir(train_dataset):
+            train_loader_config['collate_fn'] = train_dataset.collate_fn
         train_loader = DataLoader(train_dataset, **train_loader_config)
         if val_dataset:
             # We force the val dataset not shuffled and fully used
             val_loader_config = self.config.data_loader.as_dict()
             val_loader_config['drop_last'] = False
             val_loader_config['shuffle'] = False
-            if 'get_collate_fn' in dir(val_dataset):
-                val_loader_config['collate_fn'] = val_dataset.get_collate_fn()
+            if 'collate_fn' in dir(val_dataset):
+                val_loader_config['collate_fn'] = val_dataset.collate_fn
             val_loader = DataLoader(val_dataset, **val_loader_config)
         batch_size = self.config.data_loader.batch_size
 
@@ -268,6 +268,8 @@ class BaseTrainer:
             data_config = self.config.data_loader.as_dict()
             data_config['drop_last'] = False
             data_config['shuffle'] = False
+            if 'collate_fn' in dir(dataset):
+                data_config['collate_fn'] = dataset.collate_fn
             dataloader = DataLoader(dataset, **data_config)
 
         # Forward for the whole batch

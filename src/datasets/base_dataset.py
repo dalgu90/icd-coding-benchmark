@@ -47,19 +47,16 @@ class BaseDataset(Dataset):
 
         return (clinical_note, labels)
 
-    def get_collate_fn(self):
-        def _collate_fn(examples):
-            notes, labels = zip(*examples)
+    def collate_fn(self, examples):
+        notes, labels = zip(*examples)
 
-            # Pad notes
-            max_note_len = max(map(len, notes))
-            notes = [note + [0] * (max_note_len - len(note)) for note in notes]
+        # Pad notes
+        max_note_len = max(map(len, notes))
+        notes = [note + [0] * (max_note_len - len(note)) for note in notes]
 
-            # Convert into Tensor
-            notes = torch.tensor(notes)
-            labels = torch.tensor(labels)
+        # Convert into Tensor
+        notes = torch.tensor(notes)
+        labels = torch.tensor(labels)
 
-            return notes, labels
-        return _collate_fn
-
+        return notes, labels
 
