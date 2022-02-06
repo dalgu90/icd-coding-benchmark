@@ -303,6 +303,3 @@ class VanillaConv(BaseModel):
         # put it in the right form for passing to interpret
         attn_full = attn_full.transpose(1, 2)
         return attn_full
-
-    def regularizer(self, labels=None):
-        return 0.0

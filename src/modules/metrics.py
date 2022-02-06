@@ -205,7 +205,7 @@ class RecallAtK(Metric):
         assert p_pred is not None
         y_true = to_np_array(y_true)
         p_pred = to_np_array(p_pred)
-        return recall_at_k(p_pred, y_true, 5)
+        return recall_at_k(p_pred, y_true, self.k)
 
 @ConfigMapper.map("metrics", "prec_at_k")
 class PrecAtK(Metric):
@@ -217,7 +217,7 @@ class PrecAtK(Metric):
         assert p_pred is not None
         y_true = to_np_array(y_true)
         p_pred = to_np_array(p_pred)
-        return precision_at_k(p_pred, y_true, 5)
+        return precision_at_k(p_pred, y_true, self.k)
 
 def recall_at_k(yhat_raw, y, k):
     #num true labels in top k predictions / num true labels
