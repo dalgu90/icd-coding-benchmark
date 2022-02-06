@@ -38,6 +38,10 @@ class Metric:
     def forward(self, y_true, y_pred=None, p_pred=None):
         raise NotImplementedError("This is the base class for metrics")
 
+def load_metric(config_dict):
+    metric_params = config_dict.get('params', None)
+    metric_class = config_dict.get('class', config_dict.get('name'))
+    return ConfigMapper.get_object("metrics", metric_class)(metric_params)
 
 #########################################################################
 #MACRO METRICS: calculate metric for each label and average across labels

@@ -12,6 +12,7 @@ from src.modules.metrics import *
 from src.modules.optimizers import *
 from src.modules.schedulers import *
 from src.modules.tokenizers import *
+from src.modules.checkpoint_savers import *
 from src.utils.configuration import Config
 from src.utils.logger import Logger
 from src.utils.mapper import ConfigMapper
@@ -32,12 +33,7 @@ class BaseTrainer:
         self.eval_metrics = {}
         for config_dict in self.config.eval_metrics:
             metric_name = config_dict['name']
-            self.eval_metrics[metric_name] = self.load_metric(config_dict)
-
-    def load_metric(self, config_dict):
-        metric_params = config_dict.get('params', None)
-        metric_class = config_dict.get('class', config_dict.get('name'))
-        return ConfigMapper.get_object("metrics", metric_class)(metric_params)
+            self.eval_metrics[metric_name] = load_metric(config_dict)
 
     def train(self, model, train_dataset, val_dataset=None):
         self.model = model
@@ -76,7 +72,7 @@ class BaseTrainer:
                             + self.config.logger.val.metric):
             metric_name = config_dict['name']
             if metric_name not in self.eval_metrics and metric_name != 'loss':
-                self.eval_metrics[metric_name] = self.load_metric(config_dict)
+                self.eval_metrics[metric_name] = load_metric(config_dict)
 
         # Stopping criterion: (metric, max/min, patience)
         max_epochs = int(self.config.max_epochs)
@@ -88,7 +84,7 @@ class BaseTrainer:
             if sc_metric_config['name'] in self.eval_metrics:
                 sc_metric = self.eval_metrics[sc_metric_config['name']]
             else:
-                sc_metric = self.load_metric(sc_metric_config)
+                sc_metric = load_metric(sc_metric_config)
             # Metric + max/min + patience
             stopping_criterion = (
                 sc_metric,
@@ -100,17 +96,34 @@ class BaseTrainer:
             if sc_config.desired == 'max':
                 best_stopping_val *= -1.0
 
-        # TODO: checkpoint saver (load latest)
-        init_epoch = 0
+        if self.config.use_gpu:
+            model.cuda()
+
+        # Checkpoint saver
+        ckpt_saver_params = self.config.checkpoint_saver.params
+        if 'checkpoint_dir' not in ckpt_saver_params.as_dict():
+            ckpt_saver_params.set_value('checkpoint_dir',
+                                        self.config.output_dir)
+        ckpt_saver = ConfigMapper.get_object(
+            "checkpoint_savers", self.config.checkpoint_saver.name
+        )(ckpt_saver_params)
+
+        # Load latest checkpoint
+        latest_ckpt = ckpt_saver.get_latest_checkpoint()
+        if latest_ckpt is not None:
+            ckpt_epoch, ckpt_fname = latest_ckpt
+            ckpt_saver.load_ckpt(model=model, optimizer=optimizer,
+                                 ckpt_fname=ckpt_fname)
+            print(f'Checkpoint loaded from {ckpt_fname}')
+            init_epoch = ckpt_epoch + 1
+        else:
+            init_epoch = 0
         global_step = (len(train_dataset) // batch_size) * init_epoch
 
         # TODO: logger (tensorboard)
         # - Check that interval_unit for val only supports epoch
 
         # Train!
-        if self.config.use_gpu:
-            model.cuda()
-
         for epoch in range(init_epoch, max_epochs):
             # Print training epoch
             print(f"Epoch: {epoch}/{max_epochs}, Step {global_step:6}")
@@ -196,16 +209,36 @@ class BaseTrainer:
                     best_stopping_val = stopping_val
                     best_stopping_epoch = epoch
 
-            # TODO: save checkpoint
-            #  1) Save per "interval" epoch
-            #  2) Save the best epoch
+            # Checkpoint 1. Per interval epoch
+            if ckpt_saver.check_interval(epoch):
+                ckpt_fname = ckpt_saver.save_ckpt(
+                    model=model, optimizer=optimizer, train_iter=epoch
+                )
+                print(f'Checkpoint saved to {ckpt_fname}')
+
+            # Checkpoint 2. Best val metric
+            if val_dataset:
+                metric_val, is_best = ckpt_saver.check_best(y_true=val_labels,
+                                                            p_pred=val_outputs,
+                                                            y_pred=val_pred)
+                if is_best:
+                    ckpt_fname = ckpt_saver.save_ckpt(
+                        model=model, optimizer=optimizer, train_iter=epoch,
+                        is_best=True, metric_val=metric_val
+                    )
+                    print(f'Checkpoint saved to {ckpt_fname} ({metric_val:.6f})')
 
             # Stop training if condition met
             if val_dataset and (epoch - best_stopping_epoch >= patience):
                 break
 
         # TODO: Wrapping up
-        # 1) Save the last checkpoint
+        # Save the last checkpoint, if not saved above
+        if not ckpt_saver.check_interval(epoch):
+            ckpt_fname = ckpt_saver.save_ckpt(
+                model=model, optimizer=optimizer, train_iter=epoch
+            )
+            print(f'Checkpoint saved to {ckpt_fname}')
         return
 
 

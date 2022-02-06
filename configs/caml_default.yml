@@ -102,12 +102,18 @@ trainer:
     output_dir: "results/CAML_mimic3_50"
 
     checkpoint_saver:
-      interval: 1
-      max_to_keep: 5
-      score: prec_at_5
-      desired: max
-      best_file: "best_{}.pth"
-      final_file: "final_{}.pth"
+      name: base_saver
+      params:
+        interval: 1
+        max_to_keep: 5
+        ckpt_fname_format: "ckpt-{}.pth"
+        best_fname_format: "best-{}.pth"
+        metric:
+          name: prec_at_5
+          class: prec_at_k
+          params:
+            k: 5
+        desired: max
 
     eval_metrics: &eval_metrics
       - name: prec_at_5
