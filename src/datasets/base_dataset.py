@@ -26,6 +26,7 @@ class BaseDataset(Dataset):
         # To-do: This class currently deals with only CSV files. We can extend
         # this to deal with other file types (.json, .xlsx, etc.).
 
+        print(f'Load dataset from {data_path}')
         self.df = pd.read_csv(data_path)
 
     def __len__(self):
@@ -48,6 +49,7 @@ class BaseDataset(Dataset):
         return (clinical_note, labels)
 
     def collate_fn(self, examples):
+        """ Concatenate examples into note and label tensors """
         notes, labels = zip(*examples)
 
         # Pad notes

@@ -38,6 +38,7 @@ class BaseTrainer:
             self.eval_metrics[metric_name] = load_metric(config_dict)
 
     def train(self, model, train_dataset, val_dataset=None):
+        """ Train the model """
         self.model = model
         self.train_dataset = train_dataset
         self.val_dataset = val_dataset
@@ -263,6 +264,7 @@ class BaseTrainer:
         return
 
     def test(self, model, test_dataset):
+        """ Load the best or latest ckpt and evalutate on the given dataset. """
         # Load the best or the latest model
         ckpt_saver = ConfigMapper.get_object(
             "checkpoint_savers", self.config.checkpoint_saver.name
@@ -276,7 +278,7 @@ class BaseTrainer:
             if latest_ckpt is not None:
                 ckpt_fname = latest_ckpt[1]
             else:
-                print(f'Cannot found a model checkpoint')
+                print(f'Cannot find a model checkpoint')
                 return
         ckpt_saver.load_ckpt(model, ckpt_fname, optimizer=None)
         print(f'Checkpoint loaded from {ckpt_fname}')
@@ -298,6 +300,7 @@ class BaseTrainer:
 
 
     def evaluate(self, model, dataset=None, dataloader=None):
+        """ Evaluate the model on the given dataset. """
         # Get preds and labels for the whole epoch
         epoch_outputs, epoch_labels = self._forward_epoch(
             model, dataset=dataset, dataloader=dataloader)
@@ -306,6 +309,9 @@ class BaseTrainer:
         return self._compute_metrics(epoch_outputs, epoch_labels)
 
     def _compute_metrics(self, outputs, labels, metric_names=None):
+        """
+        Compute the metrics of given names. Inputs should be Torch tensors.
+        """
         metric_vals = {}
         if metric_names is None:
             metric_names = self.eval_metrics.keys()
@@ -323,6 +329,7 @@ class BaseTrainer:
         return metric_vals
 
     def _forward_epoch(self, model, dataset=None, dataloader=None):
+        """ Compute the forward pass on the given dataset. """
         assert dataset or dataloader
 
         # Dataloader
