@@ -63,5 +63,5 @@ else:  # Test
         config.trainer.params
     )
 
-    # Train!
-    trainer.eval(model, test_data)
+    # Test!
+    trainer.test(model, test_data)

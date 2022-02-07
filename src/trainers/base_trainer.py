@@ -15,6 +15,7 @@ from src.modules.schedulers import *
 from src.modules.tokenizers import *
 from src.utils.checkpoint_savers import *
 from src.utils.configuration import Config
+from src.utils.file_loaders import save_json
 from src.utils.logger import *
 from src.utils.mapper import ConfigMapper
 from src.utils.misc import *
@@ -125,7 +126,7 @@ class BaseTrainer:
             init_epoch = 0
         global_step = (len(train_dataset) // batch_size) * init_epoch
 
-        # TODO: logger (tensorboard)
+        # Logger (tensorboard)
         logger = ConfigMapper.get_object(
             "loggers", self.config.logging.logger.name
         )(self.config.logging.logger.params)
@@ -252,7 +253,7 @@ class BaseTrainer:
             if val_dataset and (epoch - best_stopping_epoch >= patience):
                 break
 
-        # TODO: Wrapping up
+        # Wrapping up
         # Save the last checkpoint, if not saved above
         if not ckpt_saver.check_interval(epoch):
             ckpt_fname = ckpt_saver.save_ckpt(
@@ -260,6 +261,41 @@ class BaseTrainer:
             )
             print(f'Checkpoint saved to {ckpt_fname}')
         return
+
+    def test(self, model, test_dataset):
+        # Load the best or the latest model
+        ckpt_saver = ConfigMapper.get_object(
+            "checkpoint_savers", self.config.checkpoint_saver.name
+        )(self.config.checkpoint_saver.params)
+
+        best_ckpt = ckpt_saver.get_best_checkpoint()
+        if best_ckpt is not None:
+            ckpt_fname = best_ckpt
+        else:
+            latest_ckpt = ckpt_saver.get_latest_checkpoint()
+            if latest_ckpt is not None:
+                ckpt_fname = latest_ckpt[1]
+            else:
+                print(f'Cannot found a model checkpoint')
+                return
+        ckpt_saver.load_ckpt(model, ckpt_fname, optimizer=None)
+        print(f'Checkpoint loaded from {ckpt_fname}')
+
+        if self.config.use_gpu:
+            model.cuda()
+
+        # Evaluate on test dataset
+        metric_vals = self.evaluate(model, test_dataset)
+
+        # Print and save results
+        print('Evaluate on test dataset')
+        for metric_name, metric_val in metric_vals.items():
+            print(f'{metric_name:>12}: {metric_val:6f}')
+
+        result_fpath = os.path.join(self.config.output_dir, 'test_result.json')
+        print(f'Save result on {result_fpath}')
+        save_json(metric_vals, result_fpath)
+
 
     def evaluate(self, model, dataset=None, dataloader=None):
         # Get preds and labels for the whole epoch
