@@ -13,9 +13,9 @@ PAD_CHAR = "**PAD**"
 EMBEDDING_SIZE = 100
 MAX_LENGTH = 2500
 # Definitions of the below are a bit different from the original CAML
-MIMIC_2_DIR = "datasets/mimicdata/mimic2"  # MIMIC-II csv files
-MIMIC_3_DIR = "datasets/mimicdata/mimic3"  # MIMIC-III csv files
-DATA_DIR = "datasets/mimicdata"  # CAML static & preprocessed data
+MIMIC_2_DIR = "datasets/mimic_ii/csv"  # MIMIC-II csv files
+MIMIC_3_DIR = "datasets/mimic_iii/csv"  # MIMIC-III csv files
+DATA_DIR = "datasets/mimic_iii"  # CAML static & preprocessed data
 
 
 # From datasets.py
@@ -161,7 +161,7 @@ def load_code_descriptions(version="mimic3"):
                 desc = row[-1]
                 if code not in desc_dict.keys():
                     desc_dict[reformat(code, False)] = desc
-        with open("%s/ICD9_descriptions" % DATA_DIR, "r") as labelfile:
+        with open("%s/icd9_descriptions.txt" % DATA_DIR, "r") as labelfile:
             for i, row in enumerate(labelfile):
                 row = row.rstrip().split()
                 code = row[0]
