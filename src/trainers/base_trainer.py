@@ -1,6 +1,7 @@
 import math
 import os
 
+import numpy as np
 import torch
 from torch.utils.data import DataLoader
 from torch.optim.lr_scheduler import ReduceLROnPlateau
@@ -14,7 +15,7 @@ from src.modules.schedulers import *
 from src.modules.tokenizers import *
 from src.utils.checkpoint_savers import *
 from src.utils.configuration import Config
-from src.utils.logger import Logger
+from src.utils.logger import *
 from src.utils.mapper import ConfigMapper
 from src.utils.misc import *
 
@@ -77,6 +78,10 @@ class BaseTrainer:
             metric_name = config_dict['name']
             if metric_name not in self.eval_metrics and metric_name != 'loss':
                 self.eval_metrics[metric_name] = load_metric(config_dict)
+        train_metric_names = [metric['name'] for metric in
+                              self.config.logging.train.metric]
+        val_metric_names = [metric['name'] for metric in
+                            self.config.logging.val.metric]
 
         # Stopping criterion: (metric, max/min, patience)
         max_epochs = int(self.config.max_epochs)
@@ -121,7 +126,9 @@ class BaseTrainer:
         global_step = (len(train_dataset) // batch_size) * init_epoch
 
         # TODO: logger (tensorboard)
-        # - Check that interval_unit for val only supports epoch
+        logger = ConfigMapper.get_object(
+            "loggers", self.config.logging.logger.name
+        )(self.config.logging.logger.params)
 
         # Train!
         for epoch in range(init_epoch, max_epochs):
@@ -153,17 +160,17 @@ class BaseTrainer:
                 if scheduler:
                     scheduler.step()
 
-                # TODO: log on proper steps (train)
-                # if (self.config.logger.train.interval_unit == 'step'
-                    # and global_step % self.config.logger.train.interval == 0:
-                    # train_log_metrics = {}
-                    # for metric in self.config.logger.train.metric:
-                        # train_log_metrics[metric] = eval_metrics[metric](
-                            # batch_labels.cpu(),
-                            # batch_outputs.detach.cpu()
-                        # )
-                    # for metric, val in train_log_metrics.items():
-                        # logger.log(f'train/{metric}', val, step=global_step)
+                # Log on proper steps (train)
+                if (self.config.logging.train.interval_unit == 'step'
+                    and global_step % self.config.logging.train.interval == 0):
+                    train_metric_vals = self._compute_metrics(
+                        outputs=batch_outputs.detach().cpu(),
+                        labels=batch_labels.cpu(),
+                        metric_names=train_metric_names
+                    )
+                    for metric_name, metric_val in train_metric_vals.items():
+                        logger.write_scalar(f'train/{metric_name}', metric_val,
+                                            step=global_step)
 
                 pbar.set_postfix_str(f"Train Loss: {batch_loss.item():.6f}")
                 pbar.update(1)
@@ -171,21 +178,32 @@ class BaseTrainer:
                 global_step += 1
             pbar.close()
 
-            # Evaluate on eval dataset -> Numpy array
-            val_outputs, val_labels = self._forward_epoch(model,
-                                                          dataloader=val_loader)
-            val_loss = self.loss_fn(input=val_outputs, target=val_labels)
-            val_labels = val_labels.numpy()
-            val_prob = torch.sigmoid(val_outputs).numpy()
-            val_pred = val_prob.round()
-            for metric_config in self.config.eval_metrics:
-                metric_name = metric_config['name']
-                metric_val = self.eval_metrics[metric_name](y_true=val_labels,
-                                                            y_pred=val_pred,
-                                                            p_pred=val_outputs)
-                print(f'Val {metric_name}: {metric_val:6f}')
+            # Evaluate on eval dataset
+            if val_dataset:
+                val_outputs, val_labels = self._forward_epoch(
+                    model, dataloader=val_loader)
+                val_loss = self.loss_fn(input=val_outputs, target=val_labels)
+                val_labels_np = val_labels.numpy()
+                val_prob = torch.sigmoid(val_outputs).numpy()
+                val_pred = val_prob.round()
+                print('Evaluate on val dataset')
+                for metric_config in self.config.eval_metrics:
+                    metric_name = metric_config['name']
+                    metric_val = self.eval_metrics[metric_name](
+                        y_true=val_labels_np, y_pred=val_pred, p_pred=val_prob)
+                    print(f'{metric_name:>12}: {metric_val:6f}')
 
-            # TODO: log on proper epochs (train, val)
+            # Log on proper epochs (val)
+            if (val_dataset and self.config.logging.val.interval_unit == 'epoch'
+                    and epoch % self.config.logging.val.interval == 0):
+                val_metric_vals = self._compute_metrics(
+                    outputs=val_outputs,
+                    labels=val_labels,
+                    metric_names=val_metric_names
+                )
+                for metric_name, metric_val in val_metric_vals.items():
+                    logger.write_scalar(f'val/{metric_name}', metric_val,
+                                        step=global_step)
 
             # Update learning rate
             if scheduler is not None:
@@ -219,7 +237,7 @@ class BaseTrainer:
             # Checkpoint 2. Best val metric
             if val_dataset:
                 metric_val, is_best = ckpt_saver.check_best(y_true=val_labels,
-                                                            p_pred=val_outputs,
+                                                            p_pred=val_prob,
                                                             y_pred=val_pred)
                 if is_best:
                     ckpt_fname = ckpt_saver.save_ckpt(
@@ -243,23 +261,30 @@ class BaseTrainer:
             print(f'Checkpoint saved to {ckpt_fname}')
         return
 
-
     def evaluate(self, model, dataset=None, dataloader=None):
         # Get preds and labels for the whole epoch
         epoch_outputs, epoch_labels = self._forward_epoch(
             model, dataset=dataset, dataloader=dataloader)
 
         # Evaluate the predictions using self.eval_metrics
-        epoch_outputs = torch.sigmoid(epoch_outputs).numpy()
-        epoch_preds = epoch_outputs.round()
-        epoch_labels = epoch_labels.numpy()
-        metric_vals = {metric_name: metric_fn(y_true=epoch_labels,
-                                              y_pred=epoch_preds,
-                                              p_pred=epoch_outputs)
-                       for metric_name, metric_fn in self.eval_metrics.items()}
+        return self._compute_metrics(epoch_outputs, epoch_labels)
 
+    def _compute_metrics(self, outputs, labels, metric_names=None):
+        metric_vals = {}
+        if metric_names is None:
+            metric_names = self.eval_metrics.keys()
+
+        labels_np = np.array(labels)
+        probs = np.array(torch.sigmoid(outputs))
+        preds = probs.round()
+        for metric_name in metric_names:
+            if metric_name == 'loss':
+                metric_vals['loss'] = self.loss_fn(input=outputs, target=labels)
+            else:
+                metric_vals[metric_name] = self.eval_metrics[metric_name](
+                    y_true=labels_np, p_pred=probs, y_pred=preds
+                )
         return metric_vals
-
 
     def _forward_epoch(self, model, dataset=None, dataloader=None):
         assert dataset or dataloader

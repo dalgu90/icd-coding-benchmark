@@ -6,7 +6,6 @@ from src.datasets import *
 from src.models import *
 from src.trainers import *
 from src.utils.configuration import Config
-from src.utils.logger import Logger
 from src.utils.mapper import ConfigMapper
 from src.utils.misc import seed
 

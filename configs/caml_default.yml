@@ -136,10 +136,18 @@ trainer:
         interval_unit: step
         metric:
           - name: loss
+
       val:
         interval: 1
         interval_unit: epoch
-        metric: *eval_metrics
+        metric:
+          - name: loss
+          - name: prec_at_5
+          - name: macro_f1
+          - name: micro_f1
+          - name: macro_auc
+          - name: micro_auc
+
 
     seed: 1337
     use_gpu: true
