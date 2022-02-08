@@ -59,15 +59,20 @@ dataset:
       data_file: datasets/mimic_iii/1.4/test.csv
 
 model:
-  name: CAML
+  name: multirescnn
+  # model
   params:
     dataset_dir: datasets/mimic3_50
     version: mimic3
     embed_file: datasets/mimic3_50/processed_full.embed
+    conv_layer: 1
     num_classes: 50
     kernel_size: 10
+    filter_size: "3,5,9,15,19,25"
+    test_model: None
     num_filter_maps: 50
     dropout: 0.2
+    use_ext_emb: false
     lmbda: 0.0  # Positive for DR-CAML
 
 trainer:
@@ -89,13 +94,13 @@ trainer:
         lr: 0.0001
         weight_decay: 0.0
 
-    max_epochs: 200
+    max_epochs: 500
 
     lr_scheduler: null
 
     stopping_criterion:
       metric:
-        name: prec_at_5
+        name: prec_at_8
       desired: max
       patience: 10
 
@@ -149,5 +154,5 @@ trainer:
           - name: micro_auc
 
 
-    seed: 1337
+    seed: 1
     use_gpu: false

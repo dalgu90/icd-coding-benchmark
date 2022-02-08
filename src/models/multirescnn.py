@@ -183,7 +183,7 @@ class ResidualBlock(nn.Module):
 @ConfigMapper.map("models", "ResCNN")
 class ResCNN(nn.Module):
 
-    def __init__(self, args, Y, dataset_dir, 
+    def __init__(self, args, Y, 
         version="mimic3",
         lmbda=0,):
         super(ResCNN, self).__init__()
@@ -218,7 +218,7 @@ class ResCNN(nn.Module):
             p.requires_grad = False
 
 
-@ConfigMapper.map("models", "MultiResCNN")
+@ConfigMapper.map("models", "multirescnn")
 class MultiResCNN(nn.Module):
 
     def __init__(self, args, Y, dataset_dir, 
