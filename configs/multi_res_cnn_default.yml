@@ -1,0 +1,160 @@
+preprocessing:
+  name: mimic_iii_preprocessing_pipeline
+  params:
+    paths:
+      mimic_dir: datasets/mimic_iii/1.4
+      diagnosis_code_csv_name: DIAGNOSES_ICD.csv.gz
+      procedure_code_csv_name: PROCEDURES_ICD.csv.gz
+      noteevents_csv_name: NOTEEVENTS.csv.gz
+      train_csv_name: train.csv         # will be saved
+      val_csv_name: val.csv             # will be saved
+      test_csv_name: test.csv           # will be saved
+      labels_json_name: labels.json     # will be computed and saved
+    dataset_metadata:
+      column_names:
+        subject_id: SUBJECT_ID
+        hadm_id: HADM_ID
+        chartdate: CHARTDATE
+        charttime: CHARTTIME
+        storetime: STORETIME
+        category: CATEGORY
+        description: DESCRIPTION
+        cgid: CGID
+        iserror: ISERROR
+        text: TEXT
+        icd9_code: ICD9_CODE
+    dataset_splitting_method:
+      name: caml_official_split
+      params:
+        train_hadm_ids_path: datasets/mimic_iii/train_split.json
+        val_hadm_ids_path: datasets/mimic_iii/val_split.json
+        test_hadm_ids_path: datasets/mimic_iii/test_split.json
+    clinical_note_preprocessing:
+      to_lower:
+        perform: true
+      remove_punc_numeric_tokens:
+        perform: true
+    code_preprocessing:
+      top_k: 50                       # enter 0 for all codes
+      code_type: both
+      add_period_in_correct_pos: true
+
+dataset:
+  name: base_dataset
+  data_common: &data_common
+    column_names:
+      clinical_note: "TEXT"
+      label: "LABEL"
+    label_file: datasets/mimic_iii/1.4/labels.json
+    vocab_file: datasets/mimic_iii/1.4/vocab.json
+  params:
+    train:
+      <<: *data_common
+      data_file: datasets/mimic_iii/1.4/train.csv
+    val:
+      <<: *data_common
+      data_file: datasets/mimic_iii/1.4/val.csv
+    test:
+      <<: *data_common
+      data_file: datasets/mimic_iii/1.4/test.csv
+
+model:
+  name: multirescnn
+  # model
+  params:
+    dataset_dir: datasets/mimic3_50
+    version: mimic3
+    embed_file: datasets/mimic3_50/processed_full.embed
+    conv_layer: 1
+    num_classes: 50
+    kernel_size: 10
+    filter_size: "3,5,9,15,19,25"
+    test_model: None
+    num_filter_maps: 50
+    dropout: 0.2
+    use_ext_emb: false
+    lmbda: 0.0  # Positive for DR-CAML
+    vocabs: datasets/mimic_iii/1.4/vocab.json
+    gpu : false
+
+trainer:
+  name: base_trainer
+  params:
+    data_loader:
+      batch_size: 16
+      num_workers: 4
+      shuffle: false
+      drop_last: true
+
+    loss:
+      name: BinaryCrossEntropyLoss
+      params: null
+
+    optimizer:
+      name: adam
+      params:
+        lr: 0.0001
+        weight_decay: 0.0
+
+    max_epochs: 500
+
+    lr_scheduler: null
+
+    stopping_criterion:
+      metric:
+        name: prec_at_5
+      desired: max
+      patience: 10
+
+    output_dir: &output_dir "results/MAULTIRESCNN_mimic3_50"
+
+    checkpoint_saver:
+      name: base_saver
+      params:
+        checkpoint_dir: *output_dir
+        interval: 1
+        max_to_keep: 5
+        ckpt_fname_format: "ckpt-{}.pth"
+        best_fname_format: "best-{}.pth"
+        metric:
+          name: prec_at_5
+          class: prec_at_k
+          params:
+            k: 5
+        desired: max
+
+    eval_metrics: &eval_metrics
+      - name: prec_at_5
+        class: prec_at_k
+        params:
+          k: 5
+      - name: macro_f1
+      - name: micro_f1
+      - name: macro_auc
+      - name: micro_auc
+
+    logging:
+      logger:
+        name: tensorboard
+        params:
+          log_dir: *output_dir
+      train:
+        interval: 100
+        interval_unit: step
+        metric:
+          - name: loss
+
+      val:
+        interval: 1
+        interval_unit: epoch
+        metric:
+          - name: loss
+          - name: prec_at_5
+          - name: macro_f1
+          - name: micro_f1
+          - name: macro_auc
+          - name: micro_auc
+
+
+    seed: 1
+    use_gpu: false
