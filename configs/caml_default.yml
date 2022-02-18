@@ -7,9 +7,9 @@ preprocessing:
       diagnosis_code_csv_name: DIAGNOSES_ICD.csv.gz
       procedure_code_csv_name: PROCEDURES_ICD.csv.gz
       noteevents_csv_name: NOTEEVENTS.csv.gz
-      train_csv_name: train.csv         # will be saved
-      val_csv_name: val.csv             # will be saved
-      test_csv_name: test.csv           # will be saved
+      train_json_name: train.json       # will be saved
+      val_json_name: val.json           # will be saved
+      test_json_name: test.json         # will be saved
       labels_json_name: labels.json     # will be computed and saved
     dataset_metadata:
       column_names:

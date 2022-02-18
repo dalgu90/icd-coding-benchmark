@@ -24,13 +24,13 @@ class MimiciiiPreprocessingPipeline:
         self.clinical_note_config = config.clinical_note_preprocessing
         self.code_config = config.code_preprocessing
 
-        self.train_csv_name = os.path.join(
-            self.SAVE_DIR, config.paths.train_csv_name
+        self.train_json_name = os.path.join(
+            self.SAVE_DIR, config.paths.train_json_name
         )
-        self.val_csv_name = os.path.join(
-            self.SAVE_DIR, config.paths.val_csv_name
+        self.val_json_name = os.path.join(
+            self.SAVE_DIR, config.paths.val_json_name
         )
-        self.test_csv_name = os.path.join(
+        self.test_json_name = os.path.join(
             self.SAVE_DIR, config.paths.test_csv_name
         )
 
@@ -209,6 +209,10 @@ class MimiciiiPreprocessingPipeline:
         test_df[self.cols.text] = self.tokenizer.tokenize_list(
             test_df[self.cols.text]
         )
+
+        save_json(train_df, self.config.paths.train_json_name)
+        save_json(val_df, self.config.paths.val_json_name)
+        save_json(test_df, self.config.paths.test_json_name)
 
         # train embedding model
         print("\nTraining Embedding Model...")
