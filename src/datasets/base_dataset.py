@@ -1,7 +1,7 @@
 import pandas as pd
 from torch.utils.data import Dataset
 
-from src.utils.file_loaders import load_json
+from src.utils.file_loaders import load_csv_as_df, load_json
 from src.utils.mapper import configmapper
 
 
@@ -15,7 +15,14 @@ class BaseDataset(Dataset):
         # To-do: This class currently deals with only CSV files. We can extend
         # this to deal with other file types (.json, .xlsx, etc.).
 
-        self.df = pd.read_csv(data_path)
+        self.df = load_csv_as_df(
+            data_path,
+            dtype={
+                self._config.column_names.hadm_id: "string",
+                self._config.column_names.clinical_note: "string",
+                self._config.column_names.label: "string",
+            },
+        )
 
     def __len__(self):
         return self.df.shape[0]
