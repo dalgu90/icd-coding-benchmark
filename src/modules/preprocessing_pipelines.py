@@ -8,7 +8,7 @@ from src.modules.embeddings import *
 from src.modules.preprocessors import ClinicalNotePreprocessor, CodeProcessor
 from src.modules.tokenizers import *
 from src.utils.code_based_filtering import TopKCodes
-from src.utils.file_loaders import load_csv_as_df, save_df
+from src.utils.file_loaders import load_csv_as_df, save_df, save_json
 from src.utils.mapper import ConfigMapper
 
 tqdm.pandas()
