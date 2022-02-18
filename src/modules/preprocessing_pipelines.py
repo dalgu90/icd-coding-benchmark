@@ -128,7 +128,7 @@ class MimiciiiPreprocessingPipeline:
         clinical_note = self.clinical_note_preprocessor(clinical_note)
         return clinical_note
 
-    def preprocess_clinical_notes(self):
+    def load_clinical_notes(self):
         print("\nProcessing Clinical Notes...")
         notes_file_path = os.path.join(
             self.MIMIC_DIR, self.config.paths.noteevents_csv_name
@@ -141,10 +141,7 @@ class MimiciiiPreprocessingPipeline:
         noteevents_df = noteevents_df[
             noteevents_df[self.cols.category] == "Discharge summary"
         ]
-        # Preprocess clinical notes
-        noteevents_df[self.cols.text] = noteevents_df[
-            self.cols.text
-        ].progress_map(self.preprocess_clinical_note)
+
         # Delete unnecessary columns
         noteevents_df = noteevents_df[
             [
@@ -162,6 +159,11 @@ class MimiciiiPreprocessingPipeline:
         ].apply(lambda texts: " ".join(texts))
         noteevents_df = pd.DataFrame(noteevents_grouped)
         noteevents_df.reset_index(inplace=True)
+
+        # Preprocess clinical notes
+        noteevents_df[self.cols.text] = noteevents_df[
+            self.cols.text
+        ].progress_map(self.preprocess_clinical_note)
 
         codes_grouped = code_df.groupby(self.cols.hadm_id)[
             self.cols.icd9_code
@@ -181,7 +183,7 @@ class MimiciiiPreprocessingPipeline:
 
     def preprocess(self):
         code_df = self.extract_df_based_on_code_type()
-        noteevents_df = self.preprocess_clinical_notes()
+        noteevents_df = self.load_clinical_notes()
         code_df = self.filter_icd_codes_based_on_clinical_notes(
             code_df, noteevents_df
         )
