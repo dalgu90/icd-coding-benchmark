@@ -31,7 +31,7 @@ class MimiciiiPreprocessingPipeline:
             self.SAVE_DIR, config.paths.val_json_name
         )
         self.test_json_name = os.path.join(
-            self.SAVE_DIR, config.paths.test_csv_name
+            self.SAVE_DIR, config.paths.test_json_name
         )
 
         if not os.path.exists(self.MIMIC_DIR):
