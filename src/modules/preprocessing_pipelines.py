@@ -1,5 +1,6 @@
 import logging
 import os
+import sys
 
 import pandas as pd
 from tqdm.auto import tqdm
@@ -14,6 +15,11 @@ from src.utils.mapper import ConfigMapper
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
+file_hander = logging.StreamHandler(sys.stdout)
+file_hander.setFormatter(
+    logging.Formatter("%(asctime)s:%(levelname)s:%(name)s:%(message)s")
+)
+logger.addHandler(file_hander)
 
 tqdm.pandas()
 
