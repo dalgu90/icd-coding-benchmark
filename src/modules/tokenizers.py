@@ -16,10 +16,16 @@ logger.addHandler(file_hander)
 @ConfigMapper.map("tokenizers", "spacetokenizer")
 class SpaceTokenizer:
     def __init__(self, config):
-        logger.info(
-            "Using Space Tokenizer to tokenize the data with the following "
-            "config: {}".format(config.as_dict())
-        )
+        if config:
+            logger.info(
+                "Using Space Tokenizer to tokenize the data with the following "
+                "config: {}".format(config.as_dict())
+            )
+        else:
+            logger.info(
+                "Using Space Tokenizer to tokenize the data with the following "
+                "config: {}".format(config)
+            )
         self._config = config
 
     def tokenize_list(self, lst):
