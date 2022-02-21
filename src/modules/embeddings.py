@@ -1,6 +1,7 @@
 """Contains various kinds of embeddings like Glove, BERT, etc."""
-
+import logging
 import os
+import sys
 
 import gensim
 import numpy as np
@@ -8,16 +9,29 @@ import numpy as np
 from src.utils.file_loaders import load_json, save_json
 from src.utils.mapper import ConfigMapper
 
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.DEBUG)
+file_hander = logging.FileHandler("logs/dataset.log")
+file_hander.setFormatter(
+    logging.Formatter("%(asctime)s:%(levelname)s:%(name)s: %(message)s")
+)
+logger.addHandler(file_hander)
+
 
 @ConfigMapper.map("embeddings", "word2vec")
 class Word2VecEmbedding:
     def __init__(self, config):
+        logger.info(
+            "Using Word2Vec to train embeddings on clinical notes with the "
+            "following config: {}".format(config.as_dict())
+        )
         self._config = config
 
         if not os.path.exists(self._config.embedding_dir):
             os.makedirs(self._config.embedding_dir)
 
     def train(self, corpus):
+        logger.info("Training Word2Vec on clinical notes")
         # build vocabulary and train model
         model = gensim.models.Word2Vec(
             corpus, **self._config.word2vec_params.as_dict()
@@ -47,6 +61,7 @@ class Word2VecEmbedding:
         )
 
     def load_vocab_emb_matrix(self, dir_path):
+        logger.info("Loading Word2Vec model from {}".format(dir_path))
         vocab = load_json(os.path.join(dir_path, "token_to_idx.json"))
         embedding_matrix = np.load(
             os.path.join(dir_path, "embedding_matrix.npy")

@@ -1,10 +1,25 @@
+import logging
+import sys
+
 from src.utils.file_loaders import load_json
 from src.utils.mapper import ConfigMapper
+
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.DEBUG)
+file_hander = logging.FileHandler("logs/dataset.log")
+file_hander.setFormatter(
+    logging.Formatter("%(asctime)s:%(levelname)s:%(name)s: %(message)s")
+)
+logger.addHandler(file_hander)
 
 
 @ConfigMapper.map("dataset_splitters", "caml_official_split")
 class CamlOfficialSplit:
     def __init__(self, config):
+        logger.info(
+            "Using CAML official split to split data into train-test-val with "
+            "the following config: {}".format(config.as_dict())
+        )
         self.train_split = load_json(config.train_hadm_ids_path)
         self.val_split = load_json(config.val_hadm_ids_path)
         self.test_split = load_json(config.test_hadm_ids_path)

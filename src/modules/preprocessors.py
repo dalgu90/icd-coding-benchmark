@@ -17,7 +17,7 @@ from src.utils.file_loaders import load_json
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
-file_hander = logging.FileHandler("dataset.log")
+file_hander = logging.FileHandler("logs/dataset.log")
 file_hander.setFormatter(
     logging.Formatter("%(asctime)s:%(levelname)s:%(name)s: %(message)s")
 )
@@ -41,7 +41,10 @@ AVAILABLE_STEMMERS_LEMMATIZERS = {
 class ClinicalNotePreprocessor:
     def __init__(self, config):
         self._config = config
-
+        logger.info(
+            "Initialising Clinical Note Processor with the following "
+            "config: {}".format(config.as_dict())
+        )
         self.punct_tokenizer = RegexpTokenizer(r"\w+")
 
         if config.remove_stopwords.perform:

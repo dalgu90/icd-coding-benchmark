@@ -226,7 +226,7 @@ class MimiciiiPreprocessingPipeline:
         test_df = test_df.to_dict(orient="list")
 
         # tokenize the data
-        logger.info("Tokenizing data")
+        logger.info("Tokenizing text data")
         train_df[self.cols.text] = self.tokenizer.tokenize_list(
             train_df[self.cols.text]
         )
