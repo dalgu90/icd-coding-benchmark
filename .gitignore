@@ -130,7 +130,7 @@ dmypy.json
 
 # Results/Logs
 results/*
-logs/*
+logs/*.log
 
 # toml files
 *.toml

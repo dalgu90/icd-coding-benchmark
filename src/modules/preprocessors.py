@@ -1,4 +1,6 @@
+import logging
 import re
+import sys
 
 import nltk
 from nltk.corpus import stopwords
@@ -12,6 +14,14 @@ from nltk.stem import (
 from nltk.tokenize import RegexpTokenizer
 
 from src.utils.file_loaders import load_json
+
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.DEBUG)
+file_hander = logging.FileHandler("dataset.log")
+file_hander.setFormatter(
+    logging.Formatter("%(asctime)s:%(levelname)s:%(name)s: %(message)s")
+)
+logger.addHandler(file_hander)
 
 nltk.download("omw-1.4")
 nltk.download("rslp")
@@ -133,6 +143,11 @@ class ClinicalNotePreprocessor:
 class CodeProcessor:
     def __init__(self, config):
         self._config = config
+        logger.info(
+            "Initialising Code Processor with the following config: {}".format(
+                config.as_dict()
+            )
+        )
 
     def __call__(self, icd_code, is_diagnosis_code):
         if self._config.add_period_in_correct_pos.perform:

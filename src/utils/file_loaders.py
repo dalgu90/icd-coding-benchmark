@@ -6,7 +6,7 @@ import pandas as pd
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
-file_hander = logging.StreamHandler("dataset.log")
+file_hander = logging.FileHandler("dataset.log")
 file_hander.setFormatter(
     logging.Formatter("%(asctime)s:%(levelname)s:%(name)s: %(message)s")
 )
