@@ -10,7 +10,6 @@ class CamlOfficialSplit:
         self.test_split = load_json(config.test_hadm_ids_path)
 
     def __call__(self, df, hadm_id_col_name):
-        print("\nSplitting Data Based on Official Split...")
         train_df = df[df[hadm_id_col_name].isin(self.train_split)]
         val_df = df[df[hadm_id_col_name].isin(self.val_split)]
         test_df = df[df[hadm_id_col_name].isin(self.test_split)]

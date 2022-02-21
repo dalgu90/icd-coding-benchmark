@@ -17,7 +17,7 @@ logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 file_hander = logging.StreamHandler(sys.stdout)
 file_hander.setFormatter(
-    logging.Formatter("%(asctime)s:%(levelname)s:%(name)s:%(message)s")
+    logging.Formatter("%(asctime)s:%(levelname)s:%(name)s: %(message)s")
 )
 logger.addHandler(file_hander)
 
@@ -215,7 +215,7 @@ class MimiciiiPreprocessingPipeline:
         combined_df = self.combine_code_and_notes(code_df, noteevents_df)
         combined_df = self.top_k_codes(self.cols.labels, combined_df)
 
-        logging.info("Splitting data into train-test-val")
+        logger.info("Splitting data into train-test-val")
         train_df, val_df, test_df = self.split_data(
             combined_df, self.cols.hadm_id
         )
@@ -226,7 +226,7 @@ class MimiciiiPreprocessingPipeline:
         test_df = test_df.to_dict(orient="list")
 
         # tokenize the data
-        logging.info("Tokenizing data")
+        logger.info("Tokenizing data")
         train_df[self.cols.text] = self.tokenizer.tokenize_list(
             train_df[self.cols.text]
         )
@@ -242,5 +242,5 @@ class MimiciiiPreprocessingPipeline:
         save_json(test_df, self.config.paths.test_json_name)
 
         # train embedding model
-        logging.info("Training embedding model...")
+        logger.info("Training embedding model...")
         self.embedder.train(train_df[self.cols.text])

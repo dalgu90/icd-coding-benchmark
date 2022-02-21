@@ -12,7 +12,6 @@ class TopKCodes:
         self.labels_save_path = labels_save_path
 
     def __call__(self, label_col_name, code_df):
-        print(f"\nFiltering Dataset Samples Based on Top-{self.k} Codes...")
         self.find_top_k_codes(label_col_name, code_df)
         save_json(
             {v: k for k, v in enumerate(self.top_k_codes)},
