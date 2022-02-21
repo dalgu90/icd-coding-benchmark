@@ -128,8 +128,9 @@ dmypy.json
 # Pyre type checker
 .pyre/
 
-# Results
+# Results/Logs
 results/*
+logs/*
 
 # toml files
 *.toml
