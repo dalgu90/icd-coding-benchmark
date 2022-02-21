@@ -242,5 +242,5 @@ class MimiciiiPreprocessingPipeline:
         save_json(test_df, self.config.paths.test_json_name)
 
         # train embedding model
-        logger.info("Training embedding model...")
+        logger.info("Training embedding model")
         self.embedder.train(train_df[self.cols.text])
