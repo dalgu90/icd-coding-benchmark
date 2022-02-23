@@ -4,17 +4,11 @@ import sys
 
 import pandas as pd
 
-logger = logging.getLogger(__name__)
-logger.setLevel(logging.DEBUG)
-file_hander = logging.FileHandler("logs/dataset.log")
-file_hander.setFormatter(
-    logging.Formatter("%(asctime)s:%(levelname)s:%(name)s: %(message)s")
-)
-logger.addHandler(file_hander)
+from src.utils.text_logger import datasets_logger
 
 
 def load_csv_as_df(file_path, dtype=None):
-    logger.info("Loading file {} as dataframe".format(file_path))
+    datasets_logger.info("Loading file {} as dataframe".format(file_path))
     if file_path.endswith(".csv"):
         df = pd.read_csv(
             file_path, on_bad_lines="skip", low_memory=True, dtype=dtype
@@ -31,18 +25,18 @@ def load_csv_as_df(file_path, dtype=None):
 
 
 def save_df(df, file_path):
-    logger.info("Saving dataframe as CSV file {}".format(file_path))
+    datasets_logger.info("Saving dataframe as CSV file {}".format(file_path))
     df.to_csv(file_path, index=False)
 
 
 def load_json(file_path):
-    logger.info("Loading JSON file {} as dictionary".format(file_path))
+    datasets_logger.info("Loading JSON file {} as dictionary".format(file_path))
     with open(file_path, "r") as f:
         ret_dict = json.load(f)
     return ret_dict
 
 
 def save_json(d, file_path):
-    logger.info("Saving dictionary as JSON file {}".format(file_path))
+    datasets_logger.info("Saving dictionary as JSON file {}".format(file_path))
     with open(file_path, "w") as f:
         json.dump(d, f, indent=4)

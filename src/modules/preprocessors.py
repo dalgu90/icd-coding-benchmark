@@ -14,14 +14,7 @@ from nltk.stem import (
 from nltk.tokenize import RegexpTokenizer
 
 from src.utils.file_loaders import load_json
-
-logger = logging.getLogger(__name__)
-logger.setLevel(logging.DEBUG)
-file_hander = logging.FileHandler("logs/dataset.log")
-file_hander.setFormatter(
-    logging.Formatter("%(asctime)s:%(levelname)s:%(name)s: %(message)s")
-)
-logger.addHandler(file_hander)
+from src.utils.text_logger import datasets_logger
 
 nltk.download("omw-1.4")
 nltk.download("rslp")
@@ -41,7 +34,7 @@ AVAILABLE_STEMMERS_LEMMATIZERS = {
 class ClinicalNotePreprocessor:
     def __init__(self, config):
         self._config = config
-        logger.info(
+        datasets_logger.info(
             "Initialising Clinical Note Processor with the following "
             "config: {}".format(config.as_dict())
         )
@@ -146,7 +139,7 @@ class ClinicalNotePreprocessor:
 class CodeProcessor:
     def __init__(self, config):
         self._config = config
-        logger.info(
+        datasets_logger.info(
             "Initialising Code Processor with the following config: {}".format(
                 config.as_dict()
             )

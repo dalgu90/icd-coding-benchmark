@@ -3,26 +3,19 @@ import logging
 import sys
 
 from src.utils.mapper import ConfigMapper
-
-logger = logging.getLogger(__name__)
-logger.setLevel(logging.DEBUG)
-file_hander = logging.FileHandler("logs/dataset.log")
-file_hander.setFormatter(
-    logging.Formatter("%(asctime)s:%(levelname)s:%(name)s: %(message)s")
-)
-logger.addHandler(file_hander)
+from src.utils.text_logger import datasets_logger
 
 
 @ConfigMapper.map("tokenizers", "spacetokenizer")
 class SpaceTokenizer:
     def __init__(self, config):
         if config:
-            logger.info(
+            datasets_logger.info(
                 "Using Space Tokenizer to tokenize the data with the following "
                 "config: {}".format(config.as_dict())
             )
         else:
-            logger.info(
+            datasets_logger.info(
                 "Using Space Tokenizer to tokenize the data with the following "
                 "config: {}".format(config)
             )
