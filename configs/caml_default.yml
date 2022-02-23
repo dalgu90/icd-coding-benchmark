@@ -72,8 +72,8 @@ preprocessing:
       name: word2vec
       params:
         embedding_dir: *word2vec_dir
-        unk_token: <unk>
         pad_token: <pad>
+        unk_token: <unk>
         word2vec_params:
           vector_size: 100
           min_count: 3
@@ -87,6 +87,8 @@ dataset:
       clinical_note: "TEXT"
       labels: "LABELS"
     word2vec_dir: *word2vec_dir
+    pad_token: <pad>
+    unk_token: <unk>
     dataset_dir: *dataset_dir
     label_file: labels.json
   params:

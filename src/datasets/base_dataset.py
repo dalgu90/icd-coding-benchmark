@@ -20,6 +20,8 @@ class BaseDataset(Dataset):
             self._config.word2vec_dir)
         self.vocab_size = len(self.vocab)
         assert self.vocab_size == max(self.vocab.values()) + 1
+        self.pad_idx = self.vocab.index(self._config.pad_token)
+        self.unk_idx = self.vocab.index(self._config.unk_token)
 
         # Load labels (dict of {code: idx})
         label_path = os.path.join(self._config.dataset_dir,
@@ -45,8 +47,8 @@ class BaseDataset(Dataset):
         clinical_note = row[self._config.column_names.clinical_note]
         codes = row[self._config.column_names.labels].split(";")
 
-        # Note (list) -> word idxs (UNK is assigned after the last word)
-        clinical_note = [self.vocab[w] if w in self.vocab else self.vocab_size
+        # Note (list) -> word idxs (UNK is assigned at the last word)
+        clinical_note = [self.vocab[w] if w in self.vocab else self.unk_idx
                          for w in clinical_note]
 
         # ICD codes -> binary labels
@@ -62,7 +64,7 @@ class BaseDataset(Dataset):
 
         # Pad notes
         max_note_len = max(map(len, notes))
-        notes = [note + [0] * (max_note_len - len(note)) for note in notes]
+        notes = [note + [self.pad_idx] * (max_note_len - len(note)) for note in notes]
 
         # Convert into Tensor
         notes = torch.tensor(notes)
