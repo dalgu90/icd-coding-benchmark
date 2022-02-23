@@ -1,3 +1,5 @@
+import os
+
 import numpy as np
 import pandas as pd
 import torch
@@ -11,30 +13,29 @@ from src.utils.mapper import ConfigMapper
 class BaseDataset(Dataset):
     def __init__(self, config):
         self._config = config
-        data_path = self._config.data_file
 
         # Load vocab (dict of {word: idx})
-        self.vocab = load_json(config.vocab_file)
+        embedding_cls = ConfigMapper.get_object("embeddings", "word2vec")
+        self.vocab, _ = embedding_cls.load_vocab_emb_matrix(
+            self._config.word2vec_dir)
         self.vocab_size = len(self.vocab)
         assert self.vocab_size == max(self.vocab.values()) + 1
 
         # Load labels (dict of {code: idx})
-        self.all_labels = load_json(config.label_file)
+        label_path = os.path.join(self._config.dataset_dir,
+                                  self._config.label_file)
+        self.all_labels = load_json(label_path)
         self.num_labels = len(self.all_labels)
         assert self.num_labels == max(self.all_labels.values()) + 1
 
-        # To-do: This class currently deals with only CSV files. We can extend
-        # this to deal with other file types (.json, .xlsx, etc.).
+        # To-do: This class currently deals with only JSON files. We can extend
+        # this to deal with other file types (.csv, .xlsx, etc.).
 
+        # Load data (JSON)
+        data_path = os.path.join(self._config.dataset_dir,
+                                 self._config.data_file)
         print(f'Load dataset from {data_path}')
-        self.df = load_csv_as_df(
-            data_path,
-            dtype={
-                self._config.column_names.hadm_id: "string",
-                self._config.column_names.clinical_note: "string",
-                self._config.column_names.label: "string",
-            },
-        )
+        self.df = pd.DataFrame.from_dict(load_json(data_path))
 
     def __len__(self):
         return self.df.shape[0]
@@ -42,11 +43,11 @@ class BaseDataset(Dataset):
     def __getitem__(self, idx):
         row = self.df.iloc[idx]
         clinical_note = row[self._config.column_names.clinical_note]
-        codes = row[self._config.column_names.label].split(";")
+        codes = row[self._config.column_names.labels].split(";")
 
-        # Note -> word idxs (UNK is assigned after the last word)
+        # Note (list) -> word idxs (UNK is assigned after the last word)
         clinical_note = [self.vocab[w] if w in self.vocab else self.vocab_size
-                         for w in clinical_note.split()]
+                         for w in clinical_note]
 
         # ICD codes -> binary labels
         labels = np.zeros(self.num_labels, dtype=np.int32)

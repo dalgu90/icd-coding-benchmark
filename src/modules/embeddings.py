@@ -46,7 +46,8 @@ class Word2VecEmbedding:
             model.wv.get_normed_vectors(),
         )
 
-    def load_vocab_emb_matrix(self, dir_path):
+    @staticmethod
+    def load_vocab_emb_matrix(dir_path):
         vocab = load_json(os.path.join(dir_path, "token_to_idx.json"))
         embedding_matrix = np.load(
             os.path.join(dir_path, "embedding_matrix.npy")

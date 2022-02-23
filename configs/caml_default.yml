@@ -1,16 +1,24 @@
+paths:
+  mimic_dir: &mimic_dir datasets/mimic_iii/csv
+  static_dir: &static_dir datasets/mimic_iii/static
+  dataset_dir: &dataset_dir datasets/mimic3_50
+  word2vec_dir: &word2vec_dir datasets/mimic3_50/word2vec
+  output_dir: &output_dir results/CAML_mimic3_50
+
 preprocessing:
   name: mimic_iii_preprocessing_pipeline
   params:
     paths:
-      mimic_dir: datasets/mimic_iii/1.4
-      save_dir: datasets/mimic_iii
+      mimic_dir: *mimic_dir
+      static_dir: *static_dir
+      save_dir: *dataset_dir
       diagnosis_code_csv_name: DIAGNOSES_ICD.csv.gz
       procedure_code_csv_name: PROCEDURES_ICD.csv.gz
       noteevents_csv_name: NOTEEVENTS.csv.gz
       train_json_name: train.json       # will be saved
       val_json_name: val.json           # will be saved
       test_json_name: test.json         # will be saved
-      labels_json_name: labels.json     # will be computed and saved
+      label_json_name: labels.json       # will be computed and saved
     dataset_metadata:
       column_names:
         subject_id: SUBJECT_ID
@@ -28,9 +36,10 @@ preprocessing:
     dataset_splitting_method:
       name: caml_official_split
       params:
-        train_hadm_ids_path: datasets/mimic_iii/train_split.json
-        val_hadm_ids_path: datasets/mimic_iii/val_split.json
-        test_hadm_ids_path: datasets/mimic_iii/test_split.json
+        hadm_dir: *static_dir
+        train_hadm_ids_name: train_split.json
+        val_hadm_ids_name: val_split.json
+        test_hadm_ids_name: test_split.json
     clinical_note_preprocessing:
       to_lower:
         perform: true
@@ -62,7 +71,7 @@ preprocessing:
     embedding:
       name: word2vec
       params:
-        embedding_dir: datasets/mimic_iii/word2vec/
+        embedding_dir: *word2vec_dir
         unk_token: <unk>
         pad_token: <pad>
         word2vec_params:
@@ -76,26 +85,28 @@ dataset:
     column_names:
       hadm_id: "HADM_ID"
       clinical_note: "TEXT"
-      label: "LABEL"
-    vocab_file: datasets/mimic_iii/vocab.json
-    label_file: datasets/mimic_iii/labels.json
+      labels: "LABELS"
+    word2vec_dir: *word2vec_dir
+    dataset_dir: *dataset_dir
+    label_file: labels.json
   params:
     train:
       <<: *data_common
-      data_file: datasets/mimic_iii/train.csv
+      data_file: train.json
     val:
       <<: *data_common
-      data_file: datasets/mimic_iii/val.csv
+      data_file: val.json
     test:
       <<: *data_common
-      data_file: datasets/mimic_iii/test.csv
+      data_file: test.json
 
 model:
   name: CAML
   params:
-    dataset_dir: datasets/mimic3_50
+    dataset_dir: *dataset_dir
     version: mimic3
-    embed_file: datasets/mimic3_50/processed_full.embed
+    embedding_name: word2vec
+    embedding_dir: *word2vec_dir
     num_classes: 50
     kernel_size: 10
     num_filter_maps: 50
@@ -131,7 +142,7 @@ trainer:
       desired: max
       patience: 10
 
-    output_dir: &output_dir "results/CAML_mimic3_50"
+    output_dir: *output_dir
 
     checkpoint_saver:
       name: base_saver

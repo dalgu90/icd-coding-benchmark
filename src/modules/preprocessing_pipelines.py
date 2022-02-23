@@ -47,7 +47,7 @@ class MimiciiiPreprocessingPipeline:
 
         self.top_k_codes = TopKCodes(
             self.code_config.top_k,
-            os.path.join(self.SAVE_DIR, config.paths.labels_json_name),
+            os.path.join(self.SAVE_DIR, config.paths.label_json_name),
         )
         self.split_data = ConfigMapper.get_object(
             "dataset_splitters", config.dataset_splitting_method.name
@@ -210,9 +210,12 @@ class MimiciiiPreprocessingPipeline:
             test_df[self.cols.text]
         )
 
-        save_json(train_df, self.config.paths.train_json_name)
-        save_json(val_df, self.config.paths.val_json_name)
-        save_json(test_df, self.config.paths.test_json_name)
+        save_json(train_df, os.path.join(self.config.paths.save_dir,
+                                         self.config.paths.train_json_name))
+        save_json(val_df, os.path.join(self.config.paths.save_dir,
+                                       self.config.paths.val_json_name))
+        save_json(test_df, os.path.join(self.config.paths.save_dir,
+                                        self.config.paths.test_json_name))
 
         # train embedding model
         print("\nTraining Embedding Model...")
