@@ -1,5 +1,7 @@
 from collections import Counter
 
+import pandas as pd
+
 from src.utils.file_loaders import save_json
 
 
@@ -19,10 +21,14 @@ class TopKCodes:
         if self.k == 0:
             return code_df
         indices_to_delete = []
+        top_k_codes_set = set(self.top_k_codes)
         for idx, row in code_df.iterrows():
-            if set(row[label_col_name].split(",")).issubset(
-                set(self.top_k_codes)
-            ):
+            filtered_indices = set(row[label_col_name].split(";")).intersection(
+                top_k_codes_set
+            )
+            if len(filtered_indices) > 0:
+                row[label_col_name] = ";".join(filtered_indices)
+            else:
                 indices_to_delete.append(idx)
         code_df.drop(indices_to_delete, inplace=True)
         return code_df
@@ -33,6 +39,6 @@ class TopKCodes:
             for label in row[label_col_name].split(";"):
                 counts[label] += 1
         if self.k == 0:
-            self.top_k_codes = [code for code, _ in counts]
+            self.top_k_codes = [code for code, _ in counts.items()]
         else:
             self.top_k_codes = [code for code, _ in counts.most_common(self.k)]

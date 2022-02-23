@@ -3,7 +3,7 @@ import pandas as pd
 import torch
 from torch.utils.data import Dataset
 
-from src.utils.file_loaders import load_json
+from src.utils.file_loaders import load_csv_as_df, load_json
 from src.utils.mapper import ConfigMapper
 
 
@@ -27,7 +27,14 @@ class BaseDataset(Dataset):
         # this to deal with other file types (.json, .xlsx, etc.).
 
         print(f'Load dataset from {data_path}')
-        self.df = pd.read_csv(data_path)
+        self.df = load_csv_as_df(
+            data_path,
+            dtype={
+                self._config.column_names.hadm_id: "string",
+                self._config.column_names.clinical_note: "string",
+                self._config.column_names.label: "string",
+            },
+        )
 
     def __len__(self):
         return self.df.shape[0]

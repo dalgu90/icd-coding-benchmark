@@ -3,12 +3,18 @@ import json
 import pandas as pd
 
 
-def load_csv_as_df(file_path):
+def load_csv_as_df(file_path, dtype=None):
     if file_path.endswith(".csv"):
-        df = pd.read_csv(file_path, on_bad_lines="skip", low_memory=True)
+        df = pd.read_csv(
+            file_path, on_bad_lines="skip", low_memory=True, dtype=dtype
+        )
     elif file_path.endswith(".gz"):
         df = pd.read_csv(
-            file_path, compression="gzip", on_bad_lines="skip", low_memory=True
+            file_path,
+            compression="gzip",
+            on_bad_lines="skip",
+            low_memory=True,
+            dtype=dtype,
         )
     return df
 

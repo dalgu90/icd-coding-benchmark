@@ -4,13 +4,11 @@ import pandas as pd
 from tqdm.auto import tqdm
 
 from src.modules.dataset_splitters import *
-from src.modules.preprocessors import (
-    ReformatICDCode,
-    RemoveNumericOnlyTokens,
-    ToLowerCase,
-)
+from src.modules.embeddings import *
+from src.modules.preprocessors import ClinicalNotePreprocessor, CodeProcessor
+from src.modules.tokenizers import *
 from src.utils.code_based_filtering import TopKCodes
-from src.utils.file_loaders import load_csv_as_df, save_df
+from src.utils.file_loaders import load_csv_as_df, save_df, save_json
 from src.utils.mapper import ConfigMapper
 
 tqdm.pandas()
@@ -21,31 +19,59 @@ class MimiciiiPreprocessingPipeline:
     def __init__(self, config):
         self.config = config
         self.MIMIC_DIR = config.paths.mimic_dir
+        self.SAVE_DIR = config.paths.save_dir
         self.cols = config.dataset_metadata.column_names
         self.clinical_note_config = config.clinical_note_preprocessing
         self.code_config = config.code_preprocessing
 
-        self.train_csv_name = os.path.join(
-            self.MIMIC_DIR, config.paths.train_csv_name
+        self.train_json_name = os.path.join(
+            self.SAVE_DIR, config.paths.train_json_name
         )
-        self.val_csv_name = os.path.join(
-            self.MIMIC_DIR, config.paths.val_csv_name
+        self.val_json_name = os.path.join(
+            self.SAVE_DIR, config.paths.val_json_name
         )
-        self.test_csv_name = os.path.join(
-            self.MIMIC_DIR, config.paths.test_csv_name
+        self.test_json_name = os.path.join(
+            self.SAVE_DIR, config.paths.test_json_name
         )
+
+        if not os.path.exists(self.MIMIC_DIR):
+            os.makedirs(self.MIMIC_DIR)
+
+        if not os.path.exists(self.SAVE_DIR):
+            os.makedirs(self.SAVE_DIR)
+
+        self.clinical_note_preprocessor = ClinicalNotePreprocessor(
+            self.clinical_note_config
+        )
+        self.code_preprocessor = CodeProcessor(self.code_config)
 
         self.top_k_codes = TopKCodes(
             self.code_config.top_k,
-            os.path.join(self.MIMIC_DIR, config.paths.labels_json_name),
+            os.path.join(self.SAVE_DIR, config.paths.labels_json_name),
         )
         self.split_data = ConfigMapper.get_object(
             "dataset_splitters", config.dataset_splitting_method.name
         )(config.dataset_splitting_method.params)
 
+        self.tokenizer = ConfigMapper.get_object(
+            "tokenizers", config.tokenizer.name
+        )(config.tokenizer.params)
+
+        self.embedder = ConfigMapper.get_object(
+            "embeddings", config.embedding.name
+        )(config.embedding.params)
+
+        self.code_csv_dtypes = {
+            self.cols.hadm_id: "string",
+            self.cols.icd9_code: "string",
+        }
+        self.noteevents_csv_dtypes = {
+            self.cols.hadm_id: "string",
+            self.cols.text: "string",
+        }
+
     def extract_df_based_on_code_type(self):
         code_type = self.code_config.code_type
-        add_period_in_correct_pos = self.code_config.add_period_in_correct_pos
 
         diagnosis_code_csv_path = os.path.join(
             self.MIMIC_DIR, self.config.paths.diagnosis_code_csv_name
@@ -59,17 +85,23 @@ class MimiciiiPreprocessingPipeline:
             "both",
         ], 'code_type should be one of ["diagnosis", "procedure", "both"]'
 
-        diagnosis_code_df = load_csv_as_df(diagnosis_code_csv_path)
-        procedure_code_df = load_csv_as_df(procedure_code_csv_path)
+        diagnosis_code_df = load_csv_as_df(
+            diagnosis_code_csv_path, dtype=self.code_csv_dtypes
+        )
+        procedure_code_df = load_csv_as_df(
+            procedure_code_csv_path, dtype=self.code_csv_dtypes
+        )
 
-        if add_period_in_correct_pos:
-            reformat_icd_code = ReformatICDCode()
-            diagnosis_code_df[self.cols.icd9_code] = diagnosis_code_df.apply(
-                lambda row: str(reformat_icd_code(str(row[4]), True)), axis=1
-            )
-            procedure_code_df[self.cols.icd9_code] = procedure_code_df.apply(
-                lambda row: str(reformat_icd_code(str(row[4]), False)), axis=1
-            )
+        diagnosis_code_df[self.cols.icd9_code] = diagnosis_code_df[
+            self.cols.icd9_code
+        ].apply(
+            lambda x: str(self.code_preprocessor(str(x), True)),
+        )
+        procedure_code_df[self.cols.icd9_code] = procedure_code_df[
+            self.cols.icd9_code
+        ].apply(
+            lambda x: str(self.code_preprocessor(str(x), False)),
+        )
 
         if code_type == "diagnosis":
             code_df = diagnosis_code_df
@@ -77,6 +109,14 @@ class MimiciiiPreprocessingPipeline:
             code_df = procedure_code_df
         else:
             code_df = pd.concat([diagnosis_code_df, procedure_code_df])
+
+        # Delete unnecessary columns.
+        code_df = code_df[
+            [
+                self.cols.hadm_id,
+                self.cols.icd9_code,
+            ]
+        ]
         return code_df
 
     def filter_icd_codes_based_on_clinical_notes(self, code_df, noteevents_df):
@@ -85,37 +125,27 @@ class MimiciiiPreprocessingPipeline:
         return code_df
 
     def preprocess_clinical_note(self, clinical_note):
-        if self.clinical_note_config.to_lower.perform:
-            to_lower_case = ToLowerCase()
-            clinical_note = to_lower_case(clinical_note)
-
-        if self.clinical_note_config.remove_punc_numeric_tokens.perform:
-            remove_numeric_only_tokens = RemoveNumericOnlyTokens()
-            clinical_note = remove_numeric_only_tokens(clinical_note)
-
+        clinical_note = self.clinical_note_preprocessor(clinical_note)
         return clinical_note
 
-    def preprocess_clinical_notes(self):
+    def load_clinical_notes(self):
         print("\nProcessing Clinical Notes...")
         notes_file_path = os.path.join(
             self.MIMIC_DIR, self.config.paths.noteevents_csv_name
         )
 
-        noteevents_df = load_csv_as_df(notes_file_path)
+        noteevents_df = load_csv_as_df(
+            notes_file_path, dtype=self.noteevents_csv_dtypes
+        )
         # To-do: Add other categories later, based on args provided by the user
         noteevents_df = noteevents_df[
             noteevents_df[self.cols.category] == "Discharge summary"
         ]
-        # Preprocess clinical notes
-        noteevents_df[self.cols.text] = noteevents_df[
-            self.cols.text
-        ].progress_map(self.preprocess_clinical_note)
+
         # Delete unnecessary columns
         noteevents_df = noteevents_df[
             [
-                self.cols.subject_id,
                 self.cols.hadm_id,
-                self.cols.charttime,
                 self.cols.text,
             ]
         ]
@@ -123,78 +153,67 @@ class MimiciiiPreprocessingPipeline:
 
     def combine_code_and_notes(self, code_df, noteevents_df):
         print("\nForming Text-Label Dataframe...")
-        # Sort by SUBJECT_ID and HADM_ID
-        noteevents_df = noteevents_df.sort_values(
-            [self.cols.subject_id, self.cols.hadm_id]
+
+        noteevents_grouped = noteevents_df.groupby(self.cols.hadm_id)[
+            self.cols.text
+        ].apply(lambda texts: " ".join(texts))
+        noteevents_df = pd.DataFrame(noteevents_grouped)
+        noteevents_df.reset_index(inplace=True)
+
+        # Preprocess clinical notes
+        noteevents_df[self.cols.text] = noteevents_df[
+            self.cols.text
+        ].progress_map(self.preprocess_clinical_note)
+
+        codes_grouped = code_df.groupby(self.cols.hadm_id)[
+            self.cols.icd9_code
+        ].apply(lambda codes: ";".join(map(str, list(dict.fromkeys(codes)))))
+        code_df = pd.DataFrame(codes_grouped)
+        code_df.reset_index(inplace=True)
+
+        combined_df = pd.merge(noteevents_df, code_df, on=self.cols.hadm_id)
+        combined_df.sort_values(
+            [self.cols.hadm_id], inplace=True, ignore_index=True
         )
-        code_df = code_df.sort_values([self.cols.subject_id, self.cols.hadm_id])
-
-        subj_id_hadm_id_list = list(
-            set(
-                zip(code_df[self.cols.subject_id], code_df[self.cols.hadm_id])
-            ).intersection(
-                set(
-                    zip(
-                        noteevents_df[self.cols.subject_id],
-                        noteevents_df[self.cols.hadm_id],
-                    )
-                )
-            )
+        combined_df.rename(
+            columns={self.cols.icd9_code: self.cols.labels}, inplace=True
         )
-        final_df = pd.DataFrame(
-            columns=[
-                self.cols.subject_id,
-                self.cols.hadm_id,
-                self.cols.text,
-                "label",
-            ]
-        )
-        for subj_id, hadm_id in tqdm(subj_id_hadm_id_list):
-            code_df_rows = code_df[
-                (code_df[self.cols.subject_id] == subj_id)
-                & (code_df[self.cols.hadm_id] == hadm_id)
-            ]
-            noteevents_df_rows = noteevents_df[
-                (noteevents_df[self.cols.subject_id] == subj_id)
-                & (noteevents_df[self.cols.hadm_id] == hadm_id)
-            ]
 
-            codes = []
-            notes = []
-            for _, row in code_df_rows.iterrows():
-                codes.append(row[self.cols.icd9_code])
-            for _, row in noteevents_df_rows.iterrows():
-                notes.append(row[self.cols.text])
-
-            final_df = final_df.append(
-                {
-                    self.cols.subject_id: subj_id,
-                    self.cols.hadm_id: hadm_id,
-                    self.cols.text: " ".join(notes).strip(),
-                    "label": ";".join(codes),
-                },
-                ignore_index=True,
-            )
-
-        return final_df
+        return combined_df
 
     def preprocess(self):
         code_df = self.extract_df_based_on_code_type()
-        if code_df[self.cols.hadm_id].dtype == float:
-            code_df[self.cols.hadm_id] = code_df[self.cols.hadm_id].astype(int)
-        noteevents_df = self.preprocess_clinical_notes()
-        if noteevents_df[self.cols.hadm_id].dtype == float:
-            noteevents_df[self.cols.hadm_id] = noteevents_df[
-                self.cols.hadm_id
-            ].astype(int)
+        noteevents_df = self.load_clinical_notes()
         code_df = self.filter_icd_codes_based_on_clinical_notes(
             code_df, noteevents_df
         )
         combined_df = self.combine_code_and_notes(code_df, noteevents_df)
-        combined_df = self.top_k_codes("label", combined_df)
+        combined_df = self.top_k_codes(self.cols.labels, combined_df)
         train_df, val_df, test_df = self.split_data(
             combined_df, self.cols.hadm_id
         )
-        save_df(train_df, self.train_csv_name)
-        save_df(val_df, self.val_csv_name)
-        save_df(test_df, self.test_csv_name)
+
+        # convert dataset to dictionary
+        train_df = train_df.to_dict(orient="list")
+        val_df = val_df.to_dict(orient="list")
+        test_df = test_df.to_dict(orient="list")
+
+        # tokenize the data
+        print("\nTokenizing Data...")
+        train_df[self.cols.text] = self.tokenizer.tokenize_list(
+            train_df[self.cols.text]
+        )
+        val_df[self.cols.text] = self.tokenizer.tokenize_list(
+            val_df[self.cols.text]
+        )
+        test_df[self.cols.text] = self.tokenizer.tokenize_list(
+            test_df[self.cols.text]
+        )
+
+        save_json(train_df, self.config.paths.train_json_name)
+        save_json(val_df, self.config.paths.val_json_name)
+        save_json(test_df, self.config.paths.test_json_name)
+
+        # train embedding model
+        print("\nTraining Embedding Model...")
+        self.embedder.train(train_df[self.cols.text])
