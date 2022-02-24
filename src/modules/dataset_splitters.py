@@ -3,7 +3,7 @@ import sys
 
 from src.utils.file_loaders import load_json
 from src.utils.mapper import ConfigMapper
-from src.utils.text_logger import datasets_logger
+from src.utils.text_loggers.datasets_logger import datasets_logger
 
 
 @ConfigMapper.map("dataset_splitters", "caml_official_split")

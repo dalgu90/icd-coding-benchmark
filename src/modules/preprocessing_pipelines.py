@@ -10,7 +10,7 @@ from src.modules.tokenizers import *
 from src.utils.code_based_filtering import TopKCodes
 from src.utils.file_loaders import load_csv_as_df, save_df, save_json
 from src.utils.mapper import ConfigMapper
-from src.utils.text_logger import stdout_logger
+from src.utils.text_loggers.stdout_logger import stdout_logger
 
 tqdm.pandas()
 

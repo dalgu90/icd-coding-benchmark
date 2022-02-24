@@ -8,7 +8,7 @@ import numpy as np
 
 from src.utils.file_loaders import load_json, save_json
 from src.utils.mapper import ConfigMapper
-from src.utils.text_logger import datasets_logger
+from src.utils.text_loggers.datasets_logger import datasets_logger
 
 
 @ConfigMapper.map("embeddings", "word2vec")
