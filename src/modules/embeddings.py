@@ -30,7 +30,7 @@ class Word2VecEmbedding:
         # Vocab: {<pad>: 0, <unk>: 1, word1: 2, word2: 3, ... }
         words = [self._config.pad_token, self._config.unk_token] + \
                 model.wv.index_to_key
-        token_to_idx_dict = {idx: token for idx, token in enumerate(words)}
+        token_to_idx_dict = {token: idx for idx, token in enumerate(words)}
 
         save_json(
             token_to_idx_dict,
