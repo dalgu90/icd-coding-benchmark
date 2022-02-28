@@ -50,9 +50,13 @@ class Word2VecEmbedding:
         )
 
     @staticmethod
-    def load_vocab_emb_matrix(dir_path):
+    def load_vocab(dir_path):
         vocab = load_json(os.path.join(dir_path, "token_to_idx.json"))
+        return vocab
+
+    @staticmethod
+    def load_emb_matric(dir_path):
         embedding_matrix = np.load(
             os.path.join(dir_path, "embedding_matrix.npy")
         )
-        return (vocab, embedding_matrix)
+        return embedding_matrix

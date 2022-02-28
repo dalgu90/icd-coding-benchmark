@@ -16,8 +16,7 @@ class BaseDataset(Dataset):
 
         # Load vocab (dict of {word: idx})
         embedding_cls = ConfigMapper.get_object("embeddings", "word2vec")
-        self.vocab, _ = embedding_cls.load_vocab_emb_matrix(
-            self._config.word2vec_dir)
+        self.vocab = embedding_cls.load_vocab(self._config.word2vec_dir)
         self.vocab_size = len(self.vocab)
         assert self.vocab_size == max(self.vocab.values()) + 1
         self.pad_idx = self.vocab.index(self._config.pad_token)
