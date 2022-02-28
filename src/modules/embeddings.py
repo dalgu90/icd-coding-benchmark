@@ -55,7 +55,7 @@ class Word2VecEmbedding:
         return vocab
 
     @staticmethod
-    def load_emb_matric(dir_path):
+    def load_emb_matrix(dir_path):
         embedding_matrix = np.load(
             os.path.join(dir_path, "embedding_matrix.npy")
         )
