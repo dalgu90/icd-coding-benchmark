@@ -3,73 +3,50 @@
     https://github.com/jamesmullenbach/caml-mimic
 """
 
-import csv
-import random
-import sys
-import time
-from collections import defaultdict
 from math import floor
 
 import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from gensim.models import KeyedVectors
 from torch.autograd import Variable
 from torch.nn.init import xavier_uniform
 
-from src.utils.caml_utils import load_embeddings, load_lookups, pad_desc_vecs
+from src.utils.caml_utils import load_lookups, pad_desc_vecs
 from src.utils.mapper import ConfigMapper
 
 
 # From learn/models.py
 class BaseModel(nn.Module):
-    def __init__(
-        self,
-        Y,
-        dataset_dir,
-        embed_file,
-        version="mimic3",
-        lmbda=0,
-        dropout=0.5,
-        embed_size=100,
-    ):
+    def __init__(self, config):
         super(BaseModel, self).__init__()
-        # torch.manual_seed(1337)
-        # self.gpu = gpu
-        self.Y = Y
-        self.embed_size = embed_size
-        self.embed_drop = nn.Dropout(p=dropout)
-        self.lmbda = lmbda
+        self.config = config
 
-        self.dicts = load_lookups(Y, dataset_dir, version, desc_embed=lmbda > 0)
+        self.Y = config.num_classes
+        self.embed_drop = nn.Dropout(p=config.dropout)
+
+        self.dicts = load_lookups(dataset_dir=config.dataset_dir,
+                                  mimic_dir=config.mimic_dir,
+                                  static_dir=config.static_dir,
+                                  word2vec_dir=config.word2vec_dir,
+                                  version=config.version)
+        self.pad_idx = self.dicts['w2ind']['<pad>']
+        self.unk_idx = self.dicts['w2ind']['<unk>']
 
         # make embedding layer
-        if embed_file:
-            print("loading pretrained embeddings...")
-            W = torch.Tensor(load_embeddings(embed_file))
+        embedding_cls = ConfigMapper.get_object("embeddings", "word2vec")
+        W = torch.Tensor(embedding_cls.load_emb_matrix(config.word2vec_dir))
+        self.embed = nn.Embedding(W.size()[0], W.size()[1], padding_idx=0)
+        self.embed.weight.data = W.clone()
 
-            self.embed = nn.Embedding(W.size()[0], W.size()[1], padding_idx=0)
-            self.embed.weight.data = W.clone()
-        else:
-            # add 2 to include UNK and PAD
-            vocab_size = len(self.dicts["ind2w"])
-            self.embed = nn.Embedding(vocab_size + 2, embed_size, padding_idx=0)
-
-    def _get_loss(self, yhat, target, diffs=None):
-        # calculate the BCE
-        loss = F.binary_cross_entropy_with_logits(yhat, target)
-
-        # add description regularization loss if relevant
-        if self.lmbda > 0 and diffs is not None:
-            diff = torch.stack(diffs).mean()
-            loss = loss + diff
-        return loss
-
-    def embed_descriptions(self, desc_data, gpu):
+    def embed_descriptions(self, desc_data):
         # label description embedding via convolutional layer
         # number of labels is inconsistent across instances, so have to iterate
         # over the batch
+
+        # Whether the model is using GPU
+        gpu = next(self.parameters()).is_cuda
+
         b_batch = []
         for inst in desc_data:
             if len(inst) > 0:
@@ -102,70 +79,54 @@ class BaseModel(nn.Module):
 
             # multiply by number of labels to make sure overall mean is balanced
             # with regard to number of labels
-            diffs.append(self.lmbda * diff * bi.size()[0])
+            diffs.append(self.config.lmbda * diff * bi.size()[0])
         return diffs
 
 
 @ConfigMapper.map("models", "CAML")
 class ConvAttnPool(BaseModel):
-    def __init__(
-        self,
-        num_classes=50,
-        dataset_dir=None,
-        version="mimic3",
-        embed_file=None,
-        kernel_size=10,
-        num_filter_maps=50,
-        lmbda=0.0,
-        embed_size=100,
-        dropout=0.5,
-        code_emb=None,
-        **kwargs
-    ):
-        super(ConvAttnPool, self).__init__(
-            Y=num_classes,
-            dataset_dir=dataset_dir,
-            version=version,
-            embed_file=embed_file,
-            lmbda=lmbda,
-            dropout=dropout,
-            embed_size=embed_size,
-        )
+    def __init__(self, config):
+        super(ConvAttnPool, self).__init__(config=config)
 
         # initialize conv layer as in 2.1
         self.conv = nn.Conv1d(
-            self.embed_size,
-            num_filter_maps,
-            kernel_size=kernel_size,
-            padding=int(floor(kernel_size / 2)),
+            config.embed_size,
+            config.num_filter_maps,
+            kernel_size=config.kernel_size,
+            padding=int(floor(config.kernel_size / 2)),
         )
         xavier_uniform(self.conv.weight)
 
         # context vectors for computing attention as in 2.2
-        self.U = nn.Linear(num_filter_maps, self.Y)
+        self.U = nn.Linear(config.num_filter_maps, self.Y)
         xavier_uniform(self.U.weight)
 
         # final layer: create a matrix to use for the L binary classifiers as in
         # 2.3
-        self.final = nn.Linear(num_filter_maps, self.Y)
+        self.final = nn.Linear(config.num_filter_maps, self.Y)
         xavier_uniform(self.final.weight)
 
         # initialize with trained code embeddings if applicable
-        if code_emb:
-            self._code_emb_init(code_emb, self.dicts)
-            # also set conv weights to do sum of inputs
-            weights = (
-                torch.eye(self.embed_size)
-                .unsqueeze(2)
-                .expand(-1, -1, kernel_size)
-                / kernel_size
-            )
-            self.conv.weight.data = weights.clone()
-            self.conv.bias.data.zero_()
+        if config.init_code_emb:
+            if config.embed_size != config.num_filter_maps:
+                print('Cannot init attention vectors since the dimension differ'
+                      'from the dimension of the embedding')
+            else:
+                self._code_emb_init()
+
+                # also set conv weights to do sum of inputs
+                weights = (
+                    torch.eye(config.embed_size)
+                    .unsqueeze(2)
+                    .expand(-1, -1, config.kernel_size)
+                    / config.kernel_size
+                )
+                self.conv.weight.data = weights.clone()
+                self.conv.bias.data.zero_()
 
         # conv for label descriptions as in 2.5
         # description module has its own embedding and convolution layers
-        if lmbda > 0:
+        if config.lmbda > 0:
             W = self.embed.weight.data
             self.desc_embedding = nn.Embedding(
                 W.size()[0], W.size()[1], padding_idx=0
@@ -173,22 +134,40 @@ class ConvAttnPool(BaseModel):
             self.desc_embedding.weight.data = W.clone()
 
             self.label_conv = nn.Conv1d(
-                self.embed_size,
-                num_filter_maps,
-                kernel_size=kernel_size,
-                padding=int(floor(kernel_size / 2)),
+                config.embed_size,
+                config.num_filter_maps,
+                kernel_size=config.kernel_size,
+                padding=int(floor(config.kernel_size / 2)),
             )
             xavier_uniform(self.label_conv.weight)
 
-            self.label_fc1 = nn.Linear(num_filter_maps, num_filter_maps)
+            self.label_fc1 = nn.Linear(config.num_filter_maps,
+                                       config.num_filter_maps)
             xavier_uniform(self.label_fc1.weight)
 
-    def _code_emb_init(self, code_emb, dicts):
-        code_embs = KeyedVectors.load_word2vec_format(code_emb)
-        weights = np.zeros(self.final.weight.size())
-        for i in range(self.Y):
-            code = dicts["ind2c"][i]
-            weights[i] = code_embs[code]
+            # Pre-process the code description into word idxs
+            self.dv_dict = {}
+            ind2c = self.dicts['ind2c']
+            w2ind = self.dicts['w2ind']
+            desc_dict = self.dicts['desc']
+            for i, c in ind2c.items():
+                desc_vec = [w2ind[w] if w in w2ind else self.unk_idx
+                            for w in desc_dict[c]]
+                self.dv_dict[i] = desc_vec
+
+    def _code_emb_init(self):
+        # In the original CAML repo, this method seems not being called.
+        # In this implementation, we compute the AVERAGE word2vec embeddings for
+        # each code and initialize the self.U and self.final with it.
+        ind2c = self.dicts['ind2c']
+        w2ind = self.dicts['w2ind']
+        desc_dict = self.dicts['desc']
+
+        weights = torch.zeros_like(self.final.weight)
+        for i, c in ind2c.items():
+            desc_vec = [w2ind[w] if w in w2ind else self.unk_idx
+                        for w in desc_dict[c].split()]
+            weights[i] = self.embed(torch.tensor(desc_vec)).mean(axis=0)
         self.U.weight.data = torch.Tensor(weights).clone()
         self.final.weight.data = torch.Tensor(weights).clone()
 
@@ -211,19 +190,17 @@ class ConvAttnPool(BaseModel):
         return y
 
     def regularizer(self, labels=None):
-        if not self.lmbda: return 0.0
+        if not self.config.lmbda: return 0.0
 
         # Retrive the description tokens of the labels
-        ind2c, dv_dict = self.dicts['ind2c'], self.dicts['dv']
-
         desc_vecs = []
         for label in labels:
-            desc_vecs.append([dv_dict[ind2c[i]]
+            desc_vecs.append([self.dv_dict[i]
                               for i, l in enumerate(label) if l])
-        desc_data = np.array([pad_desc_vecs(dvs) for dvs in desc_vecs])
+        desc_data = [np.array(pad_desc_vecs(dvs)) for dvs in desc_vecs]
 
         # run descriptions through description module
-        b_batch = self.embed_descriptions(desc_data, self.gpu)
+        b_batch = self.embed_descriptions(desc_data)
         # get l2 similarity loss
         diffs = self._compare_label_embeddings(labels, b_batch, desc_data)
         diff = torch.stack(diffs).mean()
@@ -233,34 +210,18 @@ class ConvAttnPool(BaseModel):
 
 @ConfigMapper.map("models", "CNN")
 class VanillaConv(BaseModel):
-    def __init__(
-        self,
-        num_classes=50,
-        dataset_dir=None,
-        version="mimic3",
-        embed_file=None,
-        kernel_size=10,
-        num_filter_maps=50,
-        embed_size=100,
-        dropout=0.5,
-        **kwargs
-    ):
-        super(VanillaConv, self).__init__(
-            Y=num_classes,
-            dataset_dir=dataset_dir,
-            version=version,
-            embed_file=embed_file,
-            dropout=dropout,
-            embed_size=embed_size,
-        )
+    def __init__(self, config):
+        super(VanillaConv, self).__init__(config)
+
         # initialize conv layer as in 2.1
         self.conv = nn.Conv1d(
-            self.embed_size, num_filter_maps, kernel_size=kernel_size
+            config.embed_size, config.num_filter_maps,
+            kernel_size=config.kernel_size
         )
         xavier_uniform(self.conv.weight)
 
         # linear output
-        self.fc = nn.Linear(num_filter_maps, self.Y)
+        self.fc = nn.Linear(config.num_filter_maps, self.Y)
         xavier_uniform(self.fc.weight)
 
     def forward(self, x):

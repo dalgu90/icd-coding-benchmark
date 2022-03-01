@@ -45,7 +45,7 @@ if not args.test:  # Training
 
     # Model
     model = ConfigMapper.get_object("models", config.model.name)(
-        **config.model.params.as_dict()
+        config.model.params
     )
 
     # Trainer
@@ -63,7 +63,7 @@ else:  # Test
 
     # Model
     model = ConfigMapper.get_object("models", config.model.name)(
-        **config.model.params.as_dict()
+        config.model.params
     )
 
     # Trainer

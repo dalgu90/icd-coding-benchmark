@@ -72,8 +72,8 @@ preprocessing:
       name: word2vec
       params:
         embedding_dir: *word2vec_dir
-        pad_token: <pad>
-        unk_token: <unk>
+        pad_token: "<pad>"
+        unk_token: "<unk>"
         word2vec_params:
           vector_size: 100
           min_count: 3
@@ -87,8 +87,8 @@ dataset:
       clinical_note: "TEXT"
       labels: "LABELS"
     word2vec_dir: *word2vec_dir
-    pad_token: <pad>
-    unk_token: <unk>
+    pad_token: "<pad>"
+    unk_token: "<unk>"
     dataset_dir: *dataset_dir
     label_file: labels.json
   params:
@@ -105,15 +105,18 @@ dataset:
 model:
   name: CAML
   params:
-    dataset_dir: *dataset_dir
     version: mimic3
-    embedding_name: word2vec
-    embedding_dir: *word2vec_dir
+    dataset_dir: *dataset_dir
+    mimic_dir: *mimic_dir
+    static_dir: *static_dir
+    word2vec_dir: *word2vec_dir
     num_classes: 50
+    embed_size: 100
     kernel_size: 10
     num_filter_maps: 50
     dropout: 0.2
     lmbda: 0.0  # Positive for DR-CAML
+    init_code_emb: false
 
 trainer:
   name: base_trainer
@@ -140,7 +143,7 @@ trainer:
 
     stopping_criterion:
       metric:
-        name: prec_at_5
+        name: prec_at_8
       desired: max
       patience: 10
 
@@ -155,10 +158,10 @@ trainer:
         ckpt_fname_format: "ckpt-{}.pth"
         best_fname_format: "best-{}.pth"
         metric:
-          name: prec_at_5
+          name: prec_at_8
           class: prec_at_k
           params:
-            k: 5
+            k: 8
         desired: max
 
     eval_metrics: &eval_metrics
@@ -166,6 +169,10 @@ trainer:
         class: prec_at_k
         params:
           k: 5
+      - name: prec_at_8
+        class: prec_at_k
+        params:
+          k: 8
       - name: macro_f1
       - name: micro_f1
       - name: macro_auc
@@ -188,6 +195,7 @@ trainer:
         metric:
           - name: loss
           - name: prec_at_5
+          - name: prec_at_8
           - name: macro_f1
           - name: micro_f1
           - name: macro_auc
