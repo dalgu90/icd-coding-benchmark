@@ -19,8 +19,8 @@ class BaseDataset(Dataset):
         self.vocab = embedding_cls.load_vocab(self._config.word2vec_dir)
         self.vocab_size = len(self.vocab)
         assert self.vocab_size == max(self.vocab.values()) + 1
-        self.pad_idx = self.vocab.index(self._config.pad_token)
-        self.unk_idx = self.vocab.index(self._config.unk_token)
+        self.pad_idx = self.vocab[self._config.pad_token]
+        self.unk_idx = self.vocab[self._config.unk_token]
 
         # Load labels (dict of {code: idx})
         label_path = os.path.join(self._config.dataset_dir,
