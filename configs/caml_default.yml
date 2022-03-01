@@ -121,34 +121,27 @@ model:
 trainer:
   name: base_trainer
   params:
+    output_dir: *output_dir
     data_loader:
       batch_size: 16
       num_workers: 4
       shuffle: false
       drop_last: true
-
     loss:
       name: BinaryCrossEntropyLoss
       params: null
-
     optimizer:
       name: adam
       params:
         lr: 0.0001
         weight_decay: 0.0
-
     max_epochs: 200
-
     lr_scheduler: null
-
     stopping_criterion:
       metric:
         name: prec_at_8
       desired: max
       patience: 10
-
-    output_dir: *output_dir
-
     checkpoint_saver:
       name: base_saver
       params:
@@ -163,7 +156,6 @@ trainer:
           params:
             k: 8
         desired: max
-
     eval_metrics: &eval_metrics
       - name: prec_at_5
         class: prec_at_k
@@ -177,7 +169,6 @@ trainer:
       - name: micro_f1
       - name: macro_auc
       - name: micro_auc
-
     logging:
       logger:
         name: tensorboard
@@ -188,7 +179,6 @@ trainer:
         interval_unit: step
         metric:
           - name: loss
-
       val:
         interval: 1
         interval_unit: epoch
@@ -200,7 +190,5 @@ trainer:
           - name: micro_f1
           - name: macro_auc
           - name: micro_auc
-
-
     seed: 1337
     use_gpu: true
