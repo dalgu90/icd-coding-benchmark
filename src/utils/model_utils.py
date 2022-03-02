@@ -7,6 +7,49 @@ import gensim.models.word2vec as w2v
 import gensim.models.fasttext as fasttext
 import codecs
 import re
+import os
+import csv
+from collections import defaultdict
+
+from src.utils.file_loaders import load_csv_as_df, load_json
+from src.utils.mapper import ConfigMapper
+
+def load_lookups(dataset_dir, mimic_dir, static_dir, word2vec_dir,
+                 label_file='labels.json', version="mimic3"):
+    """
+    Inputs:
+        args: Input arguments
+        desc_embed: true if using DR-CAML
+    Outputs:
+        vocab lookups, ICD code lookups, description lookup
+        vector lookup
+    """
+    # get vocab lookups
+    embedding_cls = ConfigMapper.get_object("embeddings", "word2vec")
+    w2ind = embedding_cls.load_vocab(word2vec_dir)
+    ind2w = {i: w for w, i in w2ind.items()}
+
+    # get codes
+    c2ind = load_json(os.path.join(dataset_dir, label_file))
+    ind2c = {i: c for c, i in c2ind.items()}
+
+    # get description lookups
+    desc_dict = load_code_descriptions(
+        mimic_dir=mimic_dir, static_dir=static_dir, version=version
+    )
+
+    # In this implementation, we don't use dv_dict ({code: desc token idxs}).
+    # Instead, we tokenize/embed on the code description on the fly.
+
+    dicts = {
+        "ind2w": ind2w,
+        "w2ind": w2ind,
+        "ind2c": ind2c,
+        "c2ind": c2ind,
+        "desc": desc_dict,
+    }
+    return dicts
+
 
 def gensim_to_embeddings(wv_file, vocab_file, Y, outfile=None):
     model = gensim.models.Word2Vec.load(wv_file)
@@ -531,59 +574,59 @@ def prepare_instance(dicts, filename, args, max_length):
 
     return instances
 
-from pytorch_pretrained_bert import BertTokenizer
-def prepare_instance_bert(dicts, filename, args, max_length):
-    ind2w, w2ind, ind2c, c2ind = dicts['ind2w'], dicts['w2ind'], dicts['ind2c'], dicts['c2ind']
-    instances = []
-    num_labels = len(dicts['ind2c'])
+# from pytorch_pretrained_bert import BertTokenizer
+# def prepare_instance_bert(dicts, filename, args, max_length):
+    # ind2w, w2ind, ind2c, c2ind = dicts['ind2w'], dicts['w2ind'], dicts['ind2c'], dicts['c2ind']
+    # instances = []
+    # num_labels = len(dicts['ind2c'])
 
-    wp_tokenizer = BertTokenizer.from_pretrained(args.bert_dir, do_lower_case=True)
+    # # wp_tokenizer = BertTokenizer.from_pretrained(args.bert_dir, do_lower_case=True)
 
-    with open(filename, 'r') as infile:
-        r = csv.reader(infile)
-        #header
-        next(r)
+    # with open(filename, 'r') as infile:
+    #     r = csv.reader(infile)
+    #     #header
+    #     next(r)
 
-        for row in r:
+    #     for row in r:
 
-            text = row[2]
+    #         text = row[2]
 
-            labels_idx = np.zeros(num_labels)
-            labelled = False
+    #         labels_idx = np.zeros(num_labels)
+    #         labelled = False
 
-            for l in row[3].split(';'):
-                if l in c2ind.keys():
-                    code = int(c2ind[l])
-                    labels_idx[code] = 1
-                    labelled = True
-            if not labelled:
-                continue
+    #         for l in row[3].split(';'):
+    #             if l in c2ind.keys():
+    #                 code = int(c2ind[l])
+    #                 labels_idx[code] = 1
+    #                 labelled = True
+    #         if not labelled:
+    #             continue
 
-            tokens_ = text.split()
-            tokens = []
-            for token in tokens_:
-                if token == '[CLS]' or token == '[SEP]':
-                    continue
-                wps = wp_tokenizer.tokenize(token)
-                tokens.extend(wps)
+    #         tokens_ = text.split()
+    #         tokens = []
+    #         for token in tokens_:
+    #             if token == '[CLS]' or token == '[SEP]':
+    #                 continue
+    #             wps = wp_tokenizer.tokenize(token)
+    #             tokens.extend(wps)
 
-            tokens_max_len = max_length-2 # for CLS SEP
-            if len(tokens) > tokens_max_len:
-                tokens = tokens[:tokens_max_len]
+    #         tokens_max_len = max_length-2 # for CLS SEP
+    #         if len(tokens) > tokens_max_len:
+    #             tokens = tokens[:tokens_max_len]
 
-            tokens.insert(0, '[CLS]')
-            tokens.append('[SEP]')
+    #         tokens.insert(0, '[CLS]')
+    #         tokens.append('[SEP]')
 
-            tokens_id = wp_tokenizer.convert_tokens_to_ids(tokens)
-            masks = [1] * len(tokens)
-            segments = [0] * len(tokens)
+    #         tokens_id = wp_tokenizer.convert_tokens_to_ids(tokens)
+    #         masks = [1] * len(tokens)
+    #         segments = [0] * len(tokens)
 
-            dict_instance = {'label':labels_idx, 'tokens':tokens,
-                             "tokens_id":tokens_id, "segments":segments, "masks":masks}
+    #         dict_instance = {'label':labels_idx, 'tokens':tokens,
+    #                          "tokens_id":tokens_id, "segments":segments, "masks":masks}
 
-            instances.append(dict_instance)
+    #         instances.append(dict_instance)
 
-    return instances
+    # return instances
 
 from torch.utils.data import Dataset
 class MyDataset(Dataset):

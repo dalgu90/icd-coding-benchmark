@@ -9,8 +9,8 @@ import torch.nn.functional as F
 from torch.nn.init import xavier_uniform_ as xavier_uniform
 #from src.modules.elmo.elmo import Elmo
 import json
-from src.utils.caml_utils import load_embeddings, load_lookups
-from src.utils.multirescnn_utils import build_pretrain_embedding
+from src.utils.caml_utils import load_lookups
+from src.utils.model_utils import build_pretrain_embedding, load_embeddings
 from math import floor
 from src.utils.mapper import ConfigMapper
 
@@ -27,7 +27,8 @@ class WordRep(nn.Module):
                                                                                      True)
                 W = torch.from_numpy(pretrain_word_embedding)
             else:
-                W = torch.Tensor(load_embeddings(args.embed_file))
+                embedding_cls = ConfigMapper.get_object("embeddings", "word2vec")
+                W = torch.Tensor(embedding_cls.load_emb_matrix(args.word2vec_dir))
 
             self.embed = nn.Embedding(W.size()[0], W.size()[1], padding_idx=0)
             self.embed.weight.data = W.clone()
@@ -46,13 +47,11 @@ class WordRep(nn.Module):
 
 
     def forward(self, x):
-
         features = [self.embed(x)]
-
         x = torch.cat(features, dim=2)
-
         x = self.embed_drop(x)
         return x
+
 
 class OutputLayer(nn.Module):
     def __init__(self, args, Y, dicts, input_size):
@@ -60,20 +59,13 @@ class OutputLayer(nn.Module):
 
         self.U = nn.Linear(input_size, Y)
         xavier_uniform(self.U.weight)
-
-
         self.final = nn.Linear(input_size, Y)
         xavier_uniform(self.final.weight)
 
     def forward(self, x):
-
         alpha = F.softmax(self.U.weight.matmul(x.transpose(1, 2)), dim=2)
-
         m = alpha.matmul(x)
-
-        y = self.final.weight.mul(m).sum(dim=2).add(self.final.bias)
-
-        
+        y = self.final.weight.mul(m).sum(dim=2).add(self.final.bias)        
         return y
 
 
@@ -135,7 +127,6 @@ class MultiCNN(nn.Module):
             p.requires_grad = False
 
 
-@ConfigMapper.map("models", "ResidualBlock")
 class ResidualBlock(nn.Module):
     def __init__(self, inchannel, outchannel, kernel_size, stride, use_res, dropout):
         super(ResidualBlock, self).__init__()
@@ -208,9 +199,11 @@ class MultiResCNN(nn.Module):
     def __init__(self, args):
         super(MultiResCNN, self).__init__()
         Y = args.num_classes
-        self.dicts = load_lookups(Y, args.dataset_dir, args.version, desc_embed=args.lmbda > 0)
-        #self.dicts = load_lookups(args)
-        
+        self.dicts = load_lookups(dataset_dir=args.dataset_dir,
+                                  mimic_dir=args.mimic_dir,
+                                  static_dir=args.static_dir,
+                                  word2vec_dir=args.word2vec_dir,
+                                  version=args.version)
         self.word_rep = WordRep(args,self.dicts)
 
         self.conv = nn.ModuleList()
@@ -239,10 +232,9 @@ class MultiResCNN(nn.Module):
     def forward(self, x):
 
         x = self.word_rep(x)
-
         x = x.transpose(1, 2)
-
         conv_result = []
+
         for conv in self.conv:
             tmp = x
             for idx, md in enumerate(conv):
@@ -252,10 +244,9 @@ class MultiResCNN(nn.Module):
                     tmp = md(tmp)
             tmp = tmp.transpose(1, 2)
             conv_result.append(tmp)
+
         x = torch.cat(conv_result, dim=2)
-
         y = self.output_layer(x)
-
         return y
 
     def freeze_net(self):
