@@ -13,6 +13,7 @@ from src.utils.caml_utils import load_lookups
 from src.utils.model_utils import build_pretrain_embedding, load_embeddings
 from math import floor
 from src.utils.mapper import ConfigMapper
+import os
 
 class WordRep(nn.Module):
     def __init__(self, args, dicts):
@@ -21,9 +22,10 @@ class WordRep(nn.Module):
         self.gpu = args.gpu
 
         if args.embed_file:
+            self.embed_file = os.path.join(args.dataset_dir, args.embed_file)
             print("loading pretrained embeddings from {}".format(args.embed_file))
-            if args.use_ext_emb:
-                pretrain_word_embedding, pretrain_emb_dim = build_pretrain_embedding(args.embed_file, dicts['w2ind'],
+            if args.use_ext_emb:                
+                pretrain_word_embedding, pretrain_emb_dim = build_pretrain_embedding(self.embed_file, dicts['w2ind'],
                                                                                      True)
                 W = torch.from_numpy(pretrain_word_embedding)
             else:

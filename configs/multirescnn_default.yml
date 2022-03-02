@@ -112,7 +112,7 @@ model:
     mimic_dir: *mimic_dir
     static_dir: *static_dir
     word2vec_dir: *word2vec_dir
-    embed_file: datasets/mimic3_50/processed_full.embed
+    embed_file: processed_full.embed
     conv_layer: 1
     num_classes: 50
     kernel_size: 10
