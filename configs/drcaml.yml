@@ -43,6 +43,8 @@ model:
     dropout: 0.2
     lmbda: 10.0  # Positive for DR-CAML
     init_code_emb: false
+    pad_token: "<pad>"
+    unk_token: "<unk>"
 
 trainer:
   name: base_trainer

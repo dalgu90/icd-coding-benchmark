@@ -30,8 +30,6 @@ class BaseModel(nn.Module):
                                   static_dir=config.static_dir,
                                   word2vec_dir=config.word2vec_dir,
                                   version=config.version)
-        self.pad_idx = self.dicts['w2ind']['<pad>']
-        self.unk_idx = self.dicts['w2ind']['<unk>']
 
         # make embedding layer
         embedding_cls = ConfigMapper.get_object("embeddings", "word2vec")
@@ -87,6 +85,9 @@ class BaseModel(nn.Module):
 class ConvAttnPool(BaseModel):
     def __init__(self, config):
         super(ConvAttnPool, self).__init__(config=config)
+
+        self.pad_idx = self.dicts['w2ind'][config.pad_token]
+        self.unk_idx = self.dicts['w2ind'][config.unk_token]
 
         # initialize conv layer as in 2.1
         self.conv = nn.Conv1d(
