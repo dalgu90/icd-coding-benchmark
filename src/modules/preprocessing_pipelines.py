@@ -10,7 +10,7 @@ from src.modules.tokenizers import *
 from src.utils.code_based_filtering import TopKCodes
 from src.utils.file_loaders import load_csv_as_df, save_df, save_json
 from src.utils.mapper import ConfigMapper
-from src.utils.text_loggers.stdout_logger import stdout_logger
+from src.utils.text_loggers import logger
 
 tqdm.pandas()
 
@@ -80,7 +80,7 @@ class MimiciiiPreprocessingPipeline:
         procedure_code_csv_path = os.path.join(
             self.MIMIC_DIR, self.config.paths.procedure_code_csv_name
         )
-        stdout_logger.info(
+        logger.info(
             "Loading code CSV files: {}, {}".format(
                 diagnosis_code_csv_path, procedure_code_csv_path
             )
@@ -97,7 +97,7 @@ class MimiciiiPreprocessingPipeline:
         procedure_code_df = load_csv_as_df(
             procedure_code_csv_path, dtype=self.code_csv_dtypes
         )
-        stdout_logger.info(
+        logger.info(
             "Preprocessing code CSV files: {}, {}".format(
                 diagnosis_code_csv_path, procedure_code_csv_path
             )
@@ -130,7 +130,7 @@ class MimiciiiPreprocessingPipeline:
         return code_df
 
     def filter_icd_codes_based_on_clinical_notes(self, code_df, noteevents_df):
-        stdout_logger.info(
+        logger.info(
             "Removing rows from code dataframe whose ICD-9 codes are not "
             "present in clinical notes"
         )
@@ -148,9 +148,7 @@ class MimiciiiPreprocessingPipeline:
             self.MIMIC_DIR, self.config.paths.noteevents_csv_name
         )
 
-        stdout_logger.info(
-            "Loading noteevents CSV file: {}".format(notes_file_path)
-        )
+        logger.info("Loading noteevents CSV file: {}".format(notes_file_path))
 
         noteevents_df = load_csv_as_df(
             notes_file_path, dtype=self.noteevents_csv_dtypes
@@ -170,7 +168,7 @@ class MimiciiiPreprocessingPipeline:
         return noteevents_df
 
     def combine_code_and_notes(self, code_df, noteevents_df):
-        stdout_logger.info("Combining code and notes dataframes")
+        logger.info("Combining code and notes dataframes")
         noteevents_grouped = noteevents_df.groupby(self.cols.hadm_id)[
             self.cols.text
         ].apply(lambda texts: " ".join(texts))
@@ -178,7 +176,7 @@ class MimiciiiPreprocessingPipeline:
         noteevents_df.reset_index(inplace=True)
 
         # Preprocess clinical notes
-        stdout_logger.info("Preprocessing clinical notes")
+        logger.info("Preprocessing clinical notes")
         noteevents_df[self.cols.text] = noteevents_df[
             self.cols.text
         ].progress_map(self.preprocess_clinical_note)
@@ -208,7 +206,7 @@ class MimiciiiPreprocessingPipeline:
         combined_df = self.combine_code_and_notes(code_df, noteevents_df)
         combined_df = self.top_k_codes(self.cols.labels, combined_df)
 
-        stdout_logger.info("Splitting data into train-test-val")
+        logger.info("Splitting data into train-test-val")
         train_df, val_df, test_df = self.split_data(
             combined_df, self.cols.hadm_id
         )
@@ -219,7 +217,7 @@ class MimiciiiPreprocessingPipeline:
         test_df = test_df.to_dict(orient="list")
 
         # tokenize the data
-        stdout_logger.info("Tokenizing text data")
+        logger.info("Tokenizing text data")
         train_df[self.cols.text] = self.tokenizer.tokenize_list(
             train_df[self.cols.text]
         )
@@ -235,5 +233,5 @@ class MimiciiiPreprocessingPipeline:
         save_json(test_df, self.config.paths.test_json_name)
 
         # train embedding model
-        stdout_logger.info("Training embedding model")
+        logger.info("Training embedding model")
         self.embedder.train(train_df[self.cols.text])

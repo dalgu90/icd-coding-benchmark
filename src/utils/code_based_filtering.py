@@ -5,12 +5,12 @@ from collections import Counter
 import pandas as pd
 
 from src.utils.file_loaders import save_json
-from src.utils.text_loggers.datasets_logger import datasets_logger
+from src.utils.text_loggers import logger
 
 
 class TopKCodes:
     def __init__(self, k, labels_save_path):
-        datasets_logger.info(
+        logger.info(
             "Finding top-k codes with the following args: k = {}, "
             "label_save_path = {}".format(k, labels_save_path)
         )
@@ -49,4 +49,4 @@ class TopKCodes:
         else:
             self.top_k_codes = [code for code, _ in counts.most_common(self.k)]
 
-        datasets_logger.info("top-k codes: {}".format(self.top_k_codes))
+        logger.info("top-k codes: {}".format(self.top_k_codes))

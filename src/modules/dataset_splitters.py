@@ -3,13 +3,13 @@ import sys
 
 from src.utils.file_loaders import load_json
 from src.utils.mapper import ConfigMapper
-from src.utils.text_loggers.datasets_logger import datasets_logger
+from src.utils.text_loggers import logger
 
 
 @ConfigMapper.map("dataset_splitters", "caml_official_split")
 class CamlOfficialSplit:
     def __init__(self, config):
-        datasets_logger.info(
+        logger.info(
             "Using CAML official split to split data into train-test-val with "
             "the following config: {}".format(config.as_dict())
         )
