@@ -94,3 +94,5 @@ def pad_desc_vecs(desc_vecs):
     for vec in desc_vecs:
         pad_vecs.append(vec + [0] * (desc_len - len(vec)))
     return pad_vecs
+
+
