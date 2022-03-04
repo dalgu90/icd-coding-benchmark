@@ -34,7 +34,7 @@ AVAILABLE_STEMMERS_LEMMATIZERS = {
 class ClinicalNotePreprocessor:
     def __init__(self, config):
         self._config = config
-        logger.info(
+        logger.debug(
             "Initialising Clinical Note Processor with the following "
             "config: {}".format(config.as_dict())
         )
@@ -139,7 +139,7 @@ class ClinicalNotePreprocessor:
 class CodeProcessor:
     def __init__(self, config):
         self._config = config
-        logger.info(
+        logger.debug(
             "Initialising Code Processor with the following config: {}".format(
                 config.as_dict()
             )

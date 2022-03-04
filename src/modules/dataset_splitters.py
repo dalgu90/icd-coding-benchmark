@@ -9,7 +9,7 @@ from src.utils.text_loggers import logger
 @ConfigMapper.map("dataset_splitters", "caml_official_split")
 class CamlOfficialSplit:
     def __init__(self, config):
-        logger.info(
+        logger.debug(
             "Using CAML official split to split data into train-test-val with "
             "the following config: {}".format(config.as_dict())
         )

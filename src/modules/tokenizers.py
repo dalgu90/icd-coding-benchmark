@@ -10,12 +10,12 @@ from src.utils.text_loggers import logger
 class SpaceTokenizer:
     def __init__(self, config):
         if config:
-            logger.info(
+            logger.debug(
                 "Using Space Tokenizer to tokenize the data with the following "
                 "config: {}".format(config.as_dict())
             )
         else:
-            logger.info(
+            logger.debug(
                 "Using Space Tokenizer to tokenize the data with the following "
                 "config: {}".format(config)
             )

@@ -10,7 +10,7 @@ from src.utils.text_loggers import logger
 
 class TopKCodes:
     def __init__(self, k, labels_save_path):
-        logger.info(
+        logger.debug(
             "Finding top-k codes with the following args: k = {}, "
             "label_save_path = {}".format(k, labels_save_path)
         )
@@ -49,4 +49,4 @@ class TopKCodes:
         else:
             self.top_k_codes = [code for code, _ in counts.most_common(self.k)]
 
-        logger.info("top-k codes: {}".format(self.top_k_codes))
+        logger.debug("top-k codes: {}".format(self.top_k_codes))
