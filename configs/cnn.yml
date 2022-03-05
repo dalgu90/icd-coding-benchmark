@@ -1,6 +1,6 @@
 paths:
-  mimic_dir: &mimic_dir datasets/mimic_iii/csv
-  static_dir: &static_dir datasets/mimic_iii/static
+  mimic_dir: &mimic_dir datasets/mimic3/csv
+  static_dir: &static_dir datasets/mimic3/static
   dataset_dir: &dataset_dir datasets/mimic3_50
   word2vec_dir: &word2vec_dir datasets/mimic3_50/word2vec
   output_dir: &output_dir results/CNN_mimic3_50
