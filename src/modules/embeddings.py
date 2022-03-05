@@ -1,23 +1,32 @@
 """Contains various kinds of embeddings like Glove, BERT, etc."""
-
+import logging
 import os
+import sys
 
 import gensim
 import numpy as np
 
 from src.utils.file_loaders import load_json, save_json
 from src.utils.mapper import ConfigMapper
+from src.utils.text_loggers import get_logger
+
+logger = get_logger(__name__)
 
 
 @ConfigMapper.map("embeddings", "word2vec")
 class Word2VecEmbedding:
     def __init__(self, config):
+        logger.debug(
+            "Using Word2Vec to train embeddings on clinical notes with the "
+            "following config: {}".format(config.as_dict())
+        )
         self._config = config
 
         if not os.path.exists(self._config.embedding_dir):
             os.makedirs(self._config.embedding_dir)
 
     def train(self, corpus):
+        logger.debug("Training Word2Vec on clinical notes")
         # build vocabulary and train model
         # Resulting model doesn't have <pad> and <unk> which will be added
         model = gensim.models.Word2Vec(
@@ -51,6 +60,7 @@ class Word2VecEmbedding:
 
     @staticmethod
     def load_vocab(dir_path):
+        logger.debug("Loading Word2Vec model from {}".format(dir_path))
         vocab = load_json(os.path.join(dir_path, "token_to_idx.json"))
         return vocab
 

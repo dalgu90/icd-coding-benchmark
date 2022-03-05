@@ -1,4 +1,6 @@
+import logging
 import re
+import sys
 
 import nltk
 from nltk.corpus import stopwords
@@ -12,6 +14,9 @@ from nltk.stem import (
 from nltk.tokenize import RegexpTokenizer
 
 from src.utils.file_loaders import load_json
+from src.utils.text_loggers import get_logger
+
+logger = get_logger(__name__)
 
 nltk.download("omw-1.4")
 nltk.download("rslp")
@@ -31,7 +36,10 @@ AVAILABLE_STEMMERS_LEMMATIZERS = {
 class ClinicalNotePreprocessor:
     def __init__(self, config):
         self._config = config
-
+        logger.debug(
+            "Initialising Clinical Note Processor with the following "
+            "config: {}".format(config.as_dict())
+        )
         self.punct_tokenizer = RegexpTokenizer(r"\w+")
 
         if config.remove_stopwords.perform:
@@ -133,6 +141,11 @@ class ClinicalNotePreprocessor:
 class CodeProcessor:
     def __init__(self, config):
         self._config = config
+        logger.debug(
+            "Initialising Code Processor with the following config: {}".format(
+                config.as_dict()
+            )
+        )
 
     def __call__(self, icd_code, is_diagnosis_code):
         if self._config.add_period_in_correct_pos.perform:

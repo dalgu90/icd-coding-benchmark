@@ -1,18 +1,26 @@
+import logging
+import sys
 from collections import Counter
 
 import pandas as pd
 
 from src.utils.file_loaders import save_json
+from src.utils.text_loggers import get_logger
+
+logger = get_logger(__name__)
 
 
 class TopKCodes:
     def __init__(self, k, labels_save_path):
+        logger.debug(
+            "Finding top-k codes with the following args: k = {}, "
+            "label_save_path = {}".format(k, labels_save_path)
+        )
         self.k = k
         self.top_k_codes = []
         self.labels_save_path = labels_save_path
 
     def __call__(self, label_col_name, code_df):
-        print(f"\nFiltering Dataset Samples Based on Top-{self.k} Codes...")
         self.find_top_k_codes(label_col_name, code_df)
         save_json(
             {v: k for k, v in enumerate(self.top_k_codes)},
@@ -42,3 +50,5 @@ class TopKCodes:
             self.top_k_codes = [code for code, _ in counts.items()]
         else:
             self.top_k_codes = [code for code, _ in counts.most_common(self.k)]
+
+        logger.debug("top-k codes: {}".format(self.top_k_codes))
