@@ -142,7 +142,9 @@ logs/*.log
 *.yaml
 
 # Dataset CSV files
-datasets/mimic_iii/1.4/*.csv.gz
+!datasets/static
+datasets/*
+datasets/mimic_iii/csv/*.csv.gz
 
 # temporary files
 temp.py

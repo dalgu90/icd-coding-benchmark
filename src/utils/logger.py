@@ -35,4 +35,3 @@ class WandBLogger(LoggerBase):
 
     def writer_scalar(self, name, value, step=None):
         raise NotImplementedError()
-

@@ -229,12 +229,24 @@ class MimiciiiPreprocessingPipeline:
             test_df[self.cols.text]
         )
 
-        save_json(train_df, os.path.join(self.config.paths.save_dir,
-                                         self.config.paths.train_json_name))
-        save_json(val_df, os.path.join(self.config.paths.save_dir,
-                                       self.config.paths.val_json_name))
-        save_json(test_df, os.path.join(self.config.paths.save_dir,
-                                        self.config.paths.test_json_name))
+        save_json(
+            train_df,
+            os.path.join(
+                self.config.paths.save_dir, self.config.paths.train_json_name
+            ),
+        )
+        save_json(
+            val_df,
+            os.path.join(
+                self.config.paths.save_dir, self.config.paths.val_json_name
+            ),
+        )
+        save_json(
+            test_df,
+            os.path.join(
+                self.config.paths.save_dir, self.config.paths.test_json_name
+            ),
+        )
 
         # train embedding model
         logger.info("Training embedding model")

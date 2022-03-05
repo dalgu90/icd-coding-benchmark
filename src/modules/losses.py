@@ -1,13 +1,13 @@
 """All criterion functions."""
 import torch
-from torch.nn import CrossEntropyLoss, MSELoss, BCEWithLogitsLoss
 import torch.nn.functional as F
+from torch.nn import BCEWithLogitsLoss, CrossEntropyLoss, MSELoss
 
 from src.utils.mapper import ConfigMapper
 
-
 ConfigMapper.map("losses", "mse")(MSELoss)
 ConfigMapper.map("losses", "CrossEntropyLoss")(CrossEntropyLoss)
+
 
 @ConfigMapper.map("losses", "BinaryCrossEntropyLoss")
 class BinaryCrossEntropyLoss(BCEWithLogitsLoss):

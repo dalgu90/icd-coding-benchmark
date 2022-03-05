@@ -3,8 +3,8 @@ import os
 
 import numpy as np
 import torch
-from torch.utils.data import DataLoader
 from torch.optim.lr_scheduler import ReduceLROnPlateau
+from torch.utils.data import DataLoader
 from tqdm import tqdm
 
 from src.modules.embeddings import *
@@ -28,46 +28,45 @@ class BaseTrainer:
 
         # Loss function
         self.loss_fn = ConfigMapper.get_object(
-            "losses", self.config.loss.name,
+            "losses",
+            self.config.loss.name,
         )(self.config.loss.params)
 
         # Evaluation metrics
         self.eval_metrics = {}
         for config_dict in self.config.eval_metrics:
-            metric_name = config_dict['name']
+            metric_name = config_dict["name"]
             self.eval_metrics[metric_name] = load_metric(config_dict)
 
     def train(self, model, train_dataset, val_dataset=None):
-        """ Train the model """
+        """Train the model"""
         self.model = model
         self.train_dataset = train_dataset
         self.val_dataset = val_dataset
 
         # Data loader
         train_loader_config = self.config.data_loader.as_dict()
-        if 'collate_fn' in dir(train_dataset):
-            train_loader_config['collate_fn'] = train_dataset.collate_fn
+        if "collate_fn" in dir(train_dataset):
+            train_loader_config["collate_fn"] = train_dataset.collate_fn
         train_loader = DataLoader(train_dataset, **train_loader_config)
         if val_dataset:
             # We force the val dataset not shuffled and fully used
             val_loader_config = self.config.data_loader.as_dict()
-            val_loader_config['drop_last'] = False
-            val_loader_config['shuffle'] = False
-            if 'collate_fn' in dir(val_dataset):
-                val_loader_config['collate_fn'] = val_dataset.collate_fn
+            val_loader_config["drop_last"] = False
+            val_loader_config["shuffle"] = False
+            if "collate_fn" in dir(val_dataset):
+                val_loader_config["collate_fn"] = val_dataset.collate_fn
             val_loader = DataLoader(val_dataset, **val_loader_config)
         batch_size = self.config.data_loader.batch_size
-        if train_loader_config['drop_last']:
+        if train_loader_config["drop_last"]:
             num_train_batch = math.floor(len(train_dataset) / batch_size)
         else:
             num_train_batch = math.ceil(len(train_dataset) / batch_size)
 
         # Optimizer & LR scheduler
-        optimizer = ConfigMapper.get_object("optimizers",
-                                            self.config.optimizer.name)(
-            model.parameters(),
-            **self.config.optimizer.params.as_dict()
-        )
+        optimizer = ConfigMapper.get_object(
+            "optimizers", self.config.optimizer.name
+        )(model.parameters(), **self.config.optimizer.params.as_dict())
         scheduler = None
         if self.config.lr_scheduler is not None:
             scheduler = ConfigMapper.get_object(
@@ -75,15 +74,18 @@ class BaseTrainer:
             )(optimizer, **self.config.lr_scheduler.params.as_dict())
 
         # Add evaluation metrics for logging
-        for config_dict in (self.config.logging.train.metric
-                            + self.config.logging.val.metric):
-            metric_name = config_dict['name']
-            if metric_name not in self.eval_metrics and metric_name != 'loss':
+        for config_dict in (
+            self.config.logging.train.metric + self.config.logging.val.metric
+        ):
+            metric_name = config_dict["name"]
+            if metric_name not in self.eval_metrics and metric_name != "loss":
                 self.eval_metrics[metric_name] = load_metric(config_dict)
-        train_metric_names = [metric['name'] for metric in
-                              self.config.logging.train.metric]
-        val_metric_names = [metric['name'] for metric in
-                            self.config.logging.val.metric]
+        train_metric_names = [
+            metric["name"] for metric in self.config.logging.train.metric
+        ]
+        val_metric_names = [
+            metric["name"] for metric in self.config.logging.val.metric
+        ]
 
         # Stopping criterion: (metric, max/min, patience)
         max_epochs = int(self.config.max_epochs)
@@ -92,19 +94,19 @@ class BaseTrainer:
             sc_config = self.config.stopping_criterion
             # Load metric
             sc_metric_config = sc_config.metric.as_dict()
-            if sc_metric_config['name'] in self.eval_metrics:
-                sc_metric = self.eval_metrics[sc_metric_config['name']]
+            if sc_metric_config["name"] in self.eval_metrics:
+                sc_metric = self.eval_metrics[sc_metric_config["name"]]
             else:
                 sc_metric = load_metric(sc_metric_config)
             # Metric + max/min + patience
             stopping_criterion = (
                 sc_metric,
                 sc_config.desired,
-                sc_config.patience
+                sc_config.patience,
             )
-            best_stopping_val = float('inf')
+            best_stopping_val = float("inf")
             best_stopping_epoch = 0
-            if sc_config.desired == 'max':
+            if sc_config.desired == "max":
                 best_stopping_val *= -1.0
 
         if self.config.use_gpu:
@@ -119,9 +121,10 @@ class BaseTrainer:
         latest_ckpt = ckpt_saver.get_latest_checkpoint()
         if latest_ckpt is not None:
             ckpt_epoch, ckpt_fname = latest_ckpt
-            ckpt_saver.load_ckpt(model=model, optimizer=optimizer,
-                                 ckpt_fname=ckpt_fname)
-            print(f'Checkpoint loaded from {ckpt_fname}')
+            ckpt_saver.load_ckpt(
+                model=model, optimizer=optimizer, ckpt_fname=ckpt_fname
+            )
+            print(f"Checkpoint loaded from {ckpt_fname}")
             init_epoch = ckpt_epoch + 1
         else:
             init_epoch = 0
@@ -151,9 +154,10 @@ class BaseTrainer:
                     batch_labels = batch_labels.cuda()
 
                 batch_outputs = model(batch_inputs)
-                batch_loss = self.loss_fn(input=batch_outputs,
-                                          target=batch_labels)
-                if 'regularizer' in dir(model):
+                batch_loss = self.loss_fn(
+                    input=batch_outputs, target=batch_labels
+                )
+                if "regularizer" in dir(model):
                     batch_loss += model.regularizer(labels=batch_labels)
 
                 batch_loss.backward()
@@ -163,16 +167,19 @@ class BaseTrainer:
                     scheduler.step()
 
                 # Log on proper steps (train)
-                if (self.config.logging.train.interval_unit == 'step'
-                    and global_step % self.config.logging.train.interval == 0):
+                if (
+                    self.config.logging.train.interval_unit == "step"
+                    and global_step % self.config.logging.train.interval == 0
+                ):
                     train_metric_vals = self._compute_metrics(
                         outputs=batch_outputs.detach().cpu(),
                         labels=batch_labels.cpu(),
-                        metric_names=train_metric_names
+                        metric_names=train_metric_names,
                     )
                     for metric_name, metric_val in train_metric_vals.items():
-                        logger.write_scalar(f'train/{metric_name}', metric_val,
-                                            step=global_step)
+                        logger.write_scalar(
+                            f"train/{metric_name}", metric_val, step=global_step
+                        )
 
                 pbar.set_postfix_str(f"Train Loss: {batch_loss.item():.6f}")
                 pbar.update(1)
@@ -183,29 +190,35 @@ class BaseTrainer:
             # Evaluate on eval dataset
             if val_dataset:
                 val_outputs, val_labels = self._forward_epoch(
-                    model, dataloader=val_loader)
+                    model, dataloader=val_loader
+                )
                 val_loss = self.loss_fn(input=val_outputs, target=val_labels)
                 val_labels_np = val_labels.numpy()
                 val_prob = torch.sigmoid(val_outputs).numpy()
                 val_pred = val_prob.round()
-                print('Evaluate on val dataset')
+                print("Evaluate on val dataset")
                 for metric_config in self.config.eval_metrics:
-                    metric_name = metric_config['name']
+                    metric_name = metric_config["name"]
                     metric_val = self.eval_metrics[metric_name](
-                        y_true=val_labels_np, y_pred=val_pred, p_pred=val_prob)
-                    print(f'{metric_name:>12}: {metric_val:6f}')
+                        y_true=val_labels_np, y_pred=val_pred, p_pred=val_prob
+                    )
+                    print(f"{metric_name:>12}: {metric_val:6f}")
 
             # Log on proper epochs (val)
-            if (val_dataset and self.config.logging.val.interval_unit == 'epoch'
-                    and epoch % self.config.logging.val.interval == 0):
+            if (
+                val_dataset
+                and self.config.logging.val.interval_unit == "epoch"
+                and epoch % self.config.logging.val.interval == 0
+            ):
                 val_metric_vals = self._compute_metrics(
                     outputs=val_outputs,
                     labels=val_labels,
-                    metric_names=val_metric_names
+                    metric_names=val_metric_names,
                 )
                 for metric_name, metric_val in val_metric_vals.items():
-                    logger.write_scalar(f'val/{metric_name}', metric_val,
-                                        step=global_step)
+                    logger.write_scalar(
+                        f"val/{metric_name}", metric_val, step=global_step
+                    )
 
             # Update learning rate
             if scheduler is not None:
@@ -219,13 +232,13 @@ class BaseTrainer:
             # Update best stopping condition
             if val_dataset and stopping_criterion:
                 metric, desired, patience = stopping_criterion
-                stopping_val = metric(y_true=val_labels,
-                                      p_pred=val_outputs,
-                                      y_pred=val_pred)
-                if desired == 'max' and stopping_val > best_stopping_val:
+                stopping_val = metric(
+                    y_true=val_labels, p_pred=val_outputs, y_pred=val_pred
+                )
+                if desired == "max" and stopping_val > best_stopping_val:
                     best_stopping_val = stopping_val
                     best_stopping_epoch = epoch
-                if desired == 'min' and stopping_val < best_stopping_val:
+                if desired == "min" and stopping_val < best_stopping_val:
                     best_stopping_val = stopping_val
                     best_stopping_epoch = epoch
 
@@ -234,21 +247,26 @@ class BaseTrainer:
                 ckpt_fname = ckpt_saver.save_ckpt(
                     model=model, optimizer=optimizer, train_iter=epoch
                 )
-                print(f'Checkpoint saved to {ckpt_fname}')
+                print(f"Checkpoint saved to {ckpt_fname}")
 
             # Checkpoint 2. Best val metric
             if val_dataset:
-                metric_val, is_best = ckpt_saver.check_best(y_true=val_labels,
-                                                            p_pred=val_prob,
-                                                            y_pred=val_pred)
+                metric_val, is_best = ckpt_saver.check_best(
+                    y_true=val_labels, p_pred=val_prob, y_pred=val_pred
+                )
                 if is_best:
                     ckpt_fname = ckpt_saver.save_ckpt(
-                        model=model, optimizer=optimizer, train_iter=epoch,
-                        is_best=True, metric_val=metric_val
+                        model=model,
+                        optimizer=optimizer,
+                        train_iter=epoch,
+                        is_best=True,
+                        metric_val=metric_val,
                     )
-                    print(f'Checkpoint saved to {ckpt_fname} '
-                          f'({ckpt_saver.config.metric.name}: '
-                          f'{metric_val:.6f})')
+                    print(
+                        f"Checkpoint saved to {ckpt_fname} "
+                        f"({ckpt_saver.config.metric.name}: "
+                        f"{metric_val:.6f})"
+                    )
 
             # Stop training if condition met
             if val_dataset and (epoch - best_stopping_epoch >= patience):
@@ -260,11 +278,11 @@ class BaseTrainer:
             ckpt_fname = ckpt_saver.save_ckpt(
                 model=model, optimizer=optimizer, train_iter=epoch
             )
-            print(f'Checkpoint saved to {ckpt_fname}')
+            print(f"Checkpoint saved to {ckpt_fname}")
         return
 
     def test(self, model, test_dataset):
-        """ Load the best or latest ckpt and evalutate on the given dataset. """
+        """Load the best or latest ckpt and evalutate on the given dataset."""
         # Load the best or the latest model
         ckpt_saver = ConfigMapper.get_object(
             "checkpoint_savers", self.config.checkpoint_saver.name
@@ -278,10 +296,10 @@ class BaseTrainer:
             if latest_ckpt is not None:
                 ckpt_fname = latest_ckpt[1]
             else:
-                print(f'Cannot find a model checkpoint')
+                print("Cannot find a model checkpoint")
                 return
         ckpt_saver.load_ckpt(model, ckpt_fname, optimizer=None)
-        print(f'Checkpoint loaded from {ckpt_fname}')
+        print(f"Checkpoint loaded from {ckpt_fname}")
 
         if self.config.use_gpu:
             model.cuda()
@@ -290,20 +308,20 @@ class BaseTrainer:
         metric_vals = self.evaluate(model, test_dataset)
 
         # Print and save results
-        print('Evaluate on test dataset')
+        print("Evaluate on test dataset")
         for metric_name, metric_val in metric_vals.items():
-            print(f'{metric_name:>12}: {metric_val:6f}')
+            print(f"{metric_name:>12}: {metric_val:6f}")
 
-        result_fpath = os.path.join(self.config.output_dir, 'test_result.json')
-        print(f'Save result on {result_fpath}')
+        result_fpath = os.path.join(self.config.output_dir, "test_result.json")
+        print(f"Save result on {result_fpath}")
         save_json(metric_vals, result_fpath)
 
-
     def evaluate(self, model, dataset=None, dataloader=None):
-        """ Evaluate the model on the given dataset. """
+        """Evaluate the model on the given dataset."""
         # Get preds and labels for the whole epoch
         epoch_outputs, epoch_labels = self._forward_epoch(
-            model, dataset=dataset, dataloader=dataloader)
+            model, dataset=dataset, dataloader=dataloader
+        )
 
         # Evaluate the predictions using self.eval_metrics
         return self._compute_metrics(epoch_outputs, epoch_labels)
@@ -320,8 +338,8 @@ class BaseTrainer:
         probs = np.array(torch.sigmoid(outputs))
         preds = probs.round()
         for metric_name in metric_names:
-            if metric_name == 'loss':
-                metric_vals['loss'] = self.loss_fn(input=outputs, target=labels)
+            if metric_name == "loss":
+                metric_vals["loss"] = self.loss_fn(input=outputs, target=labels)
             else:
                 metric_vals[metric_name] = self.eval_metrics[metric_name](
                     y_true=labels_np, p_pred=probs, y_pred=preds
@@ -329,17 +347,17 @@ class BaseTrainer:
         return metric_vals
 
     def _forward_epoch(self, model, dataset=None, dataloader=None):
-        """ Compute the forward pass on the given dataset. """
+        """Compute the forward pass on the given dataset."""
         assert dataset or dataloader
 
         # Dataloader
         if dataloader is None:
             # We force the data loader is not shuffled and fully checked
             data_config = self.config.data_loader.as_dict()
-            data_config['drop_last'] = False
-            data_config['shuffle'] = False
-            if 'collate_fn' in dir(dataset):
-                data_config['collate_fn'] = dataset.collate_fn
+            data_config["drop_last"] = False
+            data_config["shuffle"] = False
+            if "collate_fn" in dir(dataset):
+                data_config["collate_fn"] = dataset.collate_fn
             dataloader = DataLoader(dataset, **data_config)
 
         # Forward for the whole batch

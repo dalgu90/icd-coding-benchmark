@@ -2,8 +2,8 @@
     CAML utils (Mullenbach et al. 2018)
     https://github.com/jamesmullenbach/caml-mimic
 """
-import os
 import csv
+import os
 from collections import defaultdict
 
 from src.modules.preprocessors import CodeProcessor
@@ -11,8 +11,14 @@ from src.utils.file_loaders import load_csv_as_df, load_json
 from src.utils.mapper import ConfigMapper
 
 
-def load_lookups(dataset_dir, mimic_dir, static_dir, word2vec_dir,
-                 label_file='labels.json', version="mimic3"):
+def load_lookups(
+    dataset_dir,
+    mimic_dir,
+    static_dir,
+    word2vec_dir,
+    label_file="labels.json",
+    version="mimic3",
+):
     """
     Inputs:
         args: Input arguments
@@ -55,29 +61,30 @@ def load_code_descriptions(mimic_dir, static_dir, version="mimic3"):
     # load description lookup from the appropriate data files
     desc_dict = defaultdict(str)
     if version == "mimic2":
-        with open(os.path.join(static_dir, "MIMIC_ICD9_mapping"), 'r') as f:
+        with open(os.path.join(static_dir, "MIMIC_ICD9_mapping"), "r") as f:
             r = csv.reader(f)
             # header
             next(r)
             for row in r:
                 desc_dict[str(row[1])] = str(row[2])
     else:
-        diag_df  = load_csv_as_df(
-            os.path.join(mimic_dir, 'D_ICD_DIAGNOSES.csv.gz'),
-            dtype={"ICD9_CODE": str}
+        diag_df = load_csv_as_df(
+            os.path.join(mimic_dir, "D_ICD_DIAGNOSES.csv.gz"),
+            dtype={"ICD9_CODE": str},
         )
         for _, row in diag_df.iterrows():
             desc_dict[reformat_fn(row.ICD9_CODE, True)] = row.LONG_TITLE
 
         proc_df = load_csv_as_df(
-            os.path.join(mimic_dir, 'D_ICD_PROCEDURES.csv.gz'),
-            dtype={"ICD9_CODE": str}
+            os.path.join(mimic_dir, "D_ICD_PROCEDURES.csv.gz"),
+            dtype={"ICD9_CODE": str},
         )
         for _, row in proc_df.iterrows():
             desc_dict[reformat_fn(row.ICD9_CODE, True)] = row.LONG_TITLE
 
-        with open(os.path.join(static_dir, "icd9_descriptions.txt"), "r") \
-                as labelfile:
+        with open(
+            os.path.join(static_dir, "icd9_descriptions.txt"), "r"
+        ) as labelfile:
             for i, row in enumerate(labelfile):
                 row = row.rstrip().split()
                 code = row[0]
@@ -88,7 +95,7 @@ def load_code_descriptions(mimic_dir, static_dir, version="mimic3"):
 
 def pad_desc_vecs(desc_vecs):
     # In this implementation, padding is performed not in the in-place manner
-    #pad all description vectors in a batch to have the same length
+    # pad all description vectors in a batch to have the same length
     desc_len = max([len(dv) for dv in desc_vecs])
     pad_vecs = []
     for vec in desc_vecs:

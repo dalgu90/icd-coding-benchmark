@@ -37,8 +37,10 @@ class Word2VecEmbedding:
         )
 
         # Vocab: {<pad>: 0, <unk>: 1, word1: 2, word2: 3, ... }
-        words = [self._config.pad_token, self._config.unk_token] + \
-                model.wv.index_to_key
+        words = [
+            self._config.pad_token,
+            self._config.unk_token,
+        ] + model.wv.index_to_key
         token_to_idx_dict = {token: idx for idx, token in enumerate(words)}
 
         save_json(
@@ -55,7 +57,7 @@ class Word2VecEmbedding:
         )
         np.save(
             os.path.join(self._config.embedding_dir, "embedding_matrix.npy"),
-            embedding_matrix
+            embedding_matrix,
         )
 
     @staticmethod

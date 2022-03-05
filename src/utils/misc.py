@@ -97,7 +97,12 @@ def generate_grid_search_configs(main_config, grid_config, root="hyperparams"):
                 continue
 
             if "log_label" in root.keys():
-                log_label_path = copy.deepcopy(stack + ["log_label",])
+                log_label_path = copy.deepcopy(
+                    stack
+                    + [
+                        "log_label",
+                    ]
+                )
 
             if "log_label" in root.keys():
                 log_label_path = copy.deepcopy(

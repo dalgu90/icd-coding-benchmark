@@ -25,11 +25,13 @@ class BaseModel(nn.Module):
         self.Y = config.num_classes
         self.embed_drop = nn.Dropout(p=config.dropout)
 
-        self.dicts = load_lookups(dataset_dir=config.dataset_dir,
-                                  mimic_dir=config.mimic_dir,
-                                  static_dir=config.static_dir,
-                                  word2vec_dir=config.word2vec_dir,
-                                  version=config.version)
+        self.dicts = load_lookups(
+            dataset_dir=config.dataset_dir,
+            mimic_dir=config.mimic_dir,
+            static_dir=config.static_dir,
+            word2vec_dir=config.word2vec_dir,
+            version=config.version,
+        )
 
         # make embedding layer
         embedding_cls = ConfigMapper.get_object("embeddings", "word2vec")
@@ -86,8 +88,8 @@ class ConvAttnPool(BaseModel):
     def __init__(self, config):
         super(ConvAttnPool, self).__init__(config=config)
 
-        self.pad_idx = self.dicts['w2ind'][config.pad_token]
-        self.unk_idx = self.dicts['w2ind'][config.unk_token]
+        self.pad_idx = self.dicts["w2ind"][config.pad_token]
+        self.unk_idx = self.dicts["w2ind"][config.unk_token]
 
         # initialize conv layer as in 2.1
         self.conv = nn.Conv1d(
@@ -110,8 +112,10 @@ class ConvAttnPool(BaseModel):
         # initialize with trained code embeddings if applicable
         if config.init_code_emb:
             if config.embed_size != config.num_filter_maps:
-                print('Cannot init attention vectors since the dimension differ'
-                      'from the dimension of the embedding')
+                print(
+                    "Cannot init attention vectors since the dimension differ"
+                    "from the dimension of the embedding"
+                )
             else:
                 self._code_emb_init()
 
@@ -142,32 +146,37 @@ class ConvAttnPool(BaseModel):
             )
             xavier_uniform(self.label_conv.weight)
 
-            self.label_fc1 = nn.Linear(config.num_filter_maps,
-                                       config.num_filter_maps)
+            self.label_fc1 = nn.Linear(
+                config.num_filter_maps, config.num_filter_maps
+            )
             xavier_uniform(self.label_fc1.weight)
 
             # Pre-process the code description into word idxs
             self.dv_dict = {}
-            ind2c = self.dicts['ind2c']
-            w2ind = self.dicts['w2ind']
-            desc_dict = self.dicts['desc']
+            ind2c = self.dicts["ind2c"]
+            w2ind = self.dicts["w2ind"]
+            desc_dict = self.dicts["desc"]
             for i, c in ind2c.items():
-                desc_vec = [w2ind[w] if w in w2ind else self.unk_idx
-                            for w in desc_dict[c]]
+                desc_vec = [
+                    w2ind[w] if w in w2ind else self.unk_idx
+                    for w in desc_dict[c]
+                ]
                 self.dv_dict[i] = desc_vec
 
     def _code_emb_init(self):
         # In the original CAML repo, this method seems not being called.
         # In this implementation, we compute the AVERAGE word2vec embeddings for
         # each code and initialize the self.U and self.final with it.
-        ind2c = self.dicts['ind2c']
-        w2ind = self.dicts['w2ind']
-        desc_dict = self.dicts['desc']
+        ind2c = self.dicts["ind2c"]
+        w2ind = self.dicts["w2ind"]
+        desc_dict = self.dicts["desc"]
 
         weights = torch.zeros_like(self.final.weight)
         for i, c in ind2c.items():
-            desc_vec = [w2ind[w] if w in w2ind else self.unk_idx
-                        for w in desc_dict[c].split()]
+            desc_vec = [
+                w2ind[w] if w in w2ind else self.unk_idx
+                for w in desc_dict[c].split()
+            ]
             weights[i] = self.embed(torch.tensor(desc_vec)).mean(axis=0)
         self.U.weight.data = torch.Tensor(weights).clone()
         self.final.weight.data = torch.Tensor(weights).clone()
@@ -191,13 +200,15 @@ class ConvAttnPool(BaseModel):
         return y
 
     def regularizer(self, labels=None):
-        if not self.config.lmbda: return 0.0
+        if not self.config.lmbda:
+            return 0.0
 
         # Retrive the description tokens of the labels
         desc_vecs = []
         for label in labels:
-            desc_vecs.append([self.dv_dict[i]
-                              for i, l in enumerate(label) if l])
+            desc_vecs.append(
+                [self.dv_dict[i] for i, l in enumerate(label) if l]
+            )
         desc_data = [np.array(pad_desc_vecs(dvs)) for dvs in desc_vecs]
 
         # run descriptions through description module
@@ -216,8 +227,9 @@ class VanillaConv(BaseModel):
 
         # initialize conv layer as in 2.1
         self.conv = nn.Conv1d(
-            config.embed_size, config.num_filter_maps,
-            kernel_size=config.kernel_size
+            config.embed_size,
+            config.num_filter_maps,
+            kernel_size=config.kernel_size,
         )
         xavier_uniform(self.conv.weight)
 
