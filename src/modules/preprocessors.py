@@ -14,7 +14,9 @@ from nltk.stem import (
 from nltk.tokenize import RegexpTokenizer
 
 from src.utils.file_loaders import load_json
-from src.utils.text_loggers import logger
+from src.utils.text_loggers import get_logger
+
+logger = get_logger(__name__)
 
 nltk.download("omw-1.4")
 nltk.download("rslp")

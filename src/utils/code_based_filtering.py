@@ -5,7 +5,9 @@ from collections import Counter
 import pandas as pd
 
 from src.utils.file_loaders import save_json
-from src.utils.text_loggers import logger
+from src.utils.text_loggers import get_logger
+
+logger = get_logger(__name__)
 
 
 class TopKCodes:

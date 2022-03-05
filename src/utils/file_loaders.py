@@ -4,7 +4,9 @@ import sys
 
 import pandas as pd
 
-from src.utils.text_loggers import logger
+from src.utils.text_loggers import get_logger
+
+logger = get_logger(__name__)
 
 
 def load_csv_as_df(file_path, dtype=None):
