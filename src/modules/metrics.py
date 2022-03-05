@@ -3,22 +3,13 @@ import numpy as np
 from sklearn.metrics import (
     accuracy_score,
     f1_score,
-    mean_squared_error,
     precision_score,
     recall_score,
     roc_auc_score,
 )
-from sklearn.metrics import roc_curve, auc
 
 from src.utils.configuration import Config
 from src.utils.mapper import ConfigMapper
-
-ConfigMapper.map("metrics", "sklearn_f1")(f1_score)
-ConfigMapper.map("metrics", "sklearn_p")(precision_score)
-ConfigMapper.map("metrics", "sklearn_r")(recall_score)
-ConfigMapper.map("metrics", "sklearn_roc")(roc_auc_score)
-ConfigMapper.map("metrics", "sklearn_acc")(accuracy_score)
-ConfigMapper.map("metrics", "sklearn_mse")(mean_squared_error)
 
 
 def to_np_array(array):
@@ -151,3 +142,14 @@ class PrecAtK(Metric):
             precs.append(prec)
 
         return np.mean(precs)
+
+
+##########################################################################
+# Others
+##########################################################################
+
+@ConfigMapper.map("metrics", "accuracy")
+class Accuracy(Metric):
+    def forward(self, y_true, y_pred=None, p_pred=None):
+        y_pred = y_pred if y_pred is not None else p_pred.round()
+        return accuracy_score(y_true=y_true.ravel(), y_pred=y_pred.ravel())
