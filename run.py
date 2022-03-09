@@ -3,14 +3,12 @@ import argparse
 import os
 
 import pandas
-import pudb
 
 from src.datasets import *
 from src.models import *
 from src.trainers import *
 from src.utils.configuration import Config
 from src.utils.import_related_ops import pandas_related_ops
-from src.utils.logger import Logger
 from src.utils.mapper import ConfigMapper
 from src.utils.misc import seed
 
@@ -33,57 +31,45 @@ args = parser.parse_args()
 # Config
 config = Config(path=args.config_path)
 
-# Logger
-logger = None
-# logger = Logger(
-# log_path=os.path.join(
-# log_dir,
-# args.config_dir.strip("/").split("/")[-1]
-# + ("" if args.validation else "_orig"),
-# )
-# )
-
-
-pudb.set_trace()
 if not args.test:  # Training
     # Seed
     seed(config.trainer.params.seed)
 
     # Load dataset
     train_data = ConfigMapper.get_object("datasets", config.dataset.name)(
-        **config.dataset.params.train.as_dict()
+        config.dataset.params.train
     )
     val_data = ConfigMapper.get_object("datasets", config.dataset.name)(
-        **config.dataset.params.val.as_dict()
+        config.dataset.params.val
     )
 
     # Model
     model = ConfigMapper.get_object("models", config.model.name)(
-        **config.model.params.as_dict()
+        config.model.params
     )
 
     # Trainer
     trainer = ConfigMapper.get_object("trainers", config.trainer.name)(
-        **config.trainer.params.as_dict()
+        config.trainer.params
     )
 
     # Train!
-    trainer.train(model, train_data, val_data, logger)
+    trainer.train(model, train_data, val_data)
 else:  # Test
     # Load dataset
     test_data = ConfigMapper.get_object("datasets", config.dataset.name)(
-        **config.dataset.params.test.as_dict()
+        config.dataset.params.test
     )
 
     # Model
     model = ConfigMapper.get_object("models", config.model.name)(
-        **config.model.params.as_dict()
+        config.model.params
     )
 
     # Trainer
     trainer = ConfigMapper.get_object("trainers", config.trainer.name)(
-        **config.trainer.params.as_dict()
+        config.trainer.params
     )
 
-    # Train!
-    trainer.eval(model, test_data, logger)
+    # Test!
+    trainer.test(model, test_data)

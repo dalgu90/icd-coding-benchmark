@@ -1,5 +1,5 @@
+import os
 import logging
-import sys
 
 from src.utils.file_loaders import load_json
 from src.utils.mapper import ConfigMapper
@@ -15,9 +15,15 @@ class CamlOfficialSplit:
             "Using CAML official split to split data into train-test-val with "
             "the following config: {}".format(config.as_dict())
         )
-        self.train_split = load_json(config.train_hadm_ids_path)
-        self.val_split = load_json(config.val_hadm_ids_path)
-        self.test_split = load_json(config.test_hadm_ids_path)
+        self.train_split = load_json(
+            os.path.join(config.hadm_dir, config.train_hadm_ids_name)
+        )
+        self.val_split = load_json(
+            os.path.join(config.hadm_dir, config.val_hadm_ids_name)
+        )
+        self.test_split = load_json(
+            os.path.join(config.hadm_dir, config.test_hadm_ids_name)
+        )
 
     def __call__(self, df, hadm_id_col_name):
         train_df = df[df[hadm_id_col_name].isin(self.train_split)]

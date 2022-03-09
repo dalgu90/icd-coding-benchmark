@@ -1,27 +1,55 @@
+import os
+
+import numpy as np
 import pandas as pd
+import torch
 from torch.utils.data import Dataset
 
 from src.utils.file_loaders import load_csv_as_df, load_json
-from src.utils.mapper import configmapper
+from src.utils.mapper import ConfigMapper
+from src.utils.text_loggers import get_logger
+
+logger = get_logger(__name__)
 
 
-@configmapper("datasets", "base_dataset")
+@ConfigMapper.map("datasets", "base_dataset")
 class BaseDataset(Dataset):
     def __init__(self, config):
         self._config = config
-        data_path = self._config.data_file
-        self.all_labels = load_json(config.label_file)
 
-        # To-do: This class currently deals with only CSV files. We can extend
-        # this to deal with other file types (.json, .xlsx, etc.).
+        # Load vocab (dict of {word: idx})
+        embedding_cls = ConfigMapper.get_object("embeddings", "word2vec")
+        self.vocab = embedding_cls.load_vocab(self._config.word2vec_dir)
+        self.vocab_size = len(self.vocab)
+        assert self.vocab_size == max(self.vocab.values()) + 1
+        self.pad_idx = self.vocab[self._config.pad_token]
+        self.unk_idx = self.vocab[self._config.unk_token]
 
-        self.df = load_csv_as_df(
-            data_path,
-            dtype={
-                self._config.column_names.hadm_id: "string",
-                self._config.column_names.clinical_note: "string",
-                self._config.column_names.label: "string",
-            },
+        # Load labels (dict of {code: idx})
+        label_path = os.path.join(
+            self._config.dataset_dir, self._config.label_file
+        )
+        self.all_labels = load_json(label_path)
+        self.num_labels = len(self.all_labels)
+        assert self.num_labels == max(self.all_labels.values()) + 1
+        logger.debug(
+            "Loaded {} ICD code labels from {}".format(
+                self.num_labels, label_path
+            )
+        )
+
+        # To-do: This class currently deals with only JSON files. We can extend
+        # this to deal with other file types (.csv, .xlsx, etc.).
+
+        # Load data (JSON)
+        data_path = os.path.join(
+            self._config.dataset_dir, self._config.data_file
+        )
+        self.df = pd.DataFrame.from_dict(load_json(data_path))
+        logger.info(
+            "Loaded dataset from {} ({} examples)".format(
+                data_path, len(self.df)
+            )
         )
 
     def __len__(self):
@@ -30,8 +58,33 @@ class BaseDataset(Dataset):
     def __getitem__(self, idx):
         row = self.df.iloc[idx]
         clinical_note = row[self._config.column_names.clinical_note]
-        labels = row[self._config.column_names.label].split(";")
+        codes = row[self._config.column_names.labels].split(";")
 
-        # convert labels to indices
-        labels = [self.all_labels[label] for label in labels]
+        # Note (list) -> word idxs (UNK is assigned at the last word)
+        clinical_note = [
+            self.vocab[w] if w in self.vocab else self.unk_idx
+            for w in clinical_note
+        ]
+
+        # ICD codes -> binary labels
+        labels = np.zeros(self.num_labels, dtype=np.int32)
+        for code in codes:
+            labels[self.all_labels[code]] = 1
+
         return (clinical_note, labels)
+
+    def collate_fn(self, examples):
+        """Concatenate examples into note and label tensors"""
+        notes, labels = zip(*examples)
+
+        # Pad notes
+        max_note_len = max(map(len, notes))
+        notes = [
+            note + [self.pad_idx] * (max_note_len - len(note)) for note in notes
+        ]
+
+        # Convert into Tensor
+        notes = torch.tensor(notes)
+        labels = torch.tensor(labels)
+
+        return notes, labels

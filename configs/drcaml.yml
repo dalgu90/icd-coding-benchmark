@@ -3,81 +3,7 @@ paths:
   static_dir: &static_dir datasets/mimic3/static
   dataset_dir: &dataset_dir datasets/mimic3_50
   word2vec_dir: &word2vec_dir datasets/mimic3_50/word2vec
-  output_dir: &output_dir results/CAML_mimic3_50
-
-preprocessing:
-  name: mimic_iii_preprocessing_pipeline
-  params:
-    paths:
-      mimic_dir: *mimic_dir
-      static_dir: *static_dir
-      save_dir: *dataset_dir
-      diagnosis_code_csv_name: DIAGNOSES_ICD.csv.gz
-      procedure_code_csv_name: PROCEDURES_ICD.csv.gz
-      noteevents_csv_name: NOTEEVENTS.csv.gz
-      train_json_name: train.json       # will be saved
-      val_json_name: val.json           # will be saved
-      test_json_name: test.json         # will be saved
-      label_json_name: labels.json       # will be computed and saved
-    dataset_metadata:
-      column_names:
-        subject_id: SUBJECT_ID
-        hadm_id: HADM_ID
-        chartdate: CHARTDATE
-        charttime: CHARTTIME
-        storetime: STORETIME
-        category: CATEGORY
-        description: DESCRIPTION
-        cgid: CGID
-        iserror: ISERROR
-        text: TEXT
-        icd9_code: ICD9_CODE
-        labels: LABELS
-    dataset_splitting_method:
-      name: caml_official_split
-      params:
-        hadm_dir: *static_dir
-        train_hadm_ids_name: train_split.json
-        val_hadm_ids_name: val_split.json
-        test_hadm_ids_name: test_split.json
-    clinical_note_preprocessing:
-      to_lower:
-        perform: true
-      remove_punctuation:
-        perform: true
-      remove_numeric:
-        perform: true
-      remove_stopwords:
-        perform: true
-        params:
-          stopwords_file_path: null
-          remove_common_medical_terms: true
-      stem_or_lemmatize:
-        perform: true
-        params:
-          stemmer_name: nltk.WordNetLemmatizer
-      truncate:
-        perform: true
-        params:
-          max_length: 2000
-    code_preprocessing:
-      top_k: 50                       # enter 0 for all codes
-      code_type: both
-      add_period_in_correct_pos:
-        perform: true
-    tokenizer:
-      name: spacetokenizer
-      params: null
-    embedding:
-      name: word2vec
-      params:
-        embedding_dir: *word2vec_dir
-        pad_token: "<pad>"
-        unk_token: "<unk>"
-        word2vec_params:
-          vector_size: 100
-          min_count: 3
-          epochs: 5
+  output_dir: &output_dir results/DRCAML_mimic3_50
 
 dataset:
   name: base_dataset
@@ -115,7 +41,7 @@ model:
     kernel_size: 10
     num_filter_maps: 50
     dropout: 0.2
-    lmbda: 0.0  # Positive for DR-CAML
+    lmbda: 10.0  # Positive for DR-CAML
     init_code_emb: false
     pad_token: "<pad>"
     unk_token: "<unk>"

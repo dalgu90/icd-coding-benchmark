@@ -1,7 +1,9 @@
 import math
 import os
 
+import numpy as np
 import torch
+from torch.optim.lr_scheduler import ReduceLROnPlateau
 from torch.utils.data import DataLoader
 from tqdm import tqdm
 
@@ -11,630 +13,392 @@ from src.modules.metrics import *
 from src.modules.optimizers import *
 from src.modules.schedulers import *
 from src.modules.tokenizers import *
+from src.utils.checkpoint_savers import *
 from src.utils.configuration import Config
-from src.utils.logger import Logger
+from src.utils.file_loaders import save_json
+from src.utils.graph_writers import *
 from src.utils.mapper import ConfigMapper
 from src.utils.misc import *
+from src.utils.text_loggers import get_logger
+
+logger = get_logger(__name__)
 
 
-@ConfigMapper.map("trainers", "base")
+@ConfigMapper.map("trainers", "base_trainer")
 class BaseTrainer:
     def __init__(self, config):
-        self._config = config
-        self.metrics = {
-            ConfigMapper.get_object("metrics", metric["type"]): metric["params"]
-            for metric in self._config.main_config.metrics
-        }
-        self.train_config = self._config.train
-        self.val_config = self._config.val
-        self.log_label = self.train_config.log.log_label
-        if self.train_config.log_and_val_interval is not None:
-            self.val_log_together = True
-        print("Logging with label: ", self.log_label)
+        cls_name = self.__class__.__name__
+        logger.info(f"Initializing {cls_name}")
+        logger.debug(f"Initializing {cls_name} with config: {config}")
+        self.config = config
 
-    def train(self, model, train_dataset, val_dataset=None, logger=None):
-        device = torch.device(self._config.main_config.device.name)
-        model.to(device)
-        optim_params = self.train_config.optimizer.params
-        if optim_params:
-            optimizer = ConfigMapper.get_object("optimizers", self.train_config.optimizer.type)(
-                model.parameters(), **optim_params.as_dict()
-            )
-        else:
-            optimizer = ConfigMapper.get_object("optimizers", self.train_config.optimizer.type)(model.parameters())
-
-        if self.train_config.scheduler is not None:
-            scheduler_params = self.train_config.scheduler.params
-            if scheduler_params:
-                scheduler = ConfigMapper.get_object("schedulers", self.train_config.scheduler.type)(
-                    optimizer, **scheduler_params.as_dict()
-                )
-            else:
-                scheduler = ConfigMapper.get_object("schedulers", self.train_config.scheduler.type)(optimizer)
-
-        criterion_params = self.train_config.criterion.params
-        if criterion_params:
-            criterion = ConfigMapper.get_object("losses", self.train_config.criterion.type)(
-                **criterion_params.as_dict()
-            )
-        else:
-            criterion = ConfigMapper.get_object("losses", self.train_config.criterion.type)()
-        if "custom_collate_fn" in dir(train_dataset):
-            train_loader = DataLoader(
-                dataset=train_dataset,
-                collate_fn=train_dataset.custom_collate_fn,
-                **self.train_config.loader_params.as_dict(),
-            )
-        else:
-            train_loader = DataLoader(
-                dataset=train_dataset,
-                **self.train_config.loader_params.as_dict(),
-            )
-        # train_logger = Logger(**self.train_config.log.logger_params.as_dict())
-
-        max_epochs = self.train_config.max_epochs
-        batch_size = self.train_config.loader_params.batch_size
-
-        if self.val_log_together:
-            val_interval = self.train_config.log_and_val_interval
-            log_interval = val_interval
-        else:
-            val_interval = self.train_config.val_interval
-            log_interval = self.train_config.log.log_interval
-
-        if logger is None:
-            train_logger = Logger(
-                **self.train_config.log.logger_params.as_dict()
-            )
-        else:
-            train_logger = logger
-
-        train_log_values = self.train_config.log.values.as_dict()
-        best_score = (
-            -math.inf
-            if self.train_config.save_on.desired == "max"
-            else math.inf
+        # Loss function
+        self.loss_fn = ConfigMapper.get_object(
+            "losses",
+            self.config.loss.name,
+        )(self.config.loss.params)
+        logger.debug(
+            f"Created loss function {self.loss_fn.__class__.__name__} with "
+            f"config: {self.config.loss.params}"
         )
-        save_on_score = self.train_config.save_on.score
-        best_step = -1
-        best_model = None
 
-        best_hparam_list = None
-        best_hparam_name_list = None
-        best_metrics_list = None
-        best_metrics_name_list = None
+        # Evaluation metrics
+        self.eval_metrics = {}
+        for config_dict in self.config.eval_metrics:
+            metric_name = config_dict["name"]
+            self.eval_metrics[metric_name] = load_metric(config_dict)
 
-        # print("\nTraining\n")
-        # print(max_steps)
+    def train(self, model, train_dataset, val_dataset=None):
+        """Train the model"""
+        self.model = model
+        self.train_dataset = train_dataset
+        self.val_dataset = val_dataset
 
-        global_step = 0
-        for epoch in range(1, max_epochs + 1):
-            print(
-                "Epoch: {}/{}, Global Step: {}".format(
-                    epoch, max_epochs, global_step
-                )
+        # Data loader
+        train_loader_config = self.config.data_loader.as_dict()
+        logger.debug(f"Creating train DataLoader: {train_loader_config}")
+        if "collate_fn" in dir(train_dataset):
+            train_loader_config["collate_fn"] = train_dataset.collate_fn
+        train_loader = DataLoader(train_dataset, **train_loader_config)
+        if val_dataset:
+            # We force the val dataset not shuffled and fully used
+            val_loader_config = self.config.data_loader.as_dict()
+            val_loader_config["drop_last"] = False
+            val_loader_config["shuffle"] = False
+            logger.debug(f"Creating val DataLoader: {val_loader_config}")
+            if "collate_fn" in dir(val_dataset):
+                val_loader_config["collate_fn"] = val_dataset.collate_fn
+            val_loader = DataLoader(val_dataset, **val_loader_config)
+        batch_size = self.config.data_loader.batch_size
+        if train_loader_config["drop_last"]:
+            num_train_batch = math.floor(len(train_dataset) / batch_size)
+        else:
+            num_train_batch = math.ceil(len(train_dataset) / batch_size)
+
+        # Optimizer & LR scheduler
+        optimizer = ConfigMapper.get_object(
+            "optimizers", self.config.optimizer.name
+        )(model.parameters(), **self.config.optimizer.params.as_dict())
+        logger.debug(
+            f"Created optimizer {optimizer.__class__.__name__} with config: "
+            f"{self.config.optimizer.params}"
+        )
+        scheduler = None
+        if self.config.lr_scheduler is not None:
+            scheduler = ConfigMapper.get_object(
+                "schedulers", self.config.lr_scheduler.name
+            )(optimizer, **self.config.lr_scheduler.params.as_dict())
+            logger.debug(
+                f"Created scheduler {scheduler.__class__.__name__} with "
+                f"config: {self.config.lr_scheduler.params}"
             )
-            train_loss = 0
-            val_loss = 0
 
-            if self.train_config.label_type == "float":
-                all_labels = torch.FloatTensor().to(device)
+        # Add evaluation metrics for graph
+        for config_dict in (
+            self.config.graph.train.metric + self.config.graph.val.metric
+        ):
+            metric_name = config_dict["name"]
+            if metric_name not in self.eval_metrics and metric_name != "loss":
+                self.eval_metrics[metric_name] = load_metric(config_dict)
+        train_metric_names = [
+            metric["name"] for metric in self.config.graph.train.metric
+        ]
+        val_metric_names = [
+            metric["name"] for metric in self.config.graph.val.metric
+        ]
+
+        # Stopping criterion: (metric, max/min, patience)
+        max_epochs = int(self.config.max_epochs)
+        stopping_criterion = None
+        if self.config.stopping_criterion is not None:
+            sc_config = self.config.stopping_criterion
+            # Load metric
+            sc_metric_config = sc_config.metric.as_dict()
+            if sc_metric_config["name"] in self.eval_metrics:
+                sc_metric = self.eval_metrics[sc_metric_config["name"]]
             else:
-                all_labels = torch.LongTensor().to(device)
+                sc_metric = load_metric(sc_metric_config)
+            # Metric + max/min + patience
+            stopping_criterion = (
+                sc_metric,
+                sc_config.desired,
+                sc_config.patience,
+            )
+            best_stopping_val = float("inf")
+            best_stopping_epoch = 0
+            if sc_config.desired == "max":
+                best_stopping_val *= -1.0
 
-            all_outputs = torch.Tensor().to(device)
+        if self.config.use_gpu:
+            model.cuda()
+            logger.info("Use GPU")
 
-            train_scores = None
-            val_scores = None
+        # Checkpoint saver
+        ckpt_saver = ConfigMapper.get_object(
+            "checkpoint_savers", self.config.checkpoint_saver.name
+        )(self.config.checkpoint_saver.params)
 
-            pbar = tqdm(total=math.ceil(len(train_dataset) / batch_size))
-            pbar.set_description("Epoch " + str(epoch))
+        # Load latest checkpoint
+        latest_ckpt = ckpt_saver.get_latest_checkpoint()
+        if latest_ckpt is not None:
+            ckpt_epoch, ckpt_fname = latest_ckpt
+            ckpt_saver.load_ckpt(
+                model=model, optimizer=optimizer, ckpt_fname=ckpt_fname
+            )
+            logger.info(f"Checkpoint loaded from {ckpt_fname}")
+            init_epoch = ckpt_epoch + 1
+        else:
+            init_epoch = 0
+        global_step = (len(train_dataset) // batch_size) * init_epoch
 
-            val_counter = 0
+        # Graph Writer (tensorboard)
+        writer = ConfigMapper.get_object(
+            "graph_writers", self.config.graph.writer.name
+        )(self.config.graph.writer.params)
 
-            for step, batch in enumerate(train_loader):
-                model.train()
+        # Train!
+        for epoch in range(init_epoch, max_epochs):
+            # Print training epoch
+            logger.info(f"Epoch: {epoch}/{max_epochs}, Step {global_step:6}")
+
+            model.train()
+
+            # Train for one epoch
+            pbar = tqdm(total=num_train_batch)
+            pbar.set_description(f"Epoch {epoch}")
+            for batch_train in train_loader:
                 optimizer.zero_grad()
-                inputs, labels = batch
 
-                if (
-                    self.train_config.label_type == "float"
-                ):  # Specific to Float Type
-                    labels = labels.float()
+                batch_inputs, batch_labels = batch_train
+                if self.config.use_gpu:
+                    batch_inputs = batch_inputs.cuda()
+                    batch_labels = batch_labels.cuda()
 
-                for key in inputs:
-                    inputs[key] = inputs[key].to(device)
-                labels = labels.to(device)
-                outputs = model(inputs)
-                loss = criterion(torch.squeeze(outputs), labels)
-                loss.backward()
+                batch_outputs = model(batch_inputs)
+                batch_loss = self.loss_fn(
+                    input=batch_outputs, target=batch_labels
+                )
+                if "regularizer" in dir(model):
+                    batch_loss += model.regularizer(labels=batch_labels)
 
-                all_labels = torch.cat((all_labels, labels), 0)
+                batch_loss.backward()
 
-                if self.train_config.label_type == "float":
-                    all_outputs = torch.cat((all_outputs, outputs), 0)
-                else:
-                    all_outputs = torch.cat(
-                        (all_outputs, torch.argmax(outputs, axis=1)), 0
-                    )
-
-                train_loss += loss.item()
                 optimizer.step()
+                if scheduler:
+                    scheduler.step()
 
-                if self.train_config.scheduler is not None:
-                    if isinstance(scheduler, ReduceLROnPlateau):
-                        scheduler.step(train_loss / (step + 1))
-                    else:
-                        scheduler.step()
+                # Write graph on proper steps (train)
+                if (
+                    self.config.graph.train.interval_unit == "step"
+                    and global_step % self.config.graph.train.interval == 0
+                ):
+                    train_metric_vals = self._compute_metrics(
+                        outputs=batch_outputs.detach().cpu(),
+                        labels=batch_labels.cpu(),
+                        metric_names=train_metric_names,
+                    )
+                    for metric_name, metric_val in train_metric_vals.items():
+                        writer.write_scalar(
+                            f"train/{metric_name}", metric_val, step=global_step
+                        )
 
-                # print(train_loss)
-                # print(step+1)
-
-                pbar.set_postfix_str(f"Train Loss: {train_loss /(step+1)}")
+                pbar.set_postfix_str(f"Train Loss: {batch_loss.item():.6f}")
                 pbar.update(1)
 
                 global_step += 1
-
-                # Need to check if we want global_step or local_step
-
-                if (
-                    val_dataset is not None
-                    and (global_step - 1) % val_interval == 0
-                ):
-                    # print("\nEvaluating\n")
-                    val_scores = self.val(
-                        model,
-                        val_dataset,
-                        criterion,
-                        device,
-                        global_step,
-                        train_logger,
-                        train_log_values,
-                    )
-
-                    # save_flag = 0
-                    if self.train_config.save_on is not None:
-
-                        # BEST SCORES UPDATING
-
-                        train_scores = self.get_scores(
-                            train_loss,
-                            global_step,
-                            self.train_config.criterion.type,
-                            all_outputs,
-                            all_labels,
-                        )
-
-                        best_score, best_step, save_flag = self.check_best(
-                            val_scores, save_on_score, best_score, global_step
-                        )
-
-                        store_dict = {
-                            "model_state_dict": model.state_dict(),
-                            "best_step": best_step,
-                            "best_score": best_score,
-                            "save_on_score": save_on_score,
-                        }
-
-                        path = self.train_config.save_on.best_path.format(self.log_label)
-
-                        self.save(store_dict, path, save_flag)
-
-                        if (
-                            save_flag
-                            and train_log_values["hparams"] is not None
-                        ):
-                            (
-                                best_hparam_list,
-                                best_hparam_name_list,
-                                best_metrics_list,
-                                best_metrics_name_list,
-                            ) = self.update_hparams(train_scores, val_scores, desc="best_val")
-                # pbar.close()
-                if (global_step - 1) % log_interval == 0:
-                    # print("\nLogging\n")
-                    train_loss_name = self.train_config.criterion.type
-                    metric_list = [
-                        metric(
-                            all_labels.cpu(),
-                            all_outputs.detach().cpu(),
-                            **self.metrics[metric],
-                        )
-                        for metric in self.metrics
-                    ]
-                    metric_name_list = [
-                        metric["type"]
-                        for metric in self._config.main_config.metrics
-                    ]
-
-                    train_scores = self.log(
-                        train_loss / (step + 1),
-                        train_loss_name,
-                        metric_list,
-                        metric_name_list,
-                        train_logger,
-                        train_log_values,
-                        global_step,
-                        append_text=self.train_config.append_text,
-                    )
             pbar.close()
-            if not os.path.exists(self.train_config.checkpoint.checkpoint_dir):
-                os.makedirs(self.train_config.checkpoint.checkpoint_dir)
 
-            if self.train_config.save_after_epoch:
-                store_dict = {
-                    "model_state_dict": model.state_dict(),
-                }
-
-                path = (
-                    f"{self.train_config.checkpoint.checkpoint_dir}_"
-                    f"{str(self.train_config.log.log_label)}_"
-                    f"{str(epoch)}.pth"
+            # Evaluate on eval dataset
+            if val_dataset:
+                val_outputs, val_labels = self._forward_epoch(
+                    model, dataloader=val_loader
                 )
+                val_loss = self.loss_fn(input=val_outputs, target=val_labels)
+                val_labels_np = val_labels.numpy()
+                val_prob = torch.sigmoid(val_outputs).numpy()
+                val_pred = val_prob.round()
+                logger.info("Evaluate on val dataset")
+                for metric_config in self.config.eval_metrics:
+                    metric_name = metric_config["name"]
+                    metric_val = self.eval_metrics[metric_name](
+                        y_true=val_labels_np, y_pred=val_pred, p_pred=val_prob
+                    )
+                    logger.info(f"{metric_name:>12}: {metric_val:6f}")
 
-                self.save(store_dict, path, save_flag=1)
-
-        if epoch == max_epochs:
-            # print("\nEvaluating\n")
-            val_scores = self.val(
-                model,
-                val_dataset,
-                criterion,
-                device,
-                global_step,
-                train_logger,
-                train_log_values,
-            )
-
-            # print("\nLogging\n")
-            train_loss_name = self.train_config.criterion.type
-            metric_list = [
-                metric(
-                    all_labels.cpu(),
-                    all_outputs.detach().cpu(),
-                    **self.metrics[metric],
+            # Plot graph on proper epochs (val)
+            if (
+                val_dataset
+                and self.config.graph.val.interval_unit == "epoch"
+                and epoch % self.config.graph.val.interval == 0
+            ):
+                val_metric_vals = self._compute_metrics(
+                    outputs=val_outputs,
+                    labels=val_labels,
+                    metric_names=val_metric_names,
                 )
-                for metric in self.metrics
-            ]
-            metric_name_list = [
-                metric["type"] for metric in self._config.main_config.metrics
-            ]
-
-            train_scores = self.log(
-                train_loss / len(train_loader),
-                train_loss_name,
-                metric_list,
-                metric_name_list,
-                train_logger,
-                train_log_values,
-                global_step,
-                append_text=self.train_config.append_text,
-            )
-
-            if self.train_config.save_on is not None:
-
-                # BEST SCORES UPDATING
-
-                train_scores = self.get_scores(
-                    train_loss,
-                    len(train_loader),
-                    self.train_config.criterion.type,
-                    all_outputs,
-                    all_labels,
-                )
-
-                best_score, best_step, save_flag = self.check_best(val_scores, save_on_score, best_score, global_step)
-
-                store_dict = {
-                    "model_state_dict": model.state_dict(),
-                    "best_step": best_step,
-                    "best_score": best_score,
-                    "save_on_score": save_on_score,
-                }
-
-                path = self.train_config.save_on.best_path.format(
-                    self.log_label
-                )
-
-                self.save(store_dict, path, save_flag)
-
-                if save_flag and train_log_values["hparams"] is not None:
-                    (
-                        best_hparam_list,
-                        best_hparam_name_list,
-                        best_metrics_list,
-                        best_metrics_name_list,
-                    ) = self.update_hparams(
-                        train_scores, val_scores, desc="best_val"
+                for metric_name, metric_val in val_metric_vals.items():
+                    writer.write_scalar(
+                        f"val/{metric_name}", metric_val, step=global_step
                     )
 
-                # FINAL SCORES UPDATING + STORING
-                train_scores = self.get_scores(
-                    train_loss,
-                    len(train_loader),
-                    self.train_config.criterion.type,
-                    all_outputs,
-                    all_labels,
-                )
-
-                store_dict = {
-                    "model_state_dict": model.state_dict(),
-                    "final_step": global_step,
-                    "final_score": train_scores[save_on_score],
-                    "save_on_score": save_on_score,
-                }
-
-                path = self.train_config.save_on.final_path.format(
-                    self.log_label
-                )
-
-                self.save(store_dict, path, save_flag=1)
-                if train_log_values["hparams"] is not None:
-                    (
-                        final_hparam_list,
-                        final_hparam_name_list,
-                        final_metrics_list,
-                        final_metrics_name_list,
-                    ) = self.update_hparams(
-                        train_scores, val_scores, desc="final"
-                    )
-                    train_logger.save_hyperparams(
-                        best_hparam_list,
-                        best_hparam_name_list,
-                        [
-                            int(self.log_label),
-                        ]
-                        + best_metrics_list
-                        + final_metrics_list,
-                        [
-                            "hparams/log_label",
-                        ]
-                        + best_metrics_name_list
-                        + final_metrics_name_list,
-                    )
-                    #
-
-    # Need to check if we want same loggers of different loggers for train and
-    # eval
-    # Evaluate
-
-    def get_scores(self, loss, divisor, loss_name, all_outputs, all_labels):
-
-        avg_loss = loss / divisor
-
-        metric_list = [
-            metric(
-                all_labels.cpu(),
-                all_outputs.detach().cpu(),
-                **self.metrics[metric],
-            )
-            for metric in self.metrics
-        ]
-        metric_name_list = [
-            metric["type"] for metric in self._config.main_config.metrics
-        ]
-
-        return dict(
-            zip(
-                [
-                    loss_name,
-                ]
-                + metric_name_list,
-                [
-                    avg_loss,
-                ]
-                + metric_list,
-            )
-        )
-
-    def check_best(self, val_scores, save_on_score, best_score, global_step):
-        save_flag = 0
-        best_step = global_step
-        if self.train_config.save_on.desired == "min":
-            if val_scores[save_on_score] < best_score:
-                save_flag = 1
-                best_score = val_scores[save_on_score]
-                best_step = global_step
-        else:
-            if val_scores[save_on_score] > best_score:
-                save_flag = 1
-                best_score = val_scores[save_on_score]
-                best_step = global_step
-        return best_score, best_step, save_flag
-
-    def update_hparams(self, train_scores, val_scores, desc):
-        hparam_list = []
-        hparam_name_list = []
-        for hparam in self.train_config.log.values.hparams:
-            hparam_list.append(get_item_in_config(self._config, hparam["path"]))
-            if isinstance(hparam_list[-1], Config):
-                hparam_list[-1] = hparam_list[-1].as_dict()
-            hparam_name_list.append(hparam["name"])
-
-        val_keys, val_values = zip(*val_scores.items())
-        train_keys, train_values = zip(*train_scores.items())
-        val_keys = list(val_keys)
-        train_keys = list(train_keys)
-        val_values = list(val_values)
-        train_values = list(train_values)
-        for i, key in enumerate(val_keys):
-            val_keys[i] = f"hparams/{desc}_val_" + val_keys[i]
-        for i, key in enumerate(train_keys):
-            train_keys[i] = f"hparams/{desc}_train_" + train_keys[i]
-        # train_logger.save_hyperparams(
-        #       hparam_list,
-        #       hparam_name_list,train_values+val_values,train_keys+val_keys, )
-        return (
-            hparam_list,
-            hparam_name_list,
-            train_values + val_values,
-            train_keys + val_keys,
-        )
-
-    def save(self, store_dict, path, save_flag=0):
-        if save_flag:
-            dirs = "/".join(path.split("/")[:-1])
-            if not os.path.exists(dirs):
-                os.makedirs(dirs)
-            torch.save(store_dict, path)
-
-    def log(
-        self,
-        loss,
-        loss_name,
-        metric_list,
-        metric_name_list,
-        logger,
-        log_values,
-        global_step,
-        append_text,
-    ):
-
-        return_dic = dict(
-            zip(
-                [
-                    loss_name,
-                ]
-                + metric_name_list,
-                [
-                    loss,
-                ]
-                + metric_list,
-            )
-        )
-
-        loss_name = f"{append_text}_{self.log_label}_{loss_name}"
-        if log_values["loss"]:
-            logger.save_params(
-                [loss],
-                [loss_name],
-                combine=True,
-                combine_name="losses",
-                global_step=global_step,
-            )
-
-        for i in range(len(metric_name_list)):
-            metric_name_list[i] = f"{append_text}_{self.log_label}_{metric_name_list[i]}"
-        if log_values["metrics"]:
-            logger.save_params(
-                metric_list,
-                metric_name_list,
-                combine=True,
-                combine_name="metrics",
-                global_step=global_step,
-            )
-            # print(hparams_list)
-            # print(hparam_name_list)
-
-        # for k,v in dict(zip([loss_name],[loss])).items():
-        #     print(f"{k}:{v}")
-        # for k,v in dict(zip(metric_name_list,metric_list)).items():
-        #     print(f"{k}:{v}")
-        return return_dic
-
-    def val(
-        self,
-        model,
-        dataset,
-        criterion,
-        device,
-        global_step,
-        train_logger=None,
-        train_log_values=None,
-        log=True,
-    ):
-        append_text = self.val_config.append_text
-        if train_logger is not None:
-            val_logger = train_logger
-        else:
-            val_logger = Logger(**self.val_config.log.logger_params.as_dict())
-
-        if train_log_values is not None:
-            val_log_values = train_log_values
-        else:
-            val_log_values = self.val_config.log.values.as_dict()
-        if "custom_collate_fn" in dir(dataset):
-            val_loader = DataLoader(
-                dataset=dataset,
-                collate_fn=dataset.custom_collate_fn,
-                **self.val_config.loader_params.as_dict(),
-            )
-        else:
-            val_loader = DataLoader(dataset=dataset, **self.val_config.loader_params.as_dict())
-
-        all_outputs = torch.Tensor().to(device)
-        if self.train_config.label_type == "float":
-            all_labels = torch.FloatTensor().to(device)
-        else:
-            all_labels = torch.LongTensor().to(device)
-
-        batch_size = self.val_config.loader_params.batch_size
-
-        with torch.no_grad():
-            model.eval()
-            val_loss = 0
-            for j, batch in enumerate(val_loader):
-
-                inputs, labels = batch
-
-                if self.train_config.label_type == "float":
-                    labels = labels.float()
-
-                for key in inputs:
-                    inputs[key] = inputs[key].to(device)
-                labels = labels.to(device)
-
-                outputs = model(inputs)
-                loss = criterion(torch.squeeze(outputs), labels)
-                val_loss += loss.item()
-
-                all_labels = torch.cat((all_labels, labels), 0)
-
-                if self.train_config.label_type == "float":
-                    all_outputs = torch.cat((all_outputs, outputs), 0)
+            # Update learning rate
+            if scheduler is not None:
+                if isinstance(scheduler, ReduceLROnPlateau):
+                    # ReduceLROnPlateau uses validation loss
+                    if val_dataset:
+                        scheduler.step(val_loss)
                 else:
-                    all_outputs = torch.cat(
-                        (all_outputs, torch.argmax(outputs, axis=1)), 0
+                    scheduler.step()
+
+            # Update best stopping condition
+            if val_dataset and stopping_criterion:
+                metric, desired, patience = stopping_criterion
+                stopping_val = metric(
+                    y_true=val_labels, p_pred=val_outputs, y_pred=val_pred
+                )
+                if desired == "max" and stopping_val > best_stopping_val:
+                    best_stopping_val = stopping_val
+                    best_stopping_epoch = epoch
+                if desired == "min" and stopping_val < best_stopping_val:
+                    best_stopping_val = stopping_val
+                    best_stopping_epoch = epoch
+
+            # Checkpoint 1. Per interval epoch
+            if ckpt_saver.check_interval(epoch):
+                ckpt_fname = ckpt_saver.save_ckpt(
+                    model=model, optimizer=optimizer, train_iter=epoch
+                )
+                logger.info(f"Checkpoint saved to {ckpt_fname}")
+
+            # Checkpoint 2. Best val metric
+            if val_dataset:
+                metric_val, is_best = ckpt_saver.check_best(
+                    y_true=val_labels, p_pred=val_prob, y_pred=val_pred
+                )
+                if is_best:
+                    ckpt_fname = ckpt_saver.save_ckpt(
+                        model=model,
+                        optimizer=optimizer,
+                        train_iter=epoch,
+                        is_best=True,
+                        metric_val=metric_val,
+                    )
+                    logger.info(
+                        f"Checkpoint saved to {ckpt_fname} "
+                        f"({ckpt_saver.config.metric.name}: "
+                        f"{metric_val:.6f})"
                     )
 
-            val_loss = val_loss / len(val_loader)
+            # Stop training if condition met
+            if val_dataset and (epoch - best_stopping_epoch >= patience):
+                break
 
-            val_loss_name = self.train_config.criterion.type
-
-            # print(all_outputs, all_labels)
-            metric_list = [
-                metric(
-                    all_labels.cpu(),
-                    all_outputs.detach().cpu(),
-                    **self.metrics[metric],
-                )
-                for metric in self.metrics
-            ]
-            metric_name_list = [
-                metric["type"] for metric in self._config.main_config.metrics
-            ]
-            return_dic = dict(
-                zip(
-                    [
-                        val_loss_name,
-                    ]
-                    + metric_name_list,
-                    [
-                        val_loss,
-                    ]
-                    + metric_list,
-                )
+        # Wrapping up
+        # Save the last checkpoint, if not saved above
+        if not ckpt_saver.check_interval(epoch):
+            ckpt_fname = ckpt_saver.save_ckpt(
+                model=model, optimizer=optimizer, train_iter=epoch
             )
-            if log:
-                val_scores = self.log(
-                    val_loss,
-                    val_loss_name,
-                    metric_list,
-                    metric_name_list,
-                    val_logger,
-                    val_log_values,
-                    global_step,
-                    append_text,
+            logger.info(f"Checkpoint saved to {ckpt_fname}")
+
+        logger.info("Training completed")
+        return
+
+    def test(self, model, test_dataset):
+        """Load the best or latest ckpt and evalutate on the given dataset."""
+        # Load the best or the latest model
+        ckpt_saver = ConfigMapper.get_object(
+            "checkpoint_savers", self.config.checkpoint_saver.name
+        )(self.config.checkpoint_saver.params)
+
+        best_ckpt = ckpt_saver.get_best_checkpoint()
+        if best_ckpt is not None:
+            ckpt_fname = best_ckpt
+        else:
+            latest_ckpt = ckpt_saver.get_latest_checkpoint()
+            if latest_ckpt is not None:
+                ckpt_fname = latest_ckpt[1]
+            else:
+                logger.error("Cannot find a model checkpoint")
+                return
+        ckpt_saver.load_ckpt(model, ckpt_fname, optimizer=None)
+        logger.info(f"Loaded checkpoint from {ckpt_fname}")
+
+        if self.config.use_gpu:
+            model.cuda()
+            logger.info("Use GPU")
+
+        # Evaluate on test dataset
+        logger.info("Evaluating on test dataset")
+        metric_vals = self.evaluate(model, test_dataset)
+
+        # Print and save results
+        for metric_name, metric_val in metric_vals.items():
+            logger.info(f"{metric_name:>12}: {metric_val:6f}")
+
+        result_fpath = os.path.join(self.config.output_dir, "test_result.json")
+        logger.info(f"Saving result on {result_fpath}")
+        save_json(metric_vals, result_fpath)
+
+    def evaluate(self, model, dataset=None, dataloader=None):
+        """Evaluate the model on the given dataset."""
+        # Get preds and labels for the whole epoch
+        epoch_outputs, epoch_labels = self._forward_epoch(
+            model, dataset=dataset, dataloader=dataloader
+        )
+
+        # Evaluate the predictions using self.eval_metrics
+        return self._compute_metrics(epoch_outputs, epoch_labels)
+
+    def _compute_metrics(self, outputs, labels, metric_names=None):
+        """
+        Compute the metrics of given names. Inputs should be Torch tensors.
+        """
+        metric_vals = {}
+        if metric_names is None:
+            metric_names = self.eval_metrics.keys()
+
+        labels_np = np.array(labels)
+        probs = np.array(torch.sigmoid(outputs))
+        preds = probs.round()
+        for metric_name in metric_names:
+            if metric_name == "loss":
+                metric_vals["loss"] = self.loss_fn(input=outputs, target=labels)
+            else:
+                metric_vals[metric_name] = self.eval_metrics[metric_name](
+                    y_true=labels_np, p_pred=probs, y_pred=preds
                 )
-                return val_scores
-            return return_dic
+        return metric_vals
+
+    def _forward_epoch(self, model, dataset=None, dataloader=None):
+        """Compute the forward pass on the given dataset."""
+        assert dataset or dataloader
+
+        # Dataloader
+        if dataloader is None:
+            # We force the data loader is not shuffled and fully checked
+            data_config = self.config.data_loader.as_dict()
+            data_config["drop_last"] = False
+            data_config["shuffle"] = False
+            logger.debug(f"Creating test DataLoader: {data_config}")
+            if "collate_fn" in dir(dataset):
+                data_config["collate_fn"] = dataset.collate_fn
+            dataloader = DataLoader(dataset, **data_config)
+
+        # Forward for the whole batch
+        model.eval()
+        epoch_outputs, epoch_labels = [], []
+        with torch.no_grad():
+            for i, (batch_inputs, batch_labels) in enumerate(dataloader):
+                if self.config.use_gpu:
+                    batch_inputs = batch_inputs.cuda()
+                    batch_labels = batch_labels.cuda()
+                batch_outputs = model(batch_inputs)
+                epoch_labels.append(batch_labels.cpu())
+                epoch_outputs.append(batch_outputs.cpu())
+
+        # Concat
+        epoch_labels = torch.cat(epoch_labels, 0)
+        epoch_outputs = torch.cat(epoch_outputs, 0)
+
+        return epoch_outputs, epoch_labels

@@ -152,7 +152,8 @@ class CodeProcessor:
             icd_code = self.reformat_icd_code(icd_code, is_diagnosis_code)
         return icd_code
 
-    def reformat_icd_code(self, icd_code, is_diagnosis_code):
+    @staticmethod
+    def reformat_icd_code(icd_code, is_diagnosis_code):
         code = "".join(icd_code.split("."))
         if is_diagnosis_code:
             if code.startswith("E"):
