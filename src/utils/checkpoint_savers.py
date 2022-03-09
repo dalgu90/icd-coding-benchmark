@@ -9,11 +9,17 @@ import torch
 from src.modules.metrics import load_metric
 from src.utils.file_loaders import load_json, save_json
 from src.utils.mapper import ConfigMapper
+from src.utils.text_loggers import get_logger
+
+logger = get_logger(__name__)
 
 
 @ConfigMapper.map("checkpoint_savers", "base_saver")
 class BaseCheckpointSaver(object):
     def __init__(self, config):
+        cls_name = self.__class__.__name__
+        logger.debug(f"Initializing {cls_name} with config: {config}")
+
         self.config = config
         if "info_fname" not in self.config.as_dict():
             self.config.set_value("info_fname", "ckpt-info.json")
@@ -144,11 +150,12 @@ class BaseCheckpointSaver(object):
             # For best, delete the old one and save the new one
             assert metric_val is not None
             if info["best_ckpt"]:
-                os.remove(
-                    os.path.join(
-                        self.config.checkpoint_dir, info["best_ckpt"]["fname"]
-                    )
+                old_ckpt_fpath = os.path.join(
+                    self.config.checkpoint_dir, info["best_ckpt"]["fname"]
                 )
+                logger.debug(f"Removing ckpt {old_ckpt_fpath}")
+                os.remove(old_ckpt_fpath)
+            logger.debug(f"Saving ckpt to {ckpt_fpath}")
             torch.save(checkpoint, ckpt_fpath)
             info["best_ckpt"] = {
                 "fname": ckpt_fname,
@@ -161,17 +168,18 @@ class BaseCheckpointSaver(object):
                 for i, fname in info["iter_ckpts"].items()
                 if fname != ckpt_fname
             }
+            logger.debug(f"Saving ckpt to {ckpt_fpath}")
             torch.save(checkpoint, ckpt_fpath)
             info["iter_ckpts"][train_iter] = ckpt_fname
 
             train_iters_del = sorted(info["iter_ckpts"].keys(), reverse=True)
             train_iters_del = train_iters_del[self.config.max_to_keep :]
             for i in train_iters_del:
-                os.remove(
-                    os.path.join(
-                        self.config.checkpoint_dir, info["iter_ckpts"][i]
-                    )
+                old_ckpt_fpath = os.path.join(
+                    self.config.checkpoint_dir, info["iter_ckpts"][i]
                 )
+                logger.debug(f"Removing ckpt {old_ckpt_fpath}")
+                os.remove(old_ckpt_fpath)
                 del info["iter_ckpts"][i]
 
         # Save ckpt info
@@ -180,6 +188,7 @@ class BaseCheckpointSaver(object):
 
     def load_ckpt(self, model, ckpt_fname, optimizer=None):
         ckpt_fpath = os.path.join(self.config.checkpoint_dir, ckpt_fname)
+        logger.debug(f"Loading ckpt from {ckpt_fpath}")
         checkpoint = torch.load(ckpt_fpath)
         model.load_state_dict(checkpoint["model"])
         if optimizer:
@@ -188,7 +197,7 @@ class BaseCheckpointSaver(object):
     def save_args(self, args):
         if not os.path.exists(self.config.checkpoint_dir):
             os.makedirs(self.config.checkpoint_dir)
-        with open(
-            os.path.join(self.config.checkpoint_dir, "args.json"), "w"
-        ) as fd:
+        args_fpath = os.path.join(self.config.checkpoint_dir, "args.json")
+        logger.debug(f"Saving arguments to {args_fpath}")
+        with open(args_fpath, "w") as fd:
             json.dump(vars(args), fd)

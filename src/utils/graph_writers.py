@@ -5,9 +5,12 @@ import torch
 from torch.utils.tensorboard import SummaryWriter
 
 from src.utils.mapper import ConfigMapper
+from src.utils.text_loggers import get_logger
+
+logger = get_logger(__name__)
 
 
-class LoggerBase:
+class GraphWriterBase:
     def __init__(self, config):
         self.config = config
 
@@ -15,9 +18,12 @@ class LoggerBase:
         raise NotImplementedError()
 
 
-@ConfigMapper.map("loggers", "tensorboard")
-class TensorboardLogger(LoggerBase):
+@ConfigMapper.map("graph_writers", "tensorboard")
+class TensorboardGraphWriter(GraphWriterBase):
     def __init__(self, config):
+        cls_name = self.__class__.__name__
+        logger.debug(f"Initializing {cls_name} with config: {config}")
+
         super().__init__(config)
 
         # Tensorboard writer
@@ -28,9 +34,12 @@ class TensorboardLogger(LoggerBase):
         self.writer.flush()
 
 
-@ConfigMapper.map("loggers", "wandb")
-class WandBLogger(LoggerBase):
+@ConfigMapper.map("graph_writers", "wandb")
+class WandBGraphWriter(GraphWriterBase):
     def __init__(self, config):
+        cls_name = self.__class__.__name__
+        logger.debug(f"Initializing {cls_name} with config: {config}")
+
         super().__init__(config)
 
     def writer_scalar(self, name, value, step=None):

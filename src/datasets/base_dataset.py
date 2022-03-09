@@ -7,6 +7,9 @@ from torch.utils.data import Dataset
 
 from src.utils.file_loaders import load_csv_as_df, load_json
 from src.utils.mapper import ConfigMapper
+from src.utils.text_loggers import get_logger
+
+logger = get_logger(__name__)
 
 
 @ConfigMapper.map("datasets", "base_dataset")
@@ -29,6 +32,11 @@ class BaseDataset(Dataset):
         self.all_labels = load_json(label_path)
         self.num_labels = len(self.all_labels)
         assert self.num_labels == max(self.all_labels.values()) + 1
+        logger.debug(
+            "Loaded {} ICD code labels from {}".format(
+                self.num_labels, label_path
+            )
+        )
 
         # To-do: This class currently deals with only JSON files. We can extend
         # this to deal with other file types (.csv, .xlsx, etc.).
@@ -37,8 +45,12 @@ class BaseDataset(Dataset):
         data_path = os.path.join(
             self._config.dataset_dir, self._config.data_file
         )
-        print(f"Load dataset from {data_path}")
         self.df = pd.DataFrame.from_dict(load_json(data_path))
+        logger.info(
+            "Loaded dataset from {} ({} examples)".format(
+                data_path, len(self.df)
+            )
+        )
 
     def __len__(self):
         return self.df.shape[0]

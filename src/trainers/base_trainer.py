@@ -16,14 +16,20 @@ from src.modules.tokenizers import *
 from src.utils.checkpoint_savers import *
 from src.utils.configuration import Config
 from src.utils.file_loaders import save_json
-from src.utils.logger import *
+from src.utils.graph_writers import *
 from src.utils.mapper import ConfigMapper
 from src.utils.misc import *
+from src.utils.text_loggers import get_logger
+
+logger = get_logger(__name__)
 
 
 @ConfigMapper.map("trainers", "base_trainer")
 class BaseTrainer:
     def __init__(self, config):
+        cls_name = self.__class__.__name__
+        logger.info(f"Initializing {cls_name}")
+        logger.debug(f"Initializing {cls_name} with config: {config}")
         self.config = config
 
         # Loss function
@@ -31,6 +37,10 @@ class BaseTrainer:
             "losses",
             self.config.loss.name,
         )(self.config.loss.params)
+        logger.debug(
+            f"Created loss function {self.loss_fn.__class__.__name__} with "
+            f"config: {self.config.loss.params}"
+        )
 
         # Evaluation metrics
         self.eval_metrics = {}
@@ -46,6 +56,7 @@ class BaseTrainer:
 
         # Data loader
         train_loader_config = self.config.data_loader.as_dict()
+        logger.debug(f"Creating train DataLoader: {train_loader_config}")
         if "collate_fn" in dir(train_dataset):
             train_loader_config["collate_fn"] = train_dataset.collate_fn
         train_loader = DataLoader(train_dataset, **train_loader_config)
@@ -54,6 +65,7 @@ class BaseTrainer:
             val_loader_config = self.config.data_loader.as_dict()
             val_loader_config["drop_last"] = False
             val_loader_config["shuffle"] = False
+            logger.debug(f"Creating val DataLoader: {val_loader_config}")
             if "collate_fn" in dir(val_dataset):
                 val_loader_config["collate_fn"] = val_dataset.collate_fn
             val_loader = DataLoader(val_dataset, **val_loader_config)
@@ -67,24 +79,32 @@ class BaseTrainer:
         optimizer = ConfigMapper.get_object(
             "optimizers", self.config.optimizer.name
         )(model.parameters(), **self.config.optimizer.params.as_dict())
+        logger.debug(
+            f"Created optimizer {optimizer.__class__.__name__} with config: "
+            f"{self.config.optimizer.params}"
+        )
         scheduler = None
         if self.config.lr_scheduler is not None:
             scheduler = ConfigMapper.get_object(
                 "schedulers", self.config.lr_scheduler.name
             )(optimizer, **self.config.lr_scheduler.params.as_dict())
+            logger.debug(
+                f"Created scheduler {scheduler.__class__.__name__} with "
+                f"config: {self.config.lr_scheduler.params}"
+            )
 
-        # Add evaluation metrics for logging
+        # Add evaluation metrics for graph
         for config_dict in (
-            self.config.logging.train.metric + self.config.logging.val.metric
+            self.config.graph.train.metric + self.config.graph.val.metric
         ):
             metric_name = config_dict["name"]
             if metric_name not in self.eval_metrics and metric_name != "loss":
                 self.eval_metrics[metric_name] = load_metric(config_dict)
         train_metric_names = [
-            metric["name"] for metric in self.config.logging.train.metric
+            metric["name"] for metric in self.config.graph.train.metric
         ]
         val_metric_names = [
-            metric["name"] for metric in self.config.logging.val.metric
+            metric["name"] for metric in self.config.graph.val.metric
         ]
 
         # Stopping criterion: (metric, max/min, patience)
@@ -111,6 +131,7 @@ class BaseTrainer:
 
         if self.config.use_gpu:
             model.cuda()
+            logger.info("Use GPU")
 
         # Checkpoint saver
         ckpt_saver = ConfigMapper.get_object(
@@ -124,21 +145,21 @@ class BaseTrainer:
             ckpt_saver.load_ckpt(
                 model=model, optimizer=optimizer, ckpt_fname=ckpt_fname
             )
-            print(f"Checkpoint loaded from {ckpt_fname}")
+            logger.info(f"Checkpoint loaded from {ckpt_fname}")
             init_epoch = ckpt_epoch + 1
         else:
             init_epoch = 0
         global_step = (len(train_dataset) // batch_size) * init_epoch
 
-        # Logger (tensorboard)
-        logger = ConfigMapper.get_object(
-            "loggers", self.config.logging.logger.name
-        )(self.config.logging.logger.params)
+        # Graph Writer (tensorboard)
+        writer = ConfigMapper.get_object(
+            "graph_writers", self.config.graph.writer.name
+        )(self.config.graph.writer.params)
 
         # Train!
         for epoch in range(init_epoch, max_epochs):
             # Print training epoch
-            print(f"Epoch: {epoch}/{max_epochs}, Step {global_step:6}")
+            logger.info(f"Epoch: {epoch}/{max_epochs}, Step {global_step:6}")
 
             model.train()
 
@@ -166,10 +187,10 @@ class BaseTrainer:
                 if scheduler:
                     scheduler.step()
 
-                # Log on proper steps (train)
+                # Write graph on proper steps (train)
                 if (
-                    self.config.logging.train.interval_unit == "step"
-                    and global_step % self.config.logging.train.interval == 0
+                    self.config.graph.train.interval_unit == "step"
+                    and global_step % self.config.graph.train.interval == 0
                 ):
                     train_metric_vals = self._compute_metrics(
                         outputs=batch_outputs.detach().cpu(),
@@ -177,7 +198,7 @@ class BaseTrainer:
                         metric_names=train_metric_names,
                     )
                     for metric_name, metric_val in train_metric_vals.items():
-                        logger.write_scalar(
+                        writer.write_scalar(
                             f"train/{metric_name}", metric_val, step=global_step
                         )
 
@@ -196,19 +217,19 @@ class BaseTrainer:
                 val_labels_np = val_labels.numpy()
                 val_prob = torch.sigmoid(val_outputs).numpy()
                 val_pred = val_prob.round()
-                print("Evaluate on val dataset")
+                logger.info("Evaluate on val dataset")
                 for metric_config in self.config.eval_metrics:
                     metric_name = metric_config["name"]
                     metric_val = self.eval_metrics[metric_name](
                         y_true=val_labels_np, y_pred=val_pred, p_pred=val_prob
                     )
-                    print(f"{metric_name:>12}: {metric_val:6f}")
+                    logger.info(f"{metric_name:>12}: {metric_val:6f}")
 
-            # Log on proper epochs (val)
+            # Plot graph on proper epochs (val)
             if (
                 val_dataset
-                and self.config.logging.val.interval_unit == "epoch"
-                and epoch % self.config.logging.val.interval == 0
+                and self.config.graph.val.interval_unit == "epoch"
+                and epoch % self.config.graph.val.interval == 0
             ):
                 val_metric_vals = self._compute_metrics(
                     outputs=val_outputs,
@@ -216,7 +237,7 @@ class BaseTrainer:
                     metric_names=val_metric_names,
                 )
                 for metric_name, metric_val in val_metric_vals.items():
-                    logger.write_scalar(
+                    writer.write_scalar(
                         f"val/{metric_name}", metric_val, step=global_step
                     )
 
@@ -247,7 +268,7 @@ class BaseTrainer:
                 ckpt_fname = ckpt_saver.save_ckpt(
                     model=model, optimizer=optimizer, train_iter=epoch
                 )
-                print(f"Checkpoint saved to {ckpt_fname}")
+                logger.info(f"Checkpoint saved to {ckpt_fname}")
 
             # Checkpoint 2. Best val metric
             if val_dataset:
@@ -262,7 +283,7 @@ class BaseTrainer:
                         is_best=True,
                         metric_val=metric_val,
                     )
-                    print(
+                    logger.info(
                         f"Checkpoint saved to {ckpt_fname} "
                         f"({ckpt_saver.config.metric.name}: "
                         f"{metric_val:.6f})"
@@ -278,7 +299,9 @@ class BaseTrainer:
             ckpt_fname = ckpt_saver.save_ckpt(
                 model=model, optimizer=optimizer, train_iter=epoch
             )
-            print(f"Checkpoint saved to {ckpt_fname}")
+            logger.info(f"Checkpoint saved to {ckpt_fname}")
+
+        logger.info("Training completed")
         return
 
     def test(self, model, test_dataset):
@@ -296,24 +319,25 @@ class BaseTrainer:
             if latest_ckpt is not None:
                 ckpt_fname = latest_ckpt[1]
             else:
-                print("Cannot find a model checkpoint")
+                logger.error("Cannot find a model checkpoint")
                 return
         ckpt_saver.load_ckpt(model, ckpt_fname, optimizer=None)
-        print(f"Checkpoint loaded from {ckpt_fname}")
+        logger.info(f"Loaded checkpoint from {ckpt_fname}")
 
         if self.config.use_gpu:
             model.cuda()
+            logger.info("Use GPU")
 
         # Evaluate on test dataset
+        logger.info("Evaluating on test dataset")
         metric_vals = self.evaluate(model, test_dataset)
 
         # Print and save results
-        print("Evaluate on test dataset")
         for metric_name, metric_val in metric_vals.items():
-            print(f"{metric_name:>12}: {metric_val:6f}")
+            logger.info(f"{metric_name:>12}: {metric_val:6f}")
 
         result_fpath = os.path.join(self.config.output_dir, "test_result.json")
-        print(f"Save result on {result_fpath}")
+        logger.info(f"Saving result on {result_fpath}")
         save_json(metric_vals, result_fpath)
 
     def evaluate(self, model, dataset=None, dataloader=None):
@@ -356,6 +380,7 @@ class BaseTrainer:
             data_config = self.config.data_loader.as_dict()
             data_config["drop_last"] = False
             data_config["shuffle"] = False
+            logger.debug(f"Creating test DataLoader: {data_config}")
             if "collate_fn" in dir(dataset):
                 data_config["collate_fn"] = dataset.collate_fn
             dataloader = DataLoader(dataset, **data_config)

@@ -93,8 +93,8 @@ trainer:
       - name: micro_f1
       - name: macro_auc
       - name: micro_auc
-    logging:
-      logger:
+    graph:
+      writer:
         name: tensorboard
         params:
           log_dir: *output_dir

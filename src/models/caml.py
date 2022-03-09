@@ -14,6 +14,9 @@ from torch.nn.init import xavier_uniform
 
 from src.utils.caml_utils import load_lookups, pad_desc_vecs
 from src.utils.mapper import ConfigMapper
+from src.utils.text_loggers import get_logger
+
+logger = get_logger(__name__)
 
 
 # From learn/models.py
@@ -86,6 +89,9 @@ class BaseModel(nn.Module):
 @ConfigMapper.map("models", "CAML")
 class ConvAttnPool(BaseModel):
     def __init__(self, config):
+        cls_name = self.__class__.__name__
+        logger.info(f"Initializing {cls_name}")
+        logger.debug(f"Initializing {cls_name} with config: {config}")
         super(ConvAttnPool, self).__init__(config=config)
 
         self.pad_idx = self.dicts["w2ind"][config.pad_token]
@@ -112,7 +118,7 @@ class ConvAttnPool(BaseModel):
         # initialize with trained code embeddings if applicable
         if config.init_code_emb:
             if config.embed_size != config.num_filter_maps:
-                print(
+                logger.warn(
                     "Cannot init attention vectors since the dimension differ"
                     "from the dimension of the embedding"
                 )
@@ -223,6 +229,9 @@ class ConvAttnPool(BaseModel):
 @ConfigMapper.map("models", "CNN")
 class VanillaConv(BaseModel):
     def __init__(self, config):
+        cls_name = self.__class__.__name__
+        logger.info(f"Initializing {cls_name}")
+        logger.debug(f"Initializing {cls_name} with config: {config}")
         super(VanillaConv, self).__init__(config)
 
         # initialize conv layer as in 2.1

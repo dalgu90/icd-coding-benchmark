@@ -10,6 +10,9 @@ from sklearn.metrics import (
 
 from src.utils.configuration import Config
 from src.utils.mapper import ConfigMapper
+from src.utils.text_loggers import get_logger
+
+logger = get_logger(__name__)
 
 
 def to_np_array(array):
@@ -38,6 +41,10 @@ class Metric:
 def load_metric(config_dict):
     metric_params = config_dict.get("params", None)
     metric_class = config_dict.get("class", config_dict.get("name"))
+    logger.debug(
+        f"Loading metric {metric_class} with the following config: "
+        f"{metric_params}"
+    )
     return ConfigMapper.get_object("metrics", metric_class)(metric_params)
 
 
