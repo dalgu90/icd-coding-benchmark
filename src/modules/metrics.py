@@ -78,6 +78,10 @@ class MacroF1(Metric):
 class MacroAUC(Metric):
     def forward(self, y_true, y_pred=None, p_pred=None):
         assert p_pred is not None
+        # Filter out the class without positive examples
+        pos_flag = y_true.sum(axis=0) > 0
+        y_true = y_true[:, pos_flag]
+        p_pred = p_pred[:, pos_flag]
         return roc_auc_score(y_true, p_pred, average="macro")
 
 
