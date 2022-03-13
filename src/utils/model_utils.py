@@ -1,6 +1,5 @@
 """
-    CAML utils (Mullenbach et al. 2018)
-    https://github.com/jamesmullenbach/caml-mimic
+    Model utils
 """
 import csv
 import os
