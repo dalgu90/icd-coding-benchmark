@@ -1,10 +1,12 @@
+
+
+
 paths:
-  mimic_dir: &mimic_dir datasets/mimic_iii/csv
-  static_dir: &static_dir datasets/mimic_iii/static
+  mimic_dir: &mimic_dir datasets/mimic3/csv
+  static_dir: &static_dir datasets/mimic3/static
   dataset_dir: &dataset_dir datasets/mimic3_50
   word2vec_dir: &word2vec_dir datasets/mimic3_50/word2vec
-  output_dir: &output_dir results/CAML_mimic3_50
-
+  output_dir: &output_dir results/MultiResCNN_mimic3_50
 
 preprocessing:
   name: mimic_iii_preprocessing_pipeline
@@ -124,8 +126,6 @@ model:
     lmbda: 0.0  # Positive for DR-CAML
     gpu : false
 
-
-
 trainer:
   name: base_trainer
   params:
@@ -143,7 +143,7 @@ trainer:
       params:
         lr: 0.0001
         weight_decay: 0.0
-    max_epochs: 500
+    max_epochs: 200
     lr_scheduler: null
     stopping_criterion:
       metric:
@@ -177,8 +177,8 @@ trainer:
       - name: micro_f1
       - name: macro_auc
       - name: micro_auc
-    logging:
-      logger:
+    graph:
+      writer:
         name: tensorboard
         params:
           log_dir: *output_dir
