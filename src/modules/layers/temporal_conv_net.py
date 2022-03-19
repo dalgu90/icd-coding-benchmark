@@ -15,41 +15,41 @@ class TemporalConvNet(nn.Module):
 
     Args:
         conv_channel_sizes_ (list): List of lists of integers. Each list
-                                   represents the channel sizes of convolutional
-                                   layers in a `TemporalBlock`. So, for example,
-                                   if the list is [[100, 600, 600],
-                                                   [600, 600, 600]].
-                                   the `TemporalConvNet` layer will have 2
-                                   `TemporalBlock`s, each temporal block have
-                                   2 convolutional layers:
-                                   Conv(100, 600), Conv(600, 600) for the first
-                                   one, and Conv(600, 600), Conv(600, 600). If
-                                   the `add_emb_size_to_channel_sizes`, we don't
-                                   have to pass the input channel size. So, in
-                                   the above case, we can just pass
-                                   [[600, 600], [600, 600, 600]].
+                                    represents the channel sizes of convolutional
+                                    layers in a `TemporalBlock`. So, for
+                                    example, if the list is [[100, 600, 600],
+                                                             [600, 600, 600]].
+                                    the `TemporalConvNet` layer will have 2
+                                    `TemporalBlock`s, each temporal block have
+                                    2 convolutional layers:
+                                    Conv(100, 600), Conv(600, 600) for the first
+                                    one, and Conv(600, 600), Conv(600, 600). If
+                                    the `add_emb_size_to_channel_sizes`, we
+                                    don't have to pass the input channel size.
+                                    So, in the above case, we can just pass
+                                    [[600, 600], [600, 600, 600]].
         kernel_sizes_ (list): List of list of integers (same format as
-                             `conv_channel_sizes`). Each integer represents the
-                             kernel size/filter size of the respective
-                             convolutional layer in `TemporalBlock` layer.
+                              `conv_channel_sizes`). Each integer represents the
+                              kernel size/filter size of the respective
+                              convolutional layer in `TemporalBlock` layer.
         strides_ (list): List of list of integers (same format as
-                        `conv_channel_sizes`). Each integer represents the
-                        stride of the respective convolutional layer in
-                        `TemporalBlock` layer.
-        paddings_ (list): List of list of integers (same format as
                          `conv_channel_sizes`). Each integer represents the
-                         padding of the respective convolutional layer in
-                         `TemporalBlock` layer. in DCAN, this value is set to
-                         "(kernel_size - 1) * dilation_size".
-        dilations_ (list): List of list of integers (same format as
-                          `conv_channel_sizes`). Each integer represents the
-                          dilation size of the respective convolutional layer
-                          `TemporalBlock` layer.` In DCAN, this value is
-                          "2^(temporal_block_level)".
-        dropouts_ (list): List of list of floats (same format as
-                         `conv_channel_sizes`). Each float represents the
-                         dropout probability of the respective convolutional
+                         stride of the respective convolutional layer in
                          `TemporalBlock` layer.
+        paddings_ (list): List of list of integers (same format as
+                          `conv_channel_sizes`). Each integer represents the
+                          padding of the respective convolutional layer in
+                          `TemporalBlock` layer. in DCAN, this value is set to
+                          "(kernel_size - 1) * dilation_size".
+        dilations_ (list): List of list of integers (same format as
+                           `conv_channel_sizes`). Each integer represents the
+                           dilation size of the respective convolutional layer
+                           `TemporalBlock` layer.` In DCAN, this value is
+                           "2^(temporal_block_level)".
+        dropouts_ (list): List of list of floats (same format as
+                          `conv_channel_sizes`). Each float represents the
+                          dropout probability of the respective convolutional
+                          `TemporalBlock` layer.
         weight_norm (bool): If True, apply weight normalization to the
                             convolutional layers.
         activation (str): Activation function to use. DCAN uses "relu".
