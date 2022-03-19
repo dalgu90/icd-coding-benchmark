@@ -132,7 +132,7 @@ trainer:
     output_dir: *output_dir
     data_loader:
       batch_size: 16
-      num_workers: 1
+      num_workers: 0
       shuffle: false
       drop_last: true
     loss:
@@ -147,7 +147,7 @@ trainer:
     lr_scheduler: null
     stopping_criterion:
       metric:
-        name: prec_at_8
+        name: prec_at_5
       desired: max
       patience: 10
     checkpoint_saver:
@@ -159,7 +159,7 @@ trainer:
         ckpt_fname_format: "ckpt-{}.pth"
         best_fname_format: "best-{}.pth"
         metric:
-          name: prec_at_8
+          name: prec_at_5
           class: prec_at_k
           params:
             k: 8
@@ -199,4 +199,4 @@ trainer:
           - name: macro_auc
           - name: micro_auc
     seed: 1337
-    use_gpu: false
+    use_gpu: true
