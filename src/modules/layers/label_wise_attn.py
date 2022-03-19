@@ -4,6 +4,10 @@ import torch.nn as nn
 import torch.nn.functional as F
 from torch.nn.init import xavier_uniform_
 
+from src.utils.text_loggers import get_logger
+
+logger = get_logger(__name__)
+
 
 class LabelWiseAttn(nn.Module):
     """
@@ -21,6 +25,11 @@ class LabelWiseAttn(nn.Module):
 
     def __init__(self, input_size, num_classes):
         super(LabelWiseAttn, self).__init__()
+        logger.debug(
+            f"Initialising {self.__class__.__name__} with "
+            f"input size = {input_size}, num_classes = {num_classes}"
+        )
+
         self.U = nn.Linear(input_size, num_classes)
         xavier_uniform_(self.U.weight)
 

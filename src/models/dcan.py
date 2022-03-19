@@ -8,6 +8,9 @@ from src.modules.layers.label_wise_attn import LabelWiseAttn
 from src.modules.layers.temporal_conv_net import TemporalConvNet
 from src.modules.layers.word_embedding_layer import WordEmbeddingLayer
 from src.utils.mapper import ConfigMapper
+from src.utils.text_loggers import get_logger
+
+logger = get_logger(__name__)
 
 
 @ConfigMapper.map("models", "dcan")
@@ -69,6 +72,11 @@ class DCAN(nn.Module):
 
     def __init__(self, config):
         super(DCAN, self).__init__()
+        logger.info(f"Initialising {self.__class__.__name__}")
+        logger.debug(
+            f"Initialising {self.__class__.__name__} with " f"config: {config}"
+        )
+
         self.config = config
 
         self.word_embedding_layer = WordEmbeddingLayer(

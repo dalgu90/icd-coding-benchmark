@@ -2,6 +2,9 @@ import torch
 import torch.nn as nn
 
 from src.utils.mapper import ConfigMapper
+from src.utils.text_loggers import get_logger
+
+logger = get_logger(__name__)
 
 
 class WordEmbeddingLayer(nn.Module):
@@ -19,6 +22,11 @@ class WordEmbeddingLayer(nn.Module):
 
     def __init__(self, embed_dir, dropout):
         super(WordEmbeddingLayer, self).__init__()
+        logger.debug(
+            f"Initialising {self.__class__.__name__} with "
+            f"embed_dir = {embed_dir}, dropout = {dropout}"
+        )
+
         # Note: This should be changed, since we won't always use Word2Vec.
         embedding_cls = ConfigMapper.get_object("embeddings", "word2vec")
 

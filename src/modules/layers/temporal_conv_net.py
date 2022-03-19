@@ -4,6 +4,9 @@ import torch.nn as nn
 
 from src.modules.activations import *
 from src.modules.layers.temporal_block import TemporalBlock
+from src.utils.text_loggers import get_logger
+
+logger = get_logger(__name__)
 
 
 class TemporalConvNet(nn.Module):
@@ -67,6 +70,15 @@ class TemporalConvNet(nn.Module):
         activation="relu",
     ):
         super(TemporalConvNet, self).__init__()
+        logger.debug(
+            f"Initialising {self.__class__.__name__} with "
+            f"conv_channel_sizes_ = {conv_channel_sizes_}, "
+            f"kernel_sizes_ = {kernel_sizes_}, "
+            f"strides_ = {strides_}, paddings_ = {paddings_}, "
+            f"dilations_ = {dilations_}, dropouts_ = {dropouts_}, "
+            f"weight_norm = {weight_norm}, activation = {activation}"
+        )
+
         self.temporal_blocks = nn.ModuleList(
             [
                 TemporalBlock(

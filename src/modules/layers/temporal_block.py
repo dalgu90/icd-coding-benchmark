@@ -6,6 +6,9 @@ from torch.nn.utils import weight_norm as weight_norm_
 
 from src.modules.activations import *
 from src.utils.mapper import ConfigMapper
+from src.utils.text_loggers import get_logger
+
+logger = get_logger(__name__)
 
 
 class Chomp1d(nn.Module):
@@ -56,6 +59,15 @@ class ConvTemporalSubBlock(nn.Module):
         activation="relu",
     ):
         super(ConvTemporalSubBlock, self).__init__()
+        logger.debug(
+            f"Initialising {self.__class__.__name__} with "
+            f"in_channels = {in_channels}, out_channels = "
+            f"{out_channels}, kernel_size = {kernel_size}, "
+            f"stride = {stride}, padding = {padding}, "
+            f"dilation = {dilation}, dropout = {dropout}, "
+            f"weight_norm = {weight_norm}, activation = {activation}"
+        )
+
         self.conv_layer = nn.Conv1d(
             in_channels=in_channels,
             out_channels=out_channels,
