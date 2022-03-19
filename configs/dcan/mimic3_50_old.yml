@@ -1,0 +1,125 @@
+paths:
+  mimic_dir: &mimic_dir datasets/mimic3/csv
+  static_dir: &static_dir datasets/mimic3/static
+  dataset_dir: &dataset_dir datasets/mimic3_50_old
+  word2vec_dir: &word2vec_dir datasets/mimic3_50_old/word2vec
+  output_dir: &output_dir results/CAML_mimic3_50_old
+
+dataset:
+  name: base_dataset
+  data_common: &data_common
+    column_names:
+      hadm_id: "HADM_ID"
+      clinical_note: "TEXT"
+      labels: "LABELS"
+    word2vec_dir: *word2vec_dir
+    pad_token: "<pad>"
+    unk_token: "<unk>"
+    dataset_dir: *dataset_dir
+    label_file: labels.json
+  params:
+    train:
+      <<: *data_common
+      data_file: train.json
+    val:
+      <<: *data_common
+      data_file: val.json
+    test:
+      <<: *data_common
+      data_file: test.json
+
+model:
+  name: dcan
+  params:
+    num_classes: 50
+    word_representation_layer:
+      params:
+        init_params:
+          embed_dir: *word2vec_dir
+          dropout: 0.2
+        freeze_layer: true
+    add_emb_size_to_channel_sizes: true
+    conv_channel_sizes: [[600, 600], [600, 600, 600]]
+    kernel_sizes: [[2, 2], [2, 2]]
+    strides: [[1, 1], [1, 1]]
+    dilations: [[1, 1], [1, 1]]                 # 2^(temporal_conv_net_level)
+    paddings: [[1, 1], [1, 1]]                  # (kernel_size - 1) * dilation_size
+    dropouts: [[0.2, 0.2], [0.2, 0.2]]
+    weight_norm: true
+    projection_size: 300
+    activation: "relu"
+
+trainer:
+  name: base_trainer
+  params:
+    output_dir: *output_dir
+    data_loader:
+      batch_size: 16
+      num_workers: 4
+      shuffle: false
+      drop_last: true
+    loss:
+      name: BinaryCrossEntropyLoss
+      params: null
+    optimizer:
+      name: adam
+      params:
+        lr: 0.0001
+        weight_decay: 0.0
+    max_epochs: 200
+    lr_scheduler: null
+    stopping_criterion:
+      metric:
+        name: prec_at_8
+      desired: max
+      patience: 10
+    checkpoint_saver:
+      name: base_saver
+      params:
+        checkpoint_dir: *output_dir
+        interval: 1
+        max_to_keep: 5
+        ckpt_fname_format: "ckpt-{}.pth"
+        best_fname_format: "best-{}.pth"
+        metric:
+          name: prec_at_8
+          class: prec_at_k
+          params:
+            k: 8
+        desired: max
+    eval_metrics: &eval_metrics
+      - name: prec_at_5
+        class: prec_at_k
+        params:
+          k: 5
+      - name: prec_at_8
+        class: prec_at_k
+        params:
+          k: 8
+      - name: macro_f1
+      - name: micro_f1
+      - name: macro_auc
+      - name: micro_auc
+    graph:
+      writer:
+        name: tensorboard
+        params:
+          log_dir: *output_dir
+      train:
+        interval: 100
+        interval_unit: step
+        metric:
+          - name: loss
+      val:
+        interval: 1
+        interval_unit: epoch
+        metric:
+          - name: loss
+          - name: prec_at_5
+          - name: prec_at_8
+          - name: macro_f1
+          - name: micro_f1
+          - name: macro_auc
+          - name: micro_auc
+    seed: 1
+    use_gpu: true

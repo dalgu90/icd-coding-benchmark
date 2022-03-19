@@ -1,9 +1,9 @@
 paths:
   mimic_dir: &mimic_dir datasets/mimic3/csv
   static_dir: &static_dir datasets/mimic3/static
-  dataset_dir: &dataset_dir datasets/mimic3_50
-  word2vec_dir: &word2vec_dir datasets/mimic3_50/word2vec
-  output_dir: &output_dir results/CAML_mimic3_50
+  dataset_dir: &dataset_dir datasets/mimic3_full
+  word2vec_dir: &word2vec_dir datasets/mimic3_full/word2vec
+  output_dir: &output_dir results/CAML_mimic3_full
 
 dataset:
   name: base_dataset
@@ -31,10 +31,7 @@ dataset:
 model:
   name: dcan
   params:
-    dataset_dir: *dataset_dir
-    mimic_dir: *mimic_dir
-    static_dir: *static_dir
-    num_classes: 50
+    num_classes: 8930
     word_representation_layer:
       params:
         init_params:
@@ -51,8 +48,6 @@ model:
     weight_norm: true
     projection_size: 300
     activation: "relu"
-    pad_token: "<pad>"
-    unk_token: "<unk>"
 
 trainer:
   name: base_trainer
@@ -126,5 +121,5 @@ trainer:
           - name: micro_f1
           - name: macro_auc
           - name: micro_auc
-    seed: 1337
+    seed: 1
     use_gpu: true
