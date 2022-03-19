@@ -42,13 +42,14 @@ model:
           dropout: 0.2
         freeze_layer: true
     add_emb_size_to_channel_sizes: true
-    conv_channel_sizes: [[600, 600], [600, 600]]
+    conv_channel_sizes: [[600, 600], [600, 600, 600]]
     kernel_sizes: [[2, 2], [2, 2]]
     strides: [[1, 1], [1, 1]]
-    dilation_sizes: [[1, 1], [1, 1]]            # 2^(temporal_conv_net_level)
-    paddings: [[2, 2], [2, 2]]                  # (kernel_size - 1) * dilation_size
+    dilations: [[1, 1], [1, 1]]                 # 2^(temporal_conv_net_level)
+    paddings: [[1, 1], [1, 1]]                  # (kernel_size - 1) * dilation_size
     dropouts: [[0.2, 0.2], [0.2, 0.2]]
     weight_norm: true
+    projection_size: 300
     activation: "relu"
     pad_token: "<pad>"
     unk_token: "<unk>"
