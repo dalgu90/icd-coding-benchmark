@@ -261,28 +261,3 @@ class VanillaConv(BaseModel):
         x = self.fc(x)
 
         return x
-
-    def construct_attention(self, argmax, num_windows):
-        attn_batches = []
-        for argmax_i in argmax:
-            attns = []
-            for i in range(num_windows):
-                # generate mask to select indices of conv features where max was
-                # i
-                mask = (argmax_i == i).repeat(1, self.Y).t()
-                # apply mask to every label's weight vector and take the sum to
-                # get the 'attention' score
-                weights = self.fc.weight[mask].view(-1, self.Y)
-                if len(weights.size()) > 0:
-                    window_attns = weights.sum(dim=0)
-                    attns.append(window_attns)
-                else:
-                    # this window was never a max
-                    attns.append(Variable(torch.zeros(self.Y)).cuda())
-            # combine
-            attn = torch.stack(attns)
-            attn_batches.append(attn)
-        attn_full = torch.stack(attn_batches)
-        # put it in the right form for passing to interpret
-        attn_full = attn_full.transpose(1, 2)
-        return attn_full
