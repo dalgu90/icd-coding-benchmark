@@ -25,12 +25,14 @@ class BinaryCrossEntropyLoss(BCEWithLogitsLoss):
 class BinaryCrossEntropyWithLabelSmoothingLoss(BCEWithLogitsLoss):
     def __init__(self, config):
         self.config = config
-        super().__init__(**(config.as_dict() if config else {}))
+
+        config_dict = config.as_dict()
+        self.alpha = config_dict.pop("alpha")
+
+        super().__init__(**(config_dict if config else {}))
 
     def forward(self, input, target):
         if target.dtype != torch.float:
             target = target.float()
-        target = target * (
-            1 - self.config.alpha
-        ) + self.config.alpha / target.size(1)
+        target = target * (1 - self.alpha) + self.alpha / target.size(1)
         return super().forward(input=input, target=target)
