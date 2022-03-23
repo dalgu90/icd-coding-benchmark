@@ -59,7 +59,7 @@ trainer:
       shuffle: false
       drop_last: true
     loss:
-      name: BinaryCrossEntropyLoss
+      name: BinaryCrossEntropyWithLabelSmoothingLoss
       params: null
     optimizer:
       name: adam
