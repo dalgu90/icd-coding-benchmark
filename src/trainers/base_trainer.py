@@ -85,13 +85,23 @@ class BaseTrainer:
         )
         scheduler = None
         if self.config.lr_scheduler is not None:
-            scheduler = ConfigMapper.get_object(
-                "schedulers", self.config.lr_scheduler.name
-            )(optimizer, **self.config.lr_scheduler.params.as_dict())
-            logger.debug(
-                f"Created scheduler {scheduler.__class__.__name__} with "
-                f"config: {self.config.lr_scheduler.params}"
-            )
+            if 'warmup' in self.config.lr_scheduler.name:
+                scheduler = ConfigMapper.get_object(
+                    "schedulers", self.config.lr_scheduler.name
+                )(optimizer,(len(train_dataset) // batch_size),
+                **self.config.lr_scheduler.params.as_dict())
+                logger.debug(
+                    f"Created scheduler {scheduler.__class__.__name__} with "
+                    f"config: {self.config.lr_scheduler.params}"
+                )
+            else :
+                scheduler = ConfigMapper.get_object(
+                    "schedulers", self.config.lr_scheduler.name
+                )(optimizer, **self.config.lr_scheduler.params.as_dict())
+                logger.debug(
+                    f"Created scheduler {scheduler.__class__.__name__} with "
+                    f"config: {self.config.lr_scheduler.params}"
+                )
 
         # Add evaluation metrics for graph
         for config_dict in (

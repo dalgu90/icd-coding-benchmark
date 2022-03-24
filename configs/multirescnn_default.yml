@@ -139,12 +139,17 @@ trainer:
       name: BinaryCrossEntropyLoss
       params: null
     optimizer:
-      name: adam
+      name: adam_w
       params:
         lr: 0.0001
         weight_decay: 0.0
+        correct_bias : false
     max_epochs: 200
-    lr_scheduler: null
+    lr_scheduler: 
+      name : linearwithwarmup
+      params :
+        warm_up_proportion: 0.1
+        last_epoch: -1  
     stopping_criterion:
       metric:
         name: prec_at_5
