@@ -59,6 +59,7 @@ preprocessing:
         perform: true
         params:
           max_length: 2000
+    incorrect_code_loading: true
     code_preprocessing:
       top_k: 50                       # enter 0 for all codes
       code_type: both
