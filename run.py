@@ -31,7 +31,8 @@ parser.add_argument(
 parser.add_argument(
     "--model_summary",
     action="store_true",
-    help="Whether to print model summary",
+    help="Whether to print model summary. Not that this is supported only for "
+    "models which take in a 2D input. This will be extended later",
     default=False,
 )
 args = parser.parse_args()
@@ -57,7 +58,9 @@ if not args.test:  # Training
     )
 
     if args.model_summary:
-        summary(model, torch.randint((1, 20)).to(torch.long))
+        summary(
+            model, torch.randint(low=0, high=50000, size=(1, 20)).to(torch.long)
+        )
 
     # Trainer
     trainer = ConfigMapper.get_object("trainers", config.trainer.name)(
