@@ -31,7 +31,7 @@ parser.add_argument(
 parser.add_argument(
     "--model_summary",
     action="store_true",
-    help="Whether to print model summary. Not that this is supported only for "
+    help="Whether to print model summary. Note that this is supported only for "
     "models which take in a 2D input. This will be extended later",
     default=False,
 )
