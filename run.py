@@ -3,6 +3,8 @@ import argparse
 import os
 
 import pandas
+import torch
+from torchsummaryX import summary
 
 from src.datasets import *
 from src.models import *
@@ -26,6 +28,13 @@ parser.add_argument(
     help="Whether to use validation data or test data",
     default=False,
 )
+parser.add_argument(
+    "--model_summary",
+    action="store_true",
+    help="Whether to print model summary. Note that this is supported only for "
+    "models which take in a 2D input. This will be extended later",
+    default=False,
+)
 args = parser.parse_args()
 
 # Config
@@ -47,6 +56,11 @@ if not args.test:  # Training
     model = ConfigMapper.get_object("models", config.model.name)(
         config.model.params
     )
+
+    if args.model_summary:
+        summary(
+            model, torch.randint(low=0, high=50000, size=(1, 20)).to(torch.long)
+        )
 
     # Trainer
     trainer = ConfigMapper.get_object("trainers", config.trainer.name)(
