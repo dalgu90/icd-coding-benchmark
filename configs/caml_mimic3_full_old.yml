@@ -89,10 +89,10 @@ trainer:
         class: prec_at_k
         params:
           k: 8
-      - name: prec_at_13
+      - name: prec_at_15
         class: prec_at_k
         params:
-          k: 13
+          k: 15
       - name: macro_f1
       - name: micro_f1
       - name: macro_auc
@@ -113,7 +113,7 @@ trainer:
         metric:
           - name: loss
           - name: prec_at_8
-          - name: prec_at_13
+          - name: prec_at_15
           - name: macro_f1
           - name: micro_f1
           - name: macro_auc
