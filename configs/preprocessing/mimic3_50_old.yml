@@ -47,18 +47,11 @@ preprocessing:
       remove_numeric:
         perform: true
       remove_stopwords:
-        perform: true
-        params:
-          stopwords_file_path: null
-          remove_common_medical_terms: true
+        perform: false
       stem_or_lemmatize:
-        perform: true
-        params:
-          stemmer_name: nltk.WordNetLemmatizer
+        perform: false
       truncate:
-        perform: true
-        params:
-          max_length: 2000
+        perform: false
     incorrect_code_loading: true
     code_preprocessing:
       top_k: 50                       # enter 0 for all codes

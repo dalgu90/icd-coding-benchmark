@@ -65,6 +65,7 @@ class BaseDataset(Dataset):
             self.vocab[w] if w in self.vocab else self.unk_idx
             for w in clinical_note
         ]
+        clinical_note = clinical_note[: self._config.max_length]
 
         # ICD codes -> binary labels
         labels = np.zeros(self.num_labels, dtype=np.int32)

@@ -17,6 +17,7 @@ dataset:
     unk_token: "<unk>"
     dataset_dir: *dataset_dir
     label_file: labels.json
+    max_length: 2500
   params:
     train:
       <<: *data_common
