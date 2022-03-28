@@ -58,6 +58,7 @@ preprocessing:
       code_type: both
       add_period_in_correct_pos:
         perform: true
+    train_embed_with_all_split: true
     tokenizer:
       name: spacetokenizer
       params: null

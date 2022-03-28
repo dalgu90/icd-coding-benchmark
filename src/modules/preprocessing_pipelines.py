@@ -1,5 +1,6 @@
 import csv
 import os
+import time
 
 import pandas as pd
 from tqdm.auto import tqdm
@@ -151,7 +152,7 @@ class MimiciiiPreprocessingPipeline:
             code_df = code_df[code_df[self.cols.hadm_id].isin(hadm_ids)]
         else:
             # Reproduce CAML notebook's behavior
-            temp_fpath = "temp.csv"
+            temp_fpath = f"temp_{time.time()}.csv"
             scol = self.cols.subject_id
             hcol = self.cols.hadm_id
             ccol = self.cols.icd9_code
@@ -292,4 +293,12 @@ class MimiciiiPreprocessingPipeline:
 
         # train embedding model
         logger.info("Training embedding model")
-        self.embedder.train(train_df[self.cols.text])
+        if self.config.train_embed_with_all_split:
+            all_text = (
+                train_df[self.cols.text]
+                + val_df[self.cols.text]
+                + test_df[self.cols.text]
+            )
+        else:
+            all_text = train_df[self.cols.text]
+        self.embedder.train(all_text)
