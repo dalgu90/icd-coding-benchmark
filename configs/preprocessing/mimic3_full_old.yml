@@ -1,8 +1,8 @@
 paths:
   mimic_dir: &mimic_dir datasets/mimic3/csv
   static_dir: &static_dir datasets/mimic3/static
-  dataset_dir: &dataset_dir datasets/mimic3_50_old
-  word2vec_dir: &word2vec_dir datasets/mimic3_50_old/word2vec
+  dataset_dir: &dataset_dir datasets/mimic3_full_old
+  word2vec_dir: &word2vec_dir datasets/mimic3_full_old/word2vec
 
 preprocessing:
   name: mimic_iii_preprocessing_pipeline
@@ -36,9 +36,9 @@ preprocessing:
       name: caml_official_split
       params:
         hadm_dir: *static_dir
-        train_hadm_ids_name: train_50_old_split.json
-        val_hadm_ids_name: val_50_old_split.json
-        test_hadm_ids_name: test_50_old_split.json
+        train_hadm_ids_name: train_full_split.json
+        val_hadm_ids_name: val_full_split.json
+        test_hadm_ids_name: test_full_split.json
     clinical_note_preprocessing:
       to_lower:
         perform: true
@@ -54,7 +54,7 @@ preprocessing:
         perform: false
     incorrect_code_loading: true
     code_preprocessing:
-      top_k: 50                       # enter 0 for all codes
+      top_k: 0                       # enter 0 for all codes
       code_type: both
       add_period_in_correct_pos:
         perform: true

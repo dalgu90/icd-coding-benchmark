@@ -56,14 +56,14 @@ preprocessing:
         params:
           stemmer_name: nltk.WordNetLemmatizer
       truncate:
-        perform: true
-        params:
-          max_length: 2000
+        perform: false
+    incorrect_code_loading: false
     code_preprocessing:
       top_k: 50                       # enter 0 for all codes
       code_type: both
       add_period_in_correct_pos:
         perform: true
+    train_embed_with_all_split: false
     tokenizer:
       name: spacetokenizer
       params: null
