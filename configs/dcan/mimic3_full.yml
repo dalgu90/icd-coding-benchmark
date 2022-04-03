@@ -17,6 +17,7 @@ dataset:
     unk_token: "<unk>"
     dataset_dir: *dataset_dir
     label_file: labels.json
+    max_length: 2500
   params:
     train:
       <<: *data_common
@@ -39,12 +40,12 @@ model:
           dropout: 0.2
         freeze_layer: true
     add_emb_size_to_channel_sizes: true
-    conv_channel_sizes: [[600, 600], [600, 600, 600]]
-    kernel_sizes: [[2, 2], [2, 2]]
-    strides: [[1, 1], [1, 1]]
-    dilations: [[1, 1], [2, 2]]                 # 2^(temporal_conv_net_level)
-    paddings: [[1, 1], [2, 2]]                  # (kernel_size - 1) * dilation_size
-    dropouts: [[0.2, 0.2], [0.2, 0.2]]
+    conv_channel_sizes: [[600, 600], [600, 600, 600], [600, 600, 600]]
+    kernel_sizes: [[2, 2], [2, 2], [2, 2]]
+    strides: [[1, 1], [1, 1], [1, 1]]
+    dilations: [[1, 1], [2, 2], [4, 4]]                 # 2^(temporal_conv_net_level)
+    paddings: [[1, 1], [2, 2], [4, 4]]                  # (kernel_size - 1) * dilation_size
+    dropouts: [[0.2, 0.2], [0.2, 0.2], [0.2, 0.2]]
     weight_norm: true
     projection_size: 300
     activation: "relu"
@@ -67,7 +68,7 @@ trainer:
       params:
         lr: 0.0001
         weight_decay: 0.0
-    max_epochs: 23
+    max_epochs: 150
     lr_scheduler: null
     stopping_criterion:
       metric:
@@ -89,14 +90,14 @@ trainer:
             k: 8
         desired: max
     eval_metrics: &eval_metrics
-      - name: prec_at_5
-        class: prec_at_k
-        params:
-          k: 5
       - name: prec_at_8
         class: prec_at_k
         params:
           k: 8
+      - name: prec_at_15
+        class: prec_at_k
+        params:
+          k: 15
       - name: macro_f1
       - name: micro_f1
       - name: macro_auc
@@ -116,8 +117,8 @@ trainer:
         interval_unit: epoch
         metric:
           - name: loss
-          - name: prec_at_5
           - name: prec_at_8
+          - name: prec_at_15
           - name: macro_f1
           - name: micro_f1
           - name: macro_auc
