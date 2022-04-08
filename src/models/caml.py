@@ -204,6 +204,7 @@ class ConvAttnPool(BaseModel):
         y = self.final.weight.mul(m).sum(dim=2).add(self.final.bias)
 
         return y
+        
 
     def regularizer(self, labels=None):
         if not self.config.lmbda:

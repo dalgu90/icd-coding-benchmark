@@ -4,7 +4,7 @@ import os
 
 import pandas
 import torch
-from torchsummaryX import summary
+# from torchsummaryX import summary
 
 from src.datasets import *
 from src.models import *
@@ -57,10 +57,10 @@ if not args.test:  # Training
         config.model.params
     )
 
-    if args.model_summary:
-        summary(
-            model, torch.randint(low=0, high=50000, size=(1, 20)).to(torch.long)
-        )
+    # if args.model_summary:
+    #     summary(
+    #         model, torch.randint(low=0, high=50000, size=(1, 20)).to(torch.long)
+    #     )
 
     # Trainer
     trainer = ConfigMapper.get_object("trainers", config.trainer.name)(
