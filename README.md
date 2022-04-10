@@ -20,13 +20,13 @@ We currently provide (items in parentheses are under development):
 Please put the MIMIC-III `csv.gz` files (v1.4) under `datasets/mimic3/csv`. You can also create symbolic links pointing the files.
 
 ## Pre-processing
-Please run the following command to generate the MIMIC-III top-50 dataset, or generate other version using the config files in `configs/preprocessing`.
+Please run the following command to generate the MIMIC-III top-50 dataset, or generate other versions using the config files in `configs/preprocessing`.
 ```
 $ python run_preprocessing.py --config_path configs/preprocessing/mimic3_50.yml
 ```
 
 ## Training / Testing
-Please run the following command to train, or resume training of, the CAML model on the MIMIC-III top-50 dataset. You can evaluate the model with `--test` option.
+Please run the following command to train, or resume training of, the CAML model on the MIMIC-III top-50 dataset. You can evaluate the model with `--test` options and use other config files under `configs`.
 ```
 $ python run.py --config_path configs/caml_mimic3_50.yml         # Train
 $ python run.py --config_path configs/caml_mimic3_50.yml --test  # Test
@@ -43,8 +43,7 @@ $ python run.py --config_path configs/caml_mimic3_50.yml --test  # Test
 
 | Model        | macro AUC | micro AUC | macro F1 | micro F1 | P@5      |
 |--------------|-----------|-----------|----------|----------|----------|
-| mimic_50     | 0.917969  | 0.942569  | 0.608479 | 0.688646 | 0.662709 |
-
+| CAML         | 0.917969  | 0.942569  | 0.608479 | 0.688646 | 0.662709 |
 
 - MIMIC-III full (old)
 
@@ -56,8 +55,14 @@ $ python run.py --config_path configs/caml_mimic3_50.yml --test  # Test
 
 | Model        | macro AUC | micro AUC | macro F1 | micro F1 | P@5      |
 |--------------|-----------|-----------|----------|----------|----------|
-| mimic_50     | 0.881043  | 0.908731  | 0.519399 | 0.610033 | 0.612955 |
+| CAML         | 0.881043  | 0.908731  | 0.519399 | 0.610033 | 0.612955 |
 
+
+## Authors
+(in alphabetical order)
+- Abheesht Sharma [@abheesht17](https://github.com/abheesht17)
+- Juyong Kim [@dalgu90](https://github.com/dalgu90)
+- Suhas Shanbhogue [@SuhasShanbhogue](https://github.com/SuhasShanbhogue)
 
 [^1]: Also referred to as medical coding, clinical coding, or simply ICD coding in other literatures. They may have different meanings in detail.
 [^2]: Mullenbach, et al., Explainable Prediction of Medical Codes from Clinical Text, NAACL 2018 ([paper](https://arxiv.org/abs/1802.05695), [code](https://github.com/jamesmullenbach/caml-mimic))
