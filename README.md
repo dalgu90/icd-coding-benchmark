@@ -9,11 +9,11 @@ The most popular database used in automatic diagnosis coding is the MIMIC-III da
 Such inconsistency and error make it hard to compare different methods on automatic diagnosis coding and, arguably, results in incorrect evaluations of the methods.
 
 This code repository aims to provide a standardized benchmark of automatic diagnosis coding with the MIMIC-III database.
-The benchmark encompasses all the procedures of ICD coding, dataset generation, model training/evaluation, and interactive web demo.
+The benchmark encompasses all the procedures of ICD coding: dataset pre-processing, model training/evaluation, and interactive web demo.
 
 We currently provide (items in parentheses are under development):
 - Four preset of preprocessed datasets: MIMIC-III full, top-50, full (old), top-50 (old), where we referred to (old) as the version of CAML[^2].
-- ICD coding models: CNN, CAML, DCAN, (MultiResCNN, LAAT, KSI)
+- ICD coding models: CNN, CAML, DCAN, (MultiResCNN, LAAT, Fusion)
 - (Interactive demo)
 
 ## Preparation
