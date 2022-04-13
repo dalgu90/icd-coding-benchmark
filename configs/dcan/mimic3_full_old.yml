@@ -45,7 +45,7 @@ model:
     strides: [[1, 1], [1, 1], [1, 1]]
     dilations: [[1, 1], [2, 2], [4, 4]]                 # 2^(temporal_conv_net_level)
     paddings: [[1, 1], [2, 2], [4, 4]]                  # (kernel_size - 1) * dilation_size
-    dropouts: [[0.2, 0.2], [0.2, 0.2], [0.2, 0.2]]
+    dropout: 0.2
     weight_norm: true
     projection_size: 300
     activation: "relu"

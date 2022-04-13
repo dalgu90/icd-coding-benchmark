@@ -85,11 +85,18 @@ class DCAN(nn.Module):
         if config.word_representation_layer.params.freeze_layer:
             self.freeze_layer(self.word_embedding_layer.embed)
 
+        num_levels = len(config.kernel_sizes)
+        num_inner_conv_levels = len(config.kernel_sizes[0])
+
         conv_channel_sizes = config.conv_channel_sizes
         if config.add_emb_size_to_channel_sizes:
             conv_channel_sizes[0] = [
                 self.word_embedding_layer.embedding_size
             ] + conv_channel_sizes[0]
+        dropouts = [
+            [config.dropout for _ in range(num_inner_conv_levels)]
+            for _ in range(num_levels)
+        ]
 
         self.temporal_conv_net = TemporalConvNet(
             conv_channel_sizes_=conv_channel_sizes,
@@ -97,7 +104,7 @@ class DCAN(nn.Module):
             strides_=config.strides,
             paddings_=config.paddings,
             dilations_=config.dilations,
-            dropouts_=config.dropouts,
+            dropouts_=dropouts,
             weight_norm=config.weight_norm,
             activation=config.activation,
         )
