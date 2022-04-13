@@ -1,5 +1,5 @@
-import os
 import logging
+import os
 
 from src.utils.file_loaders import load_json
 from src.utils.mapper import ConfigMapper

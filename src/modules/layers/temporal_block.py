@@ -186,9 +186,8 @@ class TemporalBlock(nn.Module):
             xavier_uniform_(self.downsample.weight)
 
     def forward(self, x):
-        conv_layer_output = self.conv_temporal_sub_blocks[0](x)
-        if len(self.conv_temporal_sub_blocks) > 0:
-            for conv_temporal_sub_block in self.conv_temporal_sub_blocks[1:]:
-                conv_layer_output = conv_temporal_sub_block(conv_layer_output)
+        conv_layer_output = x
+        for conv_temporal_sub_block in self.conv_temporal_sub_blocks:
+            conv_layer_output = conv_temporal_sub_block(conv_layer_output)
         res = x if self.downsample is None else self.downsample(x)
         return self.output_activation(conv_layer_output + res)
