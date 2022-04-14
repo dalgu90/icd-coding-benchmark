@@ -1,12 +1,12 @@
 # ICD Coding Benchmark
 
-  ![Python](https://img.shields.io/badge/python-v3.7.0+-success.svg)
-  [![contributions welcome](https://img.shields.io/badge/contributions-welcome-brightgreen.svg?style=flat)](https://github.com/dalgu90/icd-coding-benchmark/issues)
-  [![GitHub contributors](https://img.shields.io/github/contributors/dalgu90/icd-coding-benchmark)](https://github.com/dalgu90/icd-coding-benchmark/graphs/contributors)
-  [![GitHub license](https://img.shields.io/github/license/dalgu90/icd-coding-benchmark)](https://github.com/dalgu90/icd-coding-benchmark/blob/main/LICENSE)
-  [![GitHub stars](https://img.shields.io/github/stars/dalgu90/icd-coding-benchmark)](https://github.com/dalgu90/icd-coding-benchmark/stargazers)
-  [![GitHub forks](https://img.shields.io/github/forks/dalgu90/icd-coding-benchmark)](https://github.com/dalgu90/icd-coding-benchmark/network)
-  [![GitHub issues](https://img.shields.io/github/issues/dalgu90/icd-coding-benchmark)](https://github.com/dalgu90/icd-coding-benchmark/issues)
+[![GitHub contributors](https://img.shields.io/github/contributors/dalgu90/icd-coding-benchmark)](https://github.com/dalgu90/icd-coding-benchmark/graphs/contributors)
+[![GitHub license](https://img.shields.io/github/license/dalgu90/icd-coding-benchmark)](https://github.com/dalgu90/icd-coding-benchmark/blob/main/LICENSE)
+[![GitHub stars](https://img.shields.io/github/stars/dalgu90/icd-coding-benchmark)](https://github.com/dalgu90/icd-coding-benchmark/stargazers)
+[![GitHub forks](https://img.shields.io/github/forks/dalgu90/icd-coding-benchmark)](https://github.com/dalgu90/icd-coding-benchmark/network)
+[![GitHub issues](https://img.shields.io/github/issues/dalgu90/icd-coding-benchmark)](https://github.com/dalgu90/icd-coding-benchmark/issues)
+![Python](https://img.shields.io/badge/python-v3.7.0+-success.svg)
+[![contributions welcome](https://img.shields.io/badge/contributions-welcome-brightgreen.svg?style=flat)](https://github.com/dalgu90/icd-coding-benchmark/issues)
 
 
 Automatic ICD coding benchmark based on the MIMIC dataset.
