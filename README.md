@@ -1,4 +1,23 @@
 # ICD Coding Benchmark
+
+<div align='center'>
+
+  ![Python](https://img.shields.io/badge/python-v3.7.0+-success.svg)
+  [![contributions welcome](https://img.shields.io/badge/contributions-welcome-brightgreen.svg?style=flat)](https://github.com/dalgu90/icd-coding-benchmark/issues)
+</div>
+
+<div align='center'>
+
+  [![GitHub contributors](https://img.shields.io/github/contributors/dalgu90/icd-coding-benchmark)](https://github.com/dalgu90/icd-coding-benchmark/graphs/contributors)
+  [![GitHub license](https://img.shields.io/github/license/dalgu90/icd-coding-benchmark)](https://github.com/dalgu90/icd-coding-benchmark/blob/main/LICENSE)
+  [![GitHub stars](https://img.shields.io/github/stars/dalgu90/icd-coding-benchmark)](https://github.com/dalgu90/icd-coding-benchmark/stargazers)
+  [![GitHub forks](https://img.shields.io/github/forks/dalgu90/icd-coding-benchmark)](https://github.com/dalgu90/icd-coding-benchmark/network)
+  [![GitHub issues](https://img.shields.io/github/issues/dalgu90/icd-coding-benchmark)](https://github.com/dalgu90/icd-coding-benchmark/issues)
+
+</div>
+
+---
+
 Automatic ICD coding benchmark based on the MIMIC dataset.
 
 **NOTE: 🚧 The repo is under construction. Please see below for available datasets/models.**
@@ -16,8 +35,10 @@ We currently provide (items in parentheses are under development):
 - ICD coding models: CNN, CAML, DCAN, (MultiResCNN, LAAT, Fusion)
 - (Interactive demo)
 
+
 ## Preparation
 Please put the MIMIC-III `csv.gz` files (v1.4) under `datasets/mimic3/csv/`. You can also create symbolic links pointing to the files.
+
 
 ## Pre-processing
 Please run the following command to generate the MIMIC-III top-50 dataset or generate other versions using the config files in `configs/preprocessing`.
@@ -25,12 +46,14 @@ Please run the following command to generate the MIMIC-III top-50 dataset or gen
 $ python run_preprocessing.py --config_path configs/preprocessing/mimic3_50.yml
 ```
 
+
 ## Training / Testing
 Please run the following command to train, or resume training of, the CAML model on the MIMIC-III top-50 dataset. You can evaluate the model with `--test` options and use other config files under `configs`.
 ```
 $ python run.py --config_path configs/caml_mimic3_50.yml         # Train
 $ python run.py --config_path configs/caml_mimic3_50.yml --test  # Test
 ```
+
 
 ## Results
 - MIMIC-III full
@@ -62,6 +85,13 @@ $ python run.py --config_path configs/caml_mimic3_50.yml --test  # Test
 | DCAN         | 0.913397  | 0.937868  | 0.611135 | 0.688379 | 0.649393 |
 
 
+## Authors
+(in alphabetical order)
+- Abheesht Sharma [@abheesht17](https://github.com/abheesht17)
+- Juyong Kim [@dalgu90](https://github.com/dalgu90)
+- Suhas Shanbhogue [@SuhasShanbhogue](https://github.com/SuhasShanbhogue)
+
+
 ## Cite this work
 ```
 @misc{juyong2022icdcodinggithub,
@@ -73,12 +103,6 @@ $ python run.py --config_path configs/caml_mimic3_50.yml --test  # Test
   howpublished = {\url{https://github.com/dalgu90/icd-coding-benchmark}},
 }
 ```
-
-## Authors
-(in alphabetical order)
-- Abheesht Sharma [@abheesht17](https://github.com/abheesht17)
-- Juyong Kim [@dalgu90](https://github.com/dalgu90)
-- Suhas Shanbhogue [@SuhasShanbhogue](https://github.com/SuhasShanbhogue)
 
 [^1]: Also referred to as medical coding, clinical coding, or simply ICD coding in other literature. They may have different meanings in detail.
 [^2]: Mullenbach, et al., Explainable Prediction of Medical Codes from Clinical Text, NAACL 2018 ([paper](https://arxiv.org/abs/1802.05695), [code](https://github.com/jamesmullenbach/caml-mimic))
