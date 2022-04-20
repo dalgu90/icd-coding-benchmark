@@ -1,4 +1,6 @@
+import csv
 import os
+import time
 
 import pandas as pd
 from tqdm.auto import tqdm
@@ -92,12 +94,20 @@ class MimiciiiPreprocessingPipeline:
             "both",
         ], 'code_type should be one of ["diagnosis", "procedure", "both"]'
 
-        diagnosis_code_df = load_csv_as_df(
-            diagnosis_code_csv_path, dtype=self.code_csv_dtypes
-        )
-        procedure_code_df = load_csv_as_df(
-            procedure_code_csv_path, dtype=self.code_csv_dtypes
-        )
+        if not self.config.incorrect_code_loading:
+            diagnosis_code_df = load_csv_as_df(
+                diagnosis_code_csv_path, dtype=self.code_csv_dtypes
+            )
+            procedure_code_df = load_csv_as_df(
+                procedure_code_csv_path, dtype=self.code_csv_dtypes
+            )
+        else:
+            # CAML's notebook does not specify dtype
+            ccol = self.cols.icd9_code
+            diagnosis_code_df = load_csv_as_df(diagnosis_code_csv_path)
+            procedure_code_df = load_csv_as_df(procedure_code_csv_path)
+            diagnosis_code_df[ccol] = diagnosis_code_df[ccol].astype("string")
+            procedure_code_df[ccol] = procedure_code_df[ccol].astype("string")
         logger.info(
             "Preprocessing code CSV files: {}, {}".format(
                 diagnosis_code_csv_path, procedure_code_csv_path
@@ -121,13 +131,14 @@ class MimiciiiPreprocessingPipeline:
         else:
             code_df = pd.concat([diagnosis_code_df, procedure_code_df])
 
-        # Delete unnecessary columns.
-        code_df = code_df[
-            [
-                self.cols.hadm_id,
-                self.cols.icd9_code,
+        # Delete unnecessary columns. (When we are not reprocuding CAML's ver)
+        if not self.config.incorrect_code_loading:
+            code_df = code_df[
+                [
+                    self.cols.hadm_id,
+                    self.cols.icd9_code,
+                ]
             ]
-        ]
         return code_df
 
     def filter_icd_codes_based_on_clinical_notes(self, code_df, noteevents_df):
@@ -137,7 +148,31 @@ class MimiciiiPreprocessingPipeline:
         )
 
         hadm_ids = set(noteevents_df[self.cols.hadm_id])
-        code_df = code_df[code_df[self.cols.hadm_id].isin(hadm_ids)]
+        if not self.config.incorrect_code_loading:
+            code_df = code_df[code_df[self.cols.hadm_id].isin(hadm_ids)]
+        else:
+            # Reproduce CAML notebook's behavior
+            temp_fpath = f"temp_{time.time()}.csv"
+            scol = self.cols.subject_id
+            hcol = self.cols.hadm_id
+            ccol = self.cols.icd9_code
+            with open(temp_fpath, "w") as fd:
+                w = csv.writer(fd)
+                w.writerow([scol, hcol, ccol, "ADMITTIME", "DISCHTIME"])
+                for _, row in code_df.iterrows():
+                    if str(row.HADM_ID) in hadm_ids:
+                        w.writerow(
+                            [row.SUBJECT_ID, row.HADM_ID, row.ICD9_CODE, "", ""]
+                        )
+            code_df = pd.read_csv(temp_fpath, index_col=None)
+            code_df = code_df.sort_values([scol, hcol])
+            code_df.to_csv(temp_fpath, index=False)
+            code_df = pd.read_csv(temp_fpath, index_col=None)
+            code_df[hcol] = code_df[hcol].astype("string")
+            code_df[ccol] = code_df[ccol].astype("string")
+            code_df = code_df[[self.cols.hadm_id, self.cols.icd9_code]]
+            os.remove(temp_fpath)
+
         return code_df
 
     def preprocess_clinical_note(self, clinical_note):
@@ -182,9 +217,17 @@ class MimiciiiPreprocessingPipeline:
             self.cols.text
         ].progress_map(self.preprocess_clinical_note)
 
-        codes_grouped = code_df.groupby(self.cols.hadm_id)[
-            self.cols.icd9_code
-        ].apply(lambda codes: ";".join(map(str, list(dict.fromkeys(codes)))))
+        if not self.config.incorrect_code_loading:
+            codes_grouped = code_df.groupby(self.cols.hadm_id)[
+                self.cols.icd9_code
+            ].apply(
+                lambda codes: ";".join(map(str, list(dict.fromkeys(codes))))
+            )
+        else:
+            # CAML's notebook counts duplicated ICD codes separately
+            codes_grouped = code_df.groupby(self.cols.hadm_id)[
+                self.cols.icd9_code
+            ].apply(lambda codes: ";".join(codes))
         code_df = pd.DataFrame(codes_grouped)
         code_df.reset_index(inplace=True)
 
@@ -250,4 +293,12 @@ class MimiciiiPreprocessingPipeline:
 
         # train embedding model
         logger.info("Training embedding model")
-        self.embedder.train(train_df[self.cols.text])
+        if self.config.train_embed_with_all_split:
+            all_text = (
+                train_df[self.cols.text]
+                + val_df[self.cols.text]
+                + test_df[self.cols.text]
+            )
+        else:
+            all_text = train_df[self.cols.text]
+        self.embedder.train(all_text)

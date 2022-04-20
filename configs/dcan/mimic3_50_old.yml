@@ -1,9 +1,9 @@
 paths:
   mimic_dir: &mimic_dir datasets/mimic3/csv
   static_dir: &static_dir datasets/mimic3/static
-  dataset_dir: &dataset_dir datasets/mimic3_50
-  word2vec_dir: &word2vec_dir datasets/mimic3_50/word2vec
-  output_dir: &output_dir results/DRCAML_mimic3_50
+  dataset_dir: &dataset_dir datasets/mimic3_50_old
+  word2vec_dir: &word2vec_dir datasets/mimic3_50_old/word2vec
+  output_dir: &output_dir results/dcan_mimic3_50_old
 
 dataset:
   name: base_dataset
@@ -17,6 +17,7 @@ dataset:
     unk_token: "<unk>"
     dataset_dir: *dataset_dir
     label_file: labels.json
+    max_length: 2500
   params:
     train:
       <<: *data_common
@@ -29,22 +30,25 @@ dataset:
       data_file: test.json
 
 model:
-  name: CAML
+  name: dcan
   params:
-    version: mimic3
-    dataset_dir: *dataset_dir
-    mimic_dir: *mimic_dir
-    static_dir: *static_dir
-    word2vec_dir: *word2vec_dir
     num_classes: 50
-    embed_size: 100
-    kernel_size: 10
-    num_filter_maps: 50
+    word_representation_layer:
+      params:
+        init_params:
+          embed_dir: *word2vec_dir
+          dropout: 0.2
+        freeze_layer: true
+    add_emb_size_to_channel_sizes: true
+    conv_channel_sizes: [[600, 600], [600, 600, 600], [600, 600, 600]]
+    kernel_sizes: [[2, 2], [2, 2], [2, 2]]
+    strides: [[1, 1], [1, 1], [1, 1]]
+    dilations: [[1, 1], [2, 2], [4, 4]]                 # 2^(temporal_conv_net_level)
+    paddings: [[1, 1], [2, 2], [4, 4]]                  # (kernel_size - 1) * dilation_size
     dropout: 0.2
-    lmbda: 10.0  # Positive for DR-CAML
-    init_code_emb: false
-    pad_token: "<pad>"
-    unk_token: "<unk>"
+    weight_norm: true
+    projection_size: 300
+    activation: "relu"
 
 trainer:
   name: base_trainer
@@ -56,14 +60,15 @@ trainer:
       shuffle: false
       drop_last: true
     loss:
-      name: BinaryCrossEntropyLoss
-      params: null
+      name: BinaryCrossEntropyWithLabelSmoothingLoss
+      params:
+        alpha: 0.1
     optimizer:
       name: adam
       params:
         lr: 0.0001
         weight_decay: 0.0
-    max_epochs: 200
+    max_epochs: 150
     lr_scheduler: null
     stopping_criterion:
       metric:
@@ -118,5 +123,5 @@ trainer:
           - name: micro_f1
           - name: macro_auc
           - name: micro_auc
-    seed: 1337
+    seed: 1
     use_gpu: true

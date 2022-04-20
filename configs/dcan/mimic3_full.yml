@@ -1,9 +1,9 @@
 paths:
   mimic_dir: &mimic_dir datasets/mimic3/csv
   static_dir: &static_dir datasets/mimic3/static
-  dataset_dir: &dataset_dir datasets/mimic3_50
-  word2vec_dir: &word2vec_dir datasets/mimic3_50/word2vec
-  output_dir: &output_dir results/CNN_mimic3_50
+  dataset_dir: &dataset_dir datasets/mimic3_full
+  word2vec_dir: &word2vec_dir datasets/mimic3_full/word2vec
+  output_dir: &output_dir results/dcan_mimic3_full
 
 dataset:
   name: base_dataset
@@ -17,6 +17,7 @@ dataset:
     unk_token: "<unk>"
     dataset_dir: *dataset_dir
     label_file: labels.json
+    max_length: 2500
   params:
     train:
       <<: *data_common
@@ -29,18 +30,25 @@ dataset:
       data_file: test.json
 
 model:
-  name: CNN
+  name: dcan
   params:
-    version: mimic3
-    dataset_dir: *dataset_dir
-    mimic_dir: *mimic_dir
-    static_dir: *static_dir
-    word2vec_dir: *word2vec_dir
-    num_classes: 50
-    embed_size: 100
-    kernel_size: 4
-    num_filter_maps: 500
+    num_classes: 8930
+    word_representation_layer:
+      params:
+        init_params:
+          embed_dir: *word2vec_dir
+          dropout: 0.2
+        freeze_layer: true
+    add_emb_size_to_channel_sizes: true
+    conv_channel_sizes: [[600, 600], [600, 600, 600], [600, 600, 600]]
+    kernel_sizes: [[2, 2], [2, 2], [2, 2]]
+    strides: [[1, 1], [1, 1], [1, 1]]
+    dilations: [[1, 1], [2, 2], [4, 4]]                 # 2^(temporal_conv_net_level)
+    paddings: [[1, 1], [2, 2], [4, 4]]                  # (kernel_size - 1) * dilation_size
     dropout: 0.2
+    weight_norm: true
+    projection_size: 300
+    activation: "relu"
 
 trainer:
   name: base_trainer
@@ -52,20 +60,21 @@ trainer:
       shuffle: false
       drop_last: true
     loss:
-      name: BinaryCrossEntropyLoss
-      params: null
+      name: BinaryCrossEntropyWithLabelSmoothingLoss
+      params:
+        alpha: 0.1
     optimizer:
       name: adam
       params:
-        lr: 0.003
+        lr: 0.0001
         weight_decay: 0.0
-    max_epochs: 100
+    max_epochs: 150
     lr_scheduler: null
     stopping_criterion:
       metric:
         name: prec_at_8
       desired: max
-      patience: 3
+      patience: 10
     checkpoint_saver:
       name: base_saver
       params:
@@ -81,14 +90,14 @@ trainer:
             k: 8
         desired: max
     eval_metrics: &eval_metrics
-      - name: prec_at_5
-        class: prec_at_k
-        params:
-          k: 5
       - name: prec_at_8
         class: prec_at_k
         params:
           k: 8
+      - name: prec_at_15
+        class: prec_at_k
+        params:
+          k: 15
       - name: macro_f1
       - name: micro_f1
       - name: macro_auc
@@ -108,11 +117,11 @@ trainer:
         interval_unit: epoch
         metric:
           - name: loss
-          - name: prec_at_5
           - name: prec_at_8
+          - name: prec_at_15
           - name: macro_f1
           - name: micro_f1
           - name: macro_auc
           - name: micro_auc
-    seed: 1337
+    seed: 1
     use_gpu: true
