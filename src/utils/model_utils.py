@@ -256,12 +256,5 @@ def build_pretrain_embedding(embedding_path, word_alphabet, norm):
     else:
         pretrain_emb[-1, :] = np.random.uniform(-scale, scale, [1, embedd_dim])
 
-
-    print("pretrained word emb size {}".format(len(embedd_dict)))
-    print("prefect match:%.2f%%, case_match:%.2f%%, dig_zero_match:%.2f%%, "
-                 "case_dig_zero_match:%.2f%%, not_match:%.2f%%"
-                 %(perfect_match*100.0/len(word_alphabet), case_match*100.0/len(word_alphabet), digits_replaced_with_zeros_found*100.0/len(word_alphabet),
-                   lowercase_and_digits_replaced_with_zeros_found*100.0/len(word_alphabet), not_match*100.0/len(word_alphabet)))
-
     return pretrain_emb, embedd_dim
 

@@ -19,3 +19,20 @@ class BinaryCrossEntropyLoss(BCEWithLogitsLoss):
         if target.dtype != torch.float:
             target = target.float()
         return super().forward(input=input, target=target)
+
+
+@ConfigMapper.map("losses", "BinaryCrossEntropyWithLabelSmoothingLoss")
+class BinaryCrossEntropyWithLabelSmoothingLoss(BCEWithLogitsLoss):
+    def __init__(self, config):
+        self.config = config
+
+        config_dict = config.as_dict()
+        self.alpha = config_dict.pop("alpha")
+
+        super().__init__(**(config_dict if config else {}))
+
+    def forward(self, input, target):
+        if target.dtype != torch.float:
+            target = target.float()
+        target = target * (1 - self.alpha) + self.alpha / target.size(1)
+        return super().forward(input=input, target=target)
