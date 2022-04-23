@@ -24,7 +24,7 @@ from src.utils.text_loggers import get_logger
 logger = get_logger(__name__)
 
 
-@ConfigMapper.map("trainers", "base_trainer")
+@ConfigMapper.map("trainers", "laat_trainer")
 class BaseTrainer:
     def __init__(self, config):
         cls_name = self.__class__.__name__
@@ -48,12 +48,38 @@ class BaseTrainer:
             metric_name = config_dict["name"]
             self.eval_metrics[metric_name] = load_metric(config_dict)
 
+
+    def _get_labels(data):
+        n_label_level = len(data[0][1])
+        out_labels = [[] for _ in range(n_label_level)]
+        for (feature, labels, _) in data:
+            for label_lvl in range(len(labels)):
+                out_labels[label_lvl].extend(labels[label_lvl])
+        unique_labels = []
+        n_labels = []
+        for lvl in range(len(out_labels)):
+            unique_labels.append(list(set(out_labels[lvl])))
+            n_labels.append(len(unique_labels[lvl]))
+
+        out_labels = unique_labels
+
+        return out_labels
+
     def train(self, model, train_dataset, val_dataset=None):
         """Train the model"""
         self.model = model
         self.train_dataset = train_dataset
         self.val_dataset = val_dataset
+        data = self.train_dataset + self.val_dataset
+        labels = _get_labels(data)
 
+        vocab = Vocab(data, labels,
+                      min_word_frequency=args.min_word_frequency,
+                      word_embedding_mode=embedding_mode,
+                      word_embedding_file=embedding_file)
+
+        logger.info("Preparing the vocab")
+        vocab.prepare_vocab()
         # Data loader
         train_loader_config = self.config.data_loader.as_dict()
         logger.debug(f"Creating train DataLoader: {train_loader_config}")
@@ -85,24 +111,13 @@ class BaseTrainer:
         )
         scheduler = None
         if self.config.lr_scheduler is not None:
-            if 'warmup' in self.config.lr_scheduler.name:
-                warm_up_steps = self.config.lr_scheduler.params.warm_up_proportion*(len(train_dataset) // batch_size)
-                num_training_steps = (len(train_dataset) // batch_size)
-                scheduler = ConfigMapper.get_object(
-                    "schedulers", self.config.lr_scheduler.name
-                )(optimizer,warm_up_steps,num_training_steps)
-                logger.debug(
-                    f"Created scheduler {scheduler.__class__.__name__} with "
-                    f"config: {self.config.lr_scheduler.params}"
-                )
-            else :
-                scheduler = ConfigMapper.get_object(
-                    "schedulers", self.config.lr_scheduler.name
-                )(optimizer, **self.config.lr_scheduler.params.as_dict())
-                logger.debug(
-                    f"Created scheduler {scheduler.__class__.__name__} with "
-                    f"config: {self.config.lr_scheduler.params}"
-                )
+            scheduler = ConfigMapper.get_object(
+                "schedulers", self.config.lr_scheduler.name
+            )(optimizer, **self.config.lr_scheduler.params.as_dict())
+            logger.debug(
+                f"Created scheduler {scheduler.__class__.__name__} with "
+                f"config: {self.config.lr_scheduler.params}"
+            )
 
         # Add evaluation metrics for graph
         for config_dict in (
