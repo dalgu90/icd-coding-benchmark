@@ -149,7 +149,7 @@ trainer:
         last_epoch: -1  
     stopping_criterion:
       metric:
-        name: prec_at_5
+        name: prec_at_8
       desired: max
       patience: 10
     checkpoint_saver:
