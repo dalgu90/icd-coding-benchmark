@@ -201,4 +201,4 @@ trainer:
           - name: macro_auc
           - name: micro_auc
     seed: 1337
-    use_gpu: false
+    use_gpu: true
