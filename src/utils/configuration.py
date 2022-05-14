@@ -116,7 +116,7 @@ class Config:
         Raises
         ------
 
-        KeyError() if the given key is not defined.
+        AttributeError() if the given key is not defined.
         """
         if attr in self._config:
             if isinstance(self._config[attr], dict):
@@ -124,7 +124,7 @@ class Config:
             else:
                 return self._config[attr]
         else:
-            raise KeyError(f"Key:{attr} not defined.")
+            raise AttributeError(f"Key:{attr} not defined.")
 
     def set_value(self, attr, value):
         """
