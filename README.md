@@ -77,10 +77,11 @@ $ python run.py --config_path configs/caml_mimic3_50.yml --test  # Test
 
 
 ## Run demo
-After you trained a model, you can run an interactive demo app of it (CAML on MIMIC-III top-50, for example) by running
+After you train a model, you can run an interactive demo app of it (CAML on MIMIC-III top-50, for example) by running
 ```
 $ streamlit run app.py -- --config_path configs/demo/caml_mimic3_50.yml
 ```
+You can write own config file specifying modules as same pre-processing and training
 
 
 ## Authors
