@@ -24,6 +24,7 @@ class BaseDataset(Dataset):
         assert self.vocab_size == max(self.vocab.values()) + 1
         self.pad_idx = self.vocab[self._config.pad_token]
         self.unk_idx = self.vocab[self._config.unk_token]
+        self.inv_vocab = {i: w for w, i in self.vocab.items()}
 
         # Load labels (dict of {code: idx})
         label_path = os.path.join(
@@ -32,6 +33,7 @@ class BaseDataset(Dataset):
         self.all_labels = load_json(label_path)
         self.num_labels = len(self.all_labels)
         assert self.num_labels == max(self.all_labels.values()) + 1
+        self.inv_labels = {i: c for c, i in self.all_labels.items()}
         logger.debug(
             "Loaded {} ICD code labels from {}".format(
                 self.num_labels, label_path
@@ -61,18 +63,36 @@ class BaseDataset(Dataset):
         codes = row[self._config.column_names.labels].split(";")
 
         # Note (list) -> word idxs (UNK is assigned at the last word)
-        clinical_note = [
-            self.vocab[w] if w in self.vocab else self.unk_idx
-            for w in clinical_note
-        ]
-        clinical_note = clinical_note[: self._config.max_length]
+        token_idxs = self.encode_tokens(clinical_note)
 
         # ICD codes -> binary labels
-        labels = np.zeros(self.num_labels, dtype=np.int32)
-        for code in codes:
-            labels[self.all_labels[code]] = 1
+        labels = self.encode_labels(codes)
+        one_hot_labels = np.zeros(self.num_labels, dtype=np.int32)
+        for l in labels:
+            one_hot_labels[l] = 1
 
-        return (clinical_note, labels)
+        return (token_idxs, one_hot_labels)
+
+    def encode_tokens(self, tokens):
+        """Convert list of words into list of token idxs, and truncate"""
+        token_idxs = [
+            self.vocab[w] if w in self.vocab else self.unk_idx
+            for w in tokens
+        ]
+        token_idxs = token_idxs[: self._config.max_length]
+        return token_idxs
+
+    def decode_tokens(self, token_idxs):
+        """Convert list of token idxs into list of words"""
+        return [self.inv_vocab[idx] for idx in token_idxs]
+
+    def encode_labels(self, codes):
+        """Convert list of ICD codes into labels"""
+        return [self.all_labels[c] for c in codes]
+
+    def decode_labels(self, labels):
+        """Convert labels into list of ICD codes"""
+        return [self.inv_labels[l] for l in labels]
 
     def collate_fn(self, examples):
         """Concatenate examples into note and label tensors"""
