@@ -76,8 +76,7 @@ class BaseDataset(Dataset):
     def encode_tokens(self, tokens):
         """Convert list of words into list of token idxs, and truncate"""
         token_idxs = [
-            self.vocab[w] if w in self.vocab else self.unk_idx
-            for w in tokens
+            self.vocab[w] if w in self.vocab else self.unk_idx for w in tokens
         ]
         token_idxs = token_idxs[: self._config.max_length]
         return token_idxs
