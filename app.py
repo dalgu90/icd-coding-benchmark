@@ -30,8 +30,13 @@ from src.utils.mapper import ConfigMapper
 st.title("ICD Coding Benchmark Demo")
 status = st.empty()  # Displaying status
 
+hash_funcs = {
+    Config: lambda x: hash(str(x)),
+    torch.nn.parameter.Parameter: lambda x: hash(x.shape),
+}
 
-# @st.cache
+
+@st.cache(hash_funcs=hash_funcs)
 def load_config():
     parser = argparse.ArgumentParser(description="Here we put app desc")
     parser.add_argument(
@@ -45,8 +50,8 @@ def load_config():
     return config
 
 
-# @st.cache
-def load_model(config):
+@st.cache(hash_funcs=hash_funcs)
+def load_modules(config):
     # Load preprocessor
     preprocessor = ClinicalNotePreprocessor(
         config.model.clinical_note_preprocessing
@@ -88,7 +93,7 @@ def load_model(config):
 
 status.text("Loading model...")
 config = load_config()
-preprocessor, vocab, inv_vocab, labels, icd_desc, model = load_model(config)
+preprocessor, vocab, inv_vocab, labels, icd_desc, model = load_modules(config)
 status.text(f"Model loaded ({config.model.name})")
 
 # Input text
