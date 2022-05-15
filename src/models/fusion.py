@@ -1,4 +1,8 @@
-#!/usr/bin/python
+"""
+    Fusion model (Luo et al. 2021)
+    https://github.com/machinelearning4health/Fusion-Towards-Automated-ICD-Coding
+"""
+
 from math import floor
 
 import numpy as np
