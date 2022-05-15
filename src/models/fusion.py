@@ -36,7 +36,7 @@ class WordRep(nn.Module):
             1: [self.feature_size, config.num_filter_maps],
             2: [self.feature_size, 100, config.num_filter_maps],
             3: [self.feature_size, 150, 100, config.num_filter_maps],
-            4: [self.feature_size, 200, 150, 100, config.num_filter_maps]
+            4: [self.feature_size, 200, 150, 100, config.num_filter_maps],
         }
 
     def forward(self, x):
@@ -53,12 +53,18 @@ class AttentionBolckV2(nn.Module):
         self.att_conv = nn.Sequential(
             nn.Conv1d(inchannel, 1, kernel_size=1, stride=1, bias=False),
         )
-        self.squeeze_pool = nn.MaxPool1d(pool_size, pool_size, return_indices=True) if is_max_pool else nn.AvgPool1d(pool_size, pool_size)
+        self.squeeze_pool = (
+            nn.MaxPool1d(pool_size, pool_size, return_indices=True)
+            if is_max_pool
+            else nn.AvgPool1d(pool_size, pool_size)
+        )
 
     def forward(self, x):
         if self.is_max_pool:
             if x.shape[2] % self.pool_size != 0:
-                x = torch.nn.functional.pad(x, [0, (self.pool_size - (x.shape[2] % self.pool_size))])
+                x = torch.nn.functional.pad(
+                    x, [0, (self.pool_size - (x.shape[2] % self.pool_size))]
+                )
             att = self.att_conv(x)
             att = att.view(att.shape[0], att.shape[1], -1, self.pool_size)
             att = torch.softmax(att, dim=3)
@@ -73,22 +79,58 @@ class AttentionBolckV2(nn.Module):
 
 
 class ResidualBlockHidden(nn.Module):
-    def __init__(self, inchannel, outchannel, kernel_size, stride, use_res, dropout, use_layer_norm=False, is_relu=True):
+    def __init__(
+        self,
+        inchannel,
+        outchannel,
+        kernel_size,
+        stride,
+        use_res,
+        dropout,
+        use_layer_norm=False,
+        is_relu=True,
+    ):
         super(ResidualBlockHidden, self).__init__()
         self.left = nn.Sequential(
-            nn.Conv1d(inchannel, outchannel, kernel_size=kernel_size, stride=stride, padding=int(floor(kernel_size / 2)), bias=False),
-            nn.GroupNorm(1, outchannel) if use_layer_norm else nn.BatchNorm1d(outchannel),
+            nn.Conv1d(
+                inchannel,
+                outchannel,
+                kernel_size=kernel_size,
+                stride=stride,
+                padding=int(floor(kernel_size / 2)),
+                bias=False,
+            ),
+            nn.GroupNorm(1, outchannel)
+            if use_layer_norm
+            else nn.BatchNorm1d(outchannel),
             nn.Tanh() if not is_relu else nn.LeakyReLU(),
-            nn.Conv1d(outchannel, outchannel, kernel_size=kernel_size, stride=1, padding=int(floor(kernel_size / 2)), bias=False),
-            nn.GroupNorm(1, outchannel) if use_layer_norm else nn.BatchNorm1d(outchannel),
+            nn.Conv1d(
+                outchannel,
+                outchannel,
+                kernel_size=kernel_size,
+                stride=1,
+                padding=int(floor(kernel_size / 2)),
+                bias=False,
+            ),
+            nn.GroupNorm(1, outchannel)
+            if use_layer_norm
+            else nn.BatchNorm1d(outchannel),
         )
 
         self.use_res = use_res
         if self.use_res:
             self.shortcut = nn.Sequential(
-                        nn.Conv1d(inchannel, outchannel, kernel_size=1, stride=stride, bias=False),
-                        nn.GroupNorm(1, outchannel) if use_layer_norm else nn.BatchNorm1d(outchannel)
-                    )
+                nn.Conv1d(
+                    inchannel,
+                    outchannel,
+                    kernel_size=1,
+                    stride=stride,
+                    bias=False,
+                ),
+                nn.GroupNorm(1, outchannel)
+                if use_layer_norm
+                else nn.BatchNorm1d(outchannel),
+            )
         self.dropout = nn.Dropout(p=dropout)
         self.out_activation = nn.Tanh() if not is_relu else nn.LeakyReLU()
 
@@ -110,17 +152,17 @@ class ScaledDotProductAttention(nn.Module):
         self.softmax = nn.Softmax(dim=2)
 
     def forward(self, q, k, v, scale=None, attn_mask=None):
-        """ Forward propagation.
+        """Forward propagation.
 
         Args:
-        	q: Queries tensor with shape [B, L_q, D_q]
-        	k: Keys tensor with shape [B, L_k, D_k]
-        	v: Values tensor with shape [B, L_v, D_v]，generally k
-        	scale: scale factor, a floating-point scalar
-        	attn_mask: Masking tensor with shape [B, L_q, L_k]
+                q: Queries tensor with shape [B, L_q, D_q]
+                k: Keys tensor with shape [B, L_k, D_k]
+                v: Values tensor with shape [B, L_v, D_v]，generally k
+                scale: scale factor, a floating-point scalar
+                attn_mask: Masking tensor with shape [B, L_q, L_k]
 
         Returns:
-        	Context tensor and attention tensor
+                Context tensor and attention tensor
         """
         attention = torch.bmm(q, k.transpose(1, 2))
         if scale:
@@ -169,7 +211,8 @@ class MultiHeadAttention(nn.Module):
         # scaled dot product attention
         scale = (key.size(-1) // num_heads) ** -0.5
         context, attention = self.dot_product_attention(
-            query, key, value, scale, attn_mask)
+            query, key, value, scale, attn_mask
+        )
 
         # concat heads
         context = context.view(batch_size, -1, dim_per_head * num_heads)
@@ -191,7 +234,9 @@ class EncoderLayer(nn.Module):
         super(EncoderLayer, self).__init__()
 
         self.attention = MultiHeadAttention(model_dim, num_heads, dropout)
-        self.feed_forward = PositionalWiseFeedForward(model_dim, ffn_dim, dropout)
+        self.feed_forward = PositionalWiseFeedForward(
+            model_dim, ffn_dim, dropout
+        )
 
     def forward(self, inputs, attn_mask=None):
         # self attention
@@ -222,7 +267,6 @@ class PositionalWiseFeedForward(nn.Module):
 
 
 class PositionalEncoding(nn.Module):
-
     def __init__(self, d_model, max_seq_len):
         """Initializer
 
@@ -233,13 +277,21 @@ class PositionalEncoding(nn.Module):
         super(PositionalEncoding, self).__init__()
 
         # According to the formula given by the paper, construct the PE matrix
-        position_encoding = np.array([
-            [pos / np.power(10000, 2.0 * (j // 2) / d_model) for j in range(d_model)]
-            for pos in range(max_seq_len)])
+        position_encoding = np.array(
+            [
+                [
+                    pos / np.power(10000, 2.0 * (j // 2) / d_model)
+                    for j in range(d_model)
+                ]
+                for pos in range(max_seq_len)
+            ]
+        )
         # Use sin for even columns and cos for odd columns
         position_encoding[:, 0::2] = np.sin(position_encoding[:, 0::2])
         position_encoding[:, 1::2] = np.cos(position_encoding[:, 1::2])
-        position_encoding = torch.from_numpy(position_encoding.astype(np.float32))
+        position_encoding = torch.from_numpy(
+            position_encoding.astype(np.float32)
+        )
         # In the first row of the PE matrix, add a vector with all 0s,
         # representing the positional encoding of this `PAD`. `UNK` is often
         # added to the word embedding, which represents the word embedding of
@@ -255,8 +307,9 @@ class PositionalEncoding(nn.Module):
         # position of `PAD` has been added. If the dictionary adds `UNK` in Word
         # embedding, we also need +1. Look, the two are very similar
         self.position_encoding = nn.Embedding(max_seq_len + 1, d_model)
-        self.position_encoding.weight = nn.Parameter(position_encoding,
-                                                     requires_grad=False)
+        self.position_encoding.weight = nn.Parameter(
+            position_encoding, requires_grad=False
+        )
 
     def forward(self, input_len):
         """Forward propagation.
@@ -287,21 +340,27 @@ class PositionalEncoding(nn.Module):
 
 class EncoderHidden(nn.Module):
     """
-        Feature aggregation layer of Fusion model.
-        Arguments `vocab_size` and `gpu` are removed when porting.
+    Feature aggregation layer of Fusion model.
+    Arguments `vocab_size` and `gpu` are removed when porting.
     """
-    def __init__(self,
-                 max_seq_len,
-                 num_layers=1,
-                 model_dim=256,
-                 num_heads=4,
-                 ffn_dim=1024,
-                 dropout=0.0):
+
+    def __init__(
+        self,
+        max_seq_len,
+        num_layers=1,
+        model_dim=256,
+        num_heads=4,
+        ffn_dim=1024,
+        dropout=0.0,
+    ):
         super(EncoderHidden, self).__init__()
 
         self.encoder_layers = nn.ModuleList(
-            [EncoderLayer(model_dim, num_heads, ffn_dim, 0.0) for _ in
-             range(num_layers)])
+            [
+                EncoderLayer(model_dim, num_heads, ffn_dim, 0.0)
+                for _ in range(num_layers)
+            ]
+        )
         self.pos_embedding = PositionalEncoding(model_dim, max_seq_len)
         self.dropout = nn.Dropout(p=dropout)
 
@@ -353,11 +412,13 @@ class Fusion(nn.Module):
                                aggregation layer and the label attention layer
 
     """
+
     def __init__(self, config):
         super(Fusion, self).__init__()
         logger.info(f"Initialising %s", self.__class__.__name__)
-        logger.debug("Initialising %s with config: %s", self.__class__.__name__,
-                     config)
+        logger.debug(
+            "Initialising %s with config: %s", self.__class__.__name__, config
+        )
         self.config = config
 
         # From CAML implementation
@@ -379,19 +440,34 @@ class Fusion(nn.Module):
         self.filter_num = len(filter_sizes)
         for filter_size in filter_sizes:
             one_channel = nn.ModuleList()
-            tmp = nn.Conv1d(self.word_rep.feature_size, self.word_rep.feature_size, kernel_size=filter_size,
-                            padding=int(floor(filter_size / 2)))
+            tmp = nn.Conv1d(
+                self.word_rep.feature_size,
+                self.word_rep.feature_size,
+                kernel_size=filter_size,
+                padding=int(floor(filter_size / 2)),
+            )
             xavier_uniform(tmp.weight)
-            one_channel.add_module('baseconv', tmp)
+            one_channel.add_module("baseconv", tmp)
             if config.use_attention_pool:
-                tmp = AttentionBolckV2(self.word_rep.feature_size, config.pool_size, True)
-                one_channel.add_module('basevonb-pool', tmp)
+                tmp = AttentionBolckV2(
+                    self.word_rep.feature_size, config.pool_size, True
+                )
+                one_channel.add_module("basevonb-pool", tmp)
 
             conv_dimension = self.word_rep.conv_dict[config.conv_layer]
             for idx in range(config.conv_layer):
-                tmp = ResidualBlockHidden(conv_dimension[idx], conv_dimension[idx + 1], filter_size, 1, True, config.dropout if config.use_transformer else 0.0, use_layer_norm=config.use_layer_norm, is_relu=config.use_relu)
-                one_channel.add_module('resconv-{}'.format(idx), tmp)
-            self.conv.add_module('channel-{}'.format(filter_size), one_channel)
+                tmp = ResidualBlockHidden(
+                    conv_dimension[idx],
+                    conv_dimension[idx + 1],
+                    filter_size,
+                    1,
+                    True,
+                    config.dropout if config.use_transformer else 0.0,
+                    use_layer_norm=config.use_layer_norm,
+                    is_relu=config.use_relu,
+                )
+                one_channel.add_module("resconv-{}".format(idx), tmp)
+            self.conv.add_module("channel-{}".format(filter_size), one_channel)
 
         if config.use_transformer:
             self.transfer = EncoderHidden(
@@ -400,7 +476,7 @@ class Fusion(nn.Module):
                 self.filter_num * config.num_filter_maps,
                 config.transfer_attention_head,
                 config.transfer_fsize,
-                config.dropout
+                config.dropout,
             )
 
         # Label attention part of OutputLayer
