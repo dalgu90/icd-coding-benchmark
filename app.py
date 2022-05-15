@@ -1,13 +1,6 @@
 #!/usr/bin/env python
 """
     The interactive demo of ICD coding benchmark (prototype)
-
-TODOs:
-    1. Make config hashable by streamlit, so config and other modules can be
-    cached.
-    2. Organize demo yaml file and the code so that users can easily modify
-    3. Support multiple models in the config file and more visualization
-
 """
 import argparse
 import csv
