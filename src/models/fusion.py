@@ -406,7 +406,6 @@ class Fusion(nn.Module):
         xavier_uniform(self.final.weight)
 
     def forward(self, x):
-
         x = self.word_rep(x)
 
         x = x.transpose(1, 2)
