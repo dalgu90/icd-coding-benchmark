@@ -81,7 +81,7 @@ After you train a model, you can run an interactive demo app of it (CAML on MIMI
 ```
 $ streamlit run app.py -- --config_path configs/demo/caml_mimic3_50.yml
 ```
-You can write own config file specifying modules as same pre-processing and training
+You can write own config file specifying modules as same as in pre-processing and training
 
 
 ## Authors
