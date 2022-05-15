@@ -369,12 +369,11 @@ class Fusion(nn.Module):
         self.word_rep = WordRep(config)
 
         self.conv = nn.ModuleList()
-        filter_sizes = config.filter_size.split(',')
+        filter_sizes = config.filter_size
         self.relu = nn.ReLU(inplace=True)
         self.use_transformer = config.use_transformer
         self.filter_num = len(filter_sizes)
         for filter_size in filter_sizes:
-            filter_size = int(filter_size)
             one_channel = nn.ModuleList()
             tmp = nn.Conv1d(self.word_rep.feature_size, self.word_rep.feature_size, kernel_size=filter_size,
                             padding=int(floor(filter_size / 2)))

@@ -39,7 +39,7 @@ model:
     word2vec_dir: *word2vec_dir
     num_classes: 8922
     dropout: 0.2
-    filter_size: "3,5,9,15,19,25"
+    filter_size: [3, 5, 9, 15, 19, 25]
     use_attention_pool: true
     pool_size: 2
     conv_layer: 1
