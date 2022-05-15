@@ -6,7 +6,7 @@ paths:
   output_dir: &output_dir results/CAML_mimic3_50
 
 demo:
-  icd_desc_file: "datasets/mimic3/static/icd9_descriptions.txt"
+  icd_desc_file: datasets/mimic3/static/icd9_descriptions.txt
   top_k: 10
   use_gpu: true
 
