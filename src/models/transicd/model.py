@@ -19,6 +19,11 @@ class TransICD(nn.Module):
             f"Initialising {self.__class__.__name__} with " f"config: {config}"
         )
 
+        if config.use_gpu:
+            self.device = "cuda"
+        else:
+            self.device = "cpu"
+
         self.word_embedding_layer = WordEmbeddingLayer(
             embed_dir=config.embed_dir
         )
@@ -28,6 +33,7 @@ class TransICD(nn.Module):
             d_model=self.embed_size,
             dropout=config.dropout,
             max_len=config.max_len,
+            device=self.device,
         )
 
         if self.embed_size % config.num_heads != 0:
@@ -66,18 +72,6 @@ class TransICD(nn.Module):
             ]
         )
 
-    def embed_label_desc(self):
-        label_embeds = (
-            self.embedder(self.label_desc)
-            .transpose(1, 2)
-            .matmul(self.label_desc_mask.unsqueeze(2))
-        )
-        label_embeds = torch.div(
-            label_embeds.squeeze(2),
-            torch.sum(self.label_desc_mask, dim=-1).unsqueeze(1),
-        )
-        return label_embeds
-
     def forward(self, inputs):
         # `inputs` shape: (batch_size, seq_len)
         batch_size = inputs.shape[0]
@@ -101,12 +95,12 @@ class TransICD(nn.Module):
         embeddings = self.dropout(embeddings)
 
         # `embeddings` shape: (seq_len, batch_size, embed_size)
-        embeds = embeds.permute(1, 0, 2)
+        embeddings = embeddings.permute(1, 0, 2)
 
         # Pass the embedded input through the Transformer model.
         # `encoded_inputs` shape: (batch_size, seq_len, embed_size)
         encoded_inputs = self.encoder(
-            embeds, src_key_padding_mask=src_key_padding_mask
+            embeddings, src_key_padding_mask=src_key_padding_mask
         )
         encoded_inputs = encoded_inputs.permute(1, 0, 2)
 
@@ -115,7 +109,7 @@ class TransICD(nn.Module):
             encoded_inputs, attn_mask
         )
 
-        outputs = torch.zeros((batch_size, self.num_classes))
+        outputs = torch.zeros(batch_size, self.num_classes).to(self.device)
         for code, ff_layer in enumerate(self.ff_layers):
             outputs[:, code : code + 1] = ff_layer(weighted_outputs[:, code, :])
 
@@ -168,17 +162,19 @@ class PositionalEmbeddingLayer(nn.Module):
         max_len (int): Maximum length of the input sequence.
     """
 
-    def __init__(self, d_model=128, dropout=0.1, max_len=2500):
+    def __init__(self, d_model=128, dropout=0.1, max_len=2500, device="cuda"):
         super(PositionalEmbeddingLayer, self).__init__()
         logger.debug(
             f"Initialising {self.__class__.__name__} with "
             f"d_model = {d_model}, dropout = {dropout}, max_len = {max_len}"
         )
 
+        self.device = device
+
         self.dropout = nn.Dropout(p=dropout)
 
         # Compute the positional encodings once in log space.
-        positional_emb = torch.zeros(max_len, d_model)
+        positional_emb = torch.zeros(max_len, d_model).to(self.device)
         position = torch.arange(0, max_len).unsqueeze(1)
         div_term = torch.exp(
             torch.arange(0, d_model, 2) * -(math.log(10000.0) / d_model)
@@ -251,7 +247,7 @@ class LabelAttentionLayer(nn.Module):
         output_1 = self.tanh_activation(output_1)
 
         # `output_2` shape: (batch_size, seq_len, num_classes)
-        output_2 = self.linear_layer2(output_1)
+        output_2 = self.linear_layer_2(output_1)
 
         # Masked fill to avoid softmaxing over padded words. The authors fill
         # the value with -1e9, which is probably incorrect. It should be 1e-9.
