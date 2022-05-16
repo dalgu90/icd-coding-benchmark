@@ -46,6 +46,7 @@ preprocessing:
         perform: true
       remove_numeric:
         perform: true
+        replace_numerics_with_letter: null
       remove_stopwords:
         perform: false
       stem_or_lemmatize:

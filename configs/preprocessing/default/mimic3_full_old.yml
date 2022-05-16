@@ -1,8 +1,8 @@
 paths:
   mimic_dir: &mimic_dir datasets/mimic3/csv
   static_dir: &static_dir datasets/mimic3/static
-  dataset_dir: &dataset_dir datasets/mimic3_50
-  word2vec_dir: &word2vec_dir datasets/mimic3_50/word2vec
+  dataset_dir: &dataset_dir datasets/mimic3_full_old
+  word2vec_dir: &word2vec_dir datasets/mimic3_full_old/word2vec
 
 preprocessing:
   name: mimic_iii_preprocessing_pipeline
@@ -46,24 +46,20 @@ preprocessing:
         perform: true
       remove_numeric:
         perform: true
+        replace_numerics_with_letter: null
       remove_stopwords:
-        perform: true
-        params:
-          stopwords_file_path: null
-          remove_common_medical_terms: true
+        perform: false
       stem_or_lemmatize:
-        perform: true
-        params:
-          stemmer_name: nltk.WordNetLemmatizer
+        perform: false
       truncate:
         perform: false
-    incorrect_code_loading: false
+    incorrect_code_loading: true
     code_preprocessing:
-      top_k: 50                       # enter 0 for all codes
+      top_k: 0                       # enter 0 for all codes
       code_type: both
       add_period_in_correct_pos:
         perform: true
-    train_embed_with_all_split: false
+    train_embed_with_all_split: true
     tokenizer:
       name: spacetokenizer
       params: null
