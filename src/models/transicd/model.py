@@ -42,6 +42,10 @@ class TransICD(nn.Module):
                 f"the number of heads {config.num_heads}"
             )
 
+        if config.freeze_embedding_layer:
+            self.freeze_layer(self.word_embedding_layer)
+            self.freeze_layer(self.positional_embedding_layer)
+
         self.pad_idx = config.pad_idx
         self.num_classes = config.num_classes
 
@@ -71,6 +75,10 @@ class TransICD(nn.Module):
                 for code in range(config.num_classes)
             ]
         )
+
+    def freeze_layer(self, layer):
+        for param in layer.parameters():
+            param.requires_grad = False
 
     def forward(self, inputs):
         # `inputs` shape: (batch_size, seq_len)

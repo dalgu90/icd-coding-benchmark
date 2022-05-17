@@ -53,7 +53,7 @@ trainer:
   params:
     output_dir: *output_dir
     data_loader:
-      batch_size: 16
+      batch_size: 8
       num_workers: 4
       shuffle: false
       drop_last: true
@@ -62,11 +62,11 @@ trainer:
       params:
         alpha: 0.1
     optimizer:
-      name: adam
+      name: adam_w
       params:
-        lr: 0.0001
-        weight_decay: 0.0
-    max_epochs: 150
+        lr: 0.001
+        weight_decay: 0.01
+    max_epochs: 40
     lr_scheduler: null
     stopping_criterion:
       metric:
