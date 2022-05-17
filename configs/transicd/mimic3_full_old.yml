@@ -3,7 +3,7 @@ paths:
   static_dir: &static_dir datasets/mimic3/static
   dataset_dir: &dataset_dir datasets/mimic3_full_old
   word2vec_dir: &word2vec_dir datasets/mimic3_full_old/word2vec
-  output_dir: &output_dir results/dcan_mimic3_full_old
+  output_dir: &output_dir results/transicd_mimic3_full_old
 
 dataset:
   name: base_dataset
