@@ -58,15 +58,14 @@ trainer:
       shuffle: false
       drop_last: true
     loss:
-      name: BinaryCrossEntropyWithLabelSmoothingLoss
-      params:
-        alpha: 0.1
+      name: BinaryCrossEntropyLoss
+      params: null
     optimizer:
       name: adam_w
       params:
         lr: 0.001
         weight_decay: 0.01
-    max_epochs: 40
+    max_epochs: 30
     lr_scheduler: null
     stopping_criterion:
       metric:
