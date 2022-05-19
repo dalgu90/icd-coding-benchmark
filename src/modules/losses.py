@@ -60,6 +60,8 @@ class LDAMLoss(BCEWithLogitsLoss):
             self.class_margin == 0, 1
         )
         self.class_margin = 1.0 / self.class_margin
+        if config_dict.pop("use_gpu"):
+            self.class_margin.to("cuda")
 
         self.C = config_dict.pop("C")
 
