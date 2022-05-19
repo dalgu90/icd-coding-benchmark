@@ -4,6 +4,7 @@ import os
 
 import torch
 import torch.nn.functional as F
+from torch.autograd import Variable
 from torch.nn import BCEWithLogitsLoss, CrossEntropyLoss, MSELoss
 
 from src.utils.file_loaders import load_json
@@ -61,7 +62,7 @@ class LDAMLoss(BCEWithLogitsLoss):
         )
         self.class_margin = 1.0 / self.class_margin
         if config_dict.pop("use_gpu"):
-            self.class_margin.to("cuda")
+            self.class_margin = self.class_margin.to("cuda")
 
         self.C = config_dict.pop("C")
 
@@ -71,5 +72,8 @@ class LDAMLoss(BCEWithLogitsLoss):
         if target.dtype != torch.float:
             target = target.float()
 
-        ldam_input = input - target * self.class_margin * self.C
+        ldam_input = (
+            input
+            - target * Variable(self.class_margin, requires_grad=False) * self.C
+        )
         return super().forward(input=ldam_input, target=target)
