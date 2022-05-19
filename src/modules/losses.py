@@ -61,14 +61,15 @@ class LDAMLoss(BCEWithLogitsLoss):
             self.class_margin == 0, 1
         )
         self.class_margin = 1.0 / self.class_margin
-        if config_dict.pop("use_gpu"):
-            self.class_margin = self.class_margin.to("cuda")
 
         self.C = config_dict.pop("C")
 
         super().__init__(**(config_dict if config_dict else {}))
 
     def forward(self, input, target):
+        device = input.get_device()
+        target = target.to(device)
+        self.class_margin = self.class_margin.to(device)
         if target.dtype != torch.float:
             target = target.float()
 
