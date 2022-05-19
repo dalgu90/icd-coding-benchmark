@@ -50,8 +50,15 @@ class MimiciiiPreprocessingPipeline:
         self.code_preprocessor = CodeProcessor(self.code_config)
 
         self.top_k_codes = TopKCodes(
-            self.code_config.top_k,
-            os.path.join(self.SAVE_DIR, config.paths.label_json_name),
+            k=self.code_config.top_k,
+            labels_save_path=os.path.join(
+                self.SAVE_DIR, config.paths.label_json_name
+            ),
+            labels_freq_save_path=os.path.join(
+                self.SAVE_DIR, config.paths.label_freq_json_name
+            )
+            if config.paths.label_freq_json_name is not None
+            else None,
         )
         self.split_data = ConfigMapper.get_object(
             "dataset_splitters", config.dataset_splitting_method.name

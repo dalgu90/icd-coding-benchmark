@@ -1,8 +1,12 @@
 """All criterion functions."""
+import json
+import os
+
 import torch
 import torch.nn.functional as F
 from torch.nn import BCEWithLogitsLoss, CrossEntropyLoss, MSELoss
 
+from src.utils.file_loaders import load_json
 from src.utils.mapper import ConfigMapper
 
 ConfigMapper.map("losses", "mse")(MSELoss)
@@ -36,3 +40,34 @@ class BinaryCrossEntropyWithLabelSmoothingLoss(BCEWithLogitsLoss):
             target = target.float()
         target = target * (1 - self.alpha) + self.alpha / target.size(1)
         return super().forward(input=input, target=target)
+
+
+@ConfigMapper.map("losses", "LDAMLoss")
+class LDAMLoss(BCEWithLogitsLoss):
+    def __init__(self, config):
+        config_dict = config.as_dict()
+
+        label_freq_path = os.path.join(
+            config_dict.pop("label_freq_json_dir"),
+            config_dict.pop("label_freq_path"),
+        )
+        label_freq = list(load_json(label_freq_path).values())
+
+        self.class_margin = (
+            torch.tensor(label_freq, dtype=torch.float32) ** 0.25
+        )
+        self.class_margin = self.class_margin.masked_fill(
+            self.class_margin == 0, 1
+        )
+        self.class_margin = 1.0 / self.class_margin
+
+        self.C = config_dict.pop("C")
+
+        super().__init__(**(config_dict if config_dict else {}))
+
+    def forward(self, input, target):
+        if target.dtype != torch.float:
+            target = target.float()
+
+        ldam_input = input - target * self.class_margin * self.C
+        return super().forward(input=ldam_input, target=target)

@@ -18,6 +18,7 @@ preprocessing:
       val_json_name: val.json           # will be saved
       test_json_name: test.json         # will be saved
       label_json_name: labels.json      # will be computed and saved
+      label_freq_json_name: label_freq.json
     dataset_metadata:
       column_names:
         subject_id: SUBJECT_ID

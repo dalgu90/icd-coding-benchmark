@@ -58,8 +58,11 @@ trainer:
       shuffle: false
       drop_last: true
     loss:
-      name: BinaryCrossEntropyLoss
-      params: null
+      name: LDAMLoss
+      params:
+        label_freq_json_dir: *dataset_dir
+        label_freq_json_name: label_freq.json
+        C: 3.0
     optimizer:
       name: adam_w
       params:
