@@ -49,7 +49,7 @@ class LDAMLoss(BCEWithLogitsLoss):
 
         label_freq_path = os.path.join(
             config_dict.pop("label_freq_json_dir"),
-            config_dict.pop("label_freq_path"),
+            config_dict.pop("label_freq_json_name"),
         )
         label_freq = list(load_json(label_freq_path).values())
 
