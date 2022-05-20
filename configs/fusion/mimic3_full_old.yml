@@ -1,0 +1,128 @@
+paths:
+  mimic_dir: &mimic_dir datasets/mimic3/csv
+  static_dir: &static_dir datasets/mimic3/static
+  dataset_dir: &dataset_dir datasets/mimic3_full_old
+  word2vec_dir: &word2vec_dir datasets/mimic3_full_old/word2vec
+  output_dir: &output_dir results/Fusion_mimic3_full_old
+
+dataset:
+  name: base_dataset
+  data_common: &data_common
+    column_names:
+      hadm_id: "HADM_ID"
+      clinical_note: "TEXT"
+      labels: "LABELS"
+    word2vec_dir: *word2vec_dir
+    pad_token: "<pad>"
+    unk_token: "<unk>"
+    dataset_dir: *dataset_dir
+    label_file: labels.json
+    max_length: 2500
+  params:
+    train:
+      <<: *data_common
+      data_file: train.json
+    val:
+      <<: *data_common
+      data_file: val.json
+    test:
+      <<: *data_common
+      data_file: test.json
+
+model:
+  name: Fusion
+  params:
+    version: mimic3
+    dataset_dir: *dataset_dir
+    mimic_dir: *mimic_dir
+    static_dir: *static_dir
+    word2vec_dir: *word2vec_dir
+    num_classes: 8922
+    dropout: 0.2
+    filter_size: [3, 5, 9, 15, 19, 25]
+    use_attention_pool: true
+    pool_size: 2
+    conv_layer: 1
+    use_layer_norm: true
+    use_relu: false
+    use_transformer: true
+    max_length: 2500
+    transfer_layer: 1
+    transfer_attention_head: 4
+    transfer_fsize: 1024
+    num_filter_maps: 50
+
+trainer:
+  name: base_trainer
+  params:
+    output_dir: *output_dir
+    data_loader:
+      batch_size: 16
+      num_workers: 4
+      shuffle: true
+      drop_last: true
+    loss:
+      name: BinaryCrossEntropyLoss
+      params: null
+    optimizer:
+      name: adam
+      params:
+        lr: 0.0001
+        weight_decay: 0.0
+    max_epochs: 200
+    lr_scheduler: null
+    stopping_criterion:
+      metric:
+        name: prec_at_8
+      desired: max
+      patience: 10
+    checkpoint_saver:
+      name: base_saver
+      params:
+        checkpoint_dir: *output_dir
+        interval: 1
+        max_to_keep: 5
+        ckpt_fname_format: "ckpt-{}.pth"
+        best_fname_format: "best-{}.pth"
+        metric:
+          name: prec_at_8
+          class: prec_at_k
+          params:
+            k: 8
+        desired: max
+    eval_metrics: &eval_metrics
+      - name: prec_at_8
+        class: prec_at_k
+        params:
+          k: 8
+      - name: prec_at_15
+        class: prec_at_k
+        params:
+          k: 15
+      - name: macro_f1
+      - name: micro_f1
+      - name: macro_auc
+      - name: micro_auc
+    graph:
+      writer:
+        name: tensorboard
+        params:
+          log_dir: *output_dir
+      train:
+        interval: 100
+        interval_unit: step
+        metric:
+          - name: loss
+      val:
+        interval: 1
+        interval_unit: epoch
+        metric:
+          - name: loss
+          - name: prec_at_8
+          - name: prec_at_15
+          - name: macro_f1
+          - name: micro_f1
+          - name: macro_auc
+          - name: micro_auc
+    seed: 1337
+    use_gpu: true
