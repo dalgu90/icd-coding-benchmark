@@ -42,7 +42,6 @@ def load_config():
 def load_modules(config):
     # Load preprocessor
     preprocessor = ClinicalNotePreprocessor(config.clinical_note_preprocessing)
-    preprocessor("")
 
     # Load dataset
     dataset = ConfigMapper.get_object("datasets", config.dataset.name)(
@@ -129,6 +128,6 @@ if token_idxs:
             "Description": top_k_descs,
         }
     )
-    st.dataframe(output_df.style.format({"Probability": "{:.4f}"}))
+    st.table(output_df.style.format({"Probability": "{:.4f}"}))
 else:
     st.markdown("**[No input]**")
