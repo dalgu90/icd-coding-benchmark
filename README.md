@@ -24,7 +24,7 @@ The benchmark encompasses all the procedures of ICD coding: dataset pre-processi
 We currently provide (items in parentheses are under development):
 - Four preset of preprocessed datasets: MIMIC-III full, top-50, full (old), top-50 (old), where we referred to (old) as the version of CAML[^2].
 - ICD coding models: CNN, CAML, DCAN, Fusion, (MultiResCNN, LAAT)
-- (Interactive demo)
+- Interactive demo
 
 
 ## Preparation
@@ -78,6 +78,14 @@ $ python run.py --config_path configs/caml_mimic3_50.yml --test  # Test
 | CAML         | 0.881043  | 0.908731  | 0.519399 | 0.610033 | 0.612955 |
 | DCAN         | 0.913397  | 0.937868  | 0.611135 | 0.688379 | 0.649393 |
 | Fusion       | 0.904610  | 0.929229  | 0.611743 | 0.674127 | 0.640023 |
+
+
+## Run demo
+After you train a model, you can run an interactive demo app of it (CAML on MIMIC-III top-50, for example) by running
+```
+$ streamlit run app.py -- --config_path configs/demo/caml_mimic3_50.yml
+```
+You can write own config file specifying modules as same as in pre-processing and training
 
 
 ## Authors

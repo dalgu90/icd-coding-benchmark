@@ -21,21 +21,18 @@ class BaseCheckpointSaver(object):
         logger.debug(f"Initializing {cls_name} with config: {config}")
 
         self.config = config
-        if "info_fname" not in self.config.as_dict():
-            self.config.set_value("info_fname", "ckpt-info.json")
+        self.info_fname = "ckpt-info.json"
+        if hasattr(self.config.as_dict(), "info_fname"):
+            self.info_fname = self.config.info_fname
 
         self.metric = load_metric(self.config.metric.as_dict())
 
     def save_ckpt_info(self, info):
-        info_fpath = os.path.join(
-            self.config.checkpoint_dir, self.config.info_fname
-        )
+        info_fpath = os.path.join(self.config.checkpoint_dir, self.info_fname)
         save_json(info, info_fpath)
 
     def load_ckpt_info(self):
-        info_fpath = os.path.join(
-            self.config.checkpoint_dir, self.config.info_fname
-        )
+        info_fpath = os.path.join(self.config.checkpoint_dir, self.info_fname)
         if os.path.exists(info_fpath):
             # Load json (convert int string to int)
             info = load_json(info_fpath)
