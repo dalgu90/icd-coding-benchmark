@@ -90,10 +90,9 @@ class MultiCNN(nn.Module):
             )
             xavier_uniform(self.conv.weight)
         else:
-            filter_sizes = config.filter_size.split(",")
-            self.filter_num = len(filter_sizes)
+            self.filter_num = len(config.filter_size)
             self.conv = nn.ModuleList()
-            for filter_size in filter_sizes:
+            for filter_size in config.filter_size:
                 filter_size = int(filter_size)
                 tmp = nn.Conv1d(
                     self.word_rep.feature_size,
@@ -243,10 +242,8 @@ class MultiResCNN(nn.Module):
 
         self.conv = nn.ModuleList()
 
-        filter_sizes = config.filter_size.split(",")
-        self.filter_num = len(filter_sizes)
-        for filter_size in filter_sizes:
-            filter_size = int(filter_size)
+        self.filter_num = len(config.filter_size)
+        for filter_size in config.filter_size:
             one_channel = nn.ModuleList()
             tmp = nn.Conv1d(
                 self.word_rep.feature_size,

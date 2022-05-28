@@ -31,7 +31,6 @@ dataset:
 
 model:
   name: multirescnn
-  # model
   params:
     version: mimic3
     dataset_dir: *dataset_dir
@@ -41,7 +40,7 @@ model:
     embed_file: processed_full.embed
     conv_layer: 1
     num_classes: 50
-    filter_size: "3,5,9,15,19,25"
+    filter_size: [3, 5, 9, 15, 19, 25]
     test_model: None
     num_filter_maps: 50
     dropout: 0.2
@@ -54,8 +53,8 @@ trainer:
     data_loader:
       batch_size: 16
       num_workers: 4
-      shuffle: false
-      drop_last: true
+      shuffle: true
+      drop_last: false
     loss:
       name: BinaryCrossEntropyLoss
       params: null
