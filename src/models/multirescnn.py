@@ -11,7 +11,7 @@ import torch.nn.functional as F
 from torch.nn.init import xavier_uniform_ as xavier_uniform
 
 from src.utils.mapper import ConfigMapper
-from src.utils.model_utils import build_pretrain_embedding, load_lookups
+from src.utils.model_utils import load_lookups
 from src.utils.text_loggers import get_logger
 
 logger = get_logger(__name__)
