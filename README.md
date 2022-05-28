@@ -23,7 +23,7 @@ The benchmark encompasses all the procedures of ICD coding: dataset pre-processi
 
 We currently provide (items in parentheses are under development):
 - Four preset of preprocessed datasets: MIMIC-III full, top-50, full (old), top-50 (old), where we referred to (old) as the version of CAML[^2].
-- ICD coding models: CNN, CAML, DCAN, (MultiResCNN, LAAT, Fusion)
+- ICD coding models: CNN, CAML, MultiResCNN, DCAN, (LAAT, Fusion)
 - (Interactive demo)
 
 
@@ -52,6 +52,7 @@ $ python run.py --config_path configs/caml_mimic3_50.yml --test  # Test
 | Model        | macro AUC | micro AUC | macro F1 | micro F1 | P@8      | P@15     |
 |--------------|-----------|-----------|----------|----------|----------|----------|
 | CAML         | 0.890823  | 0.984352  | 0.048890 | 0.498832 | 0.703181 | 0.553875 |
+| MultiResCNN  | 0.914338  | 0.986860  | 0.084015 | 0.558163 | 0.739324 | 0.587169 |
 | DCAN         | 0.854977  | 0.980384  | 0.057142 | 0.522896 | 0.718491 | 0.568149 |
 
 - MIMIC-III top-50
@@ -59,6 +60,7 @@ $ python run.py --config_path configs/caml_mimic3_50.yml --test  # Test
 | Model        | macro AUC | micro AUC | macro F1 | micro F1 | P@5      |
 |--------------|-----------|-----------|----------|----------|----------|
 | CAML         | 0.917969  | 0.942569  | 0.608479 | 0.688646 | 0.662709 |
+| MultiResCNN  | 0.926459  | 0.949508  | 0.644801 | 0.718600 | 0.672604 |
 | DCAN         | 0.933557  | 0.953008  | 0.658478 | 0.727083 | 0.681014 |
 
 - MIMIC-III full (old)
@@ -66,6 +68,7 @@ $ python run.py --config_path configs/caml_mimic3_50.yml --test  # Test
 | Model        | macro AUC | micro AUC | macro F1 | micro F1 | P@8      | P@15     |
 |--------------|-----------|-----------|----------|----------|----------|----------|
 | CAML         | 0.880379  | 0.983444  | 0.057407 | 0.500574 | 0.696582 | 0.546777 |
+| MultiResCNN  | 0.907786  | 0.986263  | 0.077205 | 0.550036 | 0.736099 | 0.583472 |
 | DCAN         | 0.844949  | 0.978251  | 0.063707 | 0.524617 | 0.722160 | 0.570087 |
 
 - MIMIC-III top-50 (old)
@@ -73,6 +76,7 @@ $ python run.py --config_path configs/caml_mimic3_50.yml --test  # Test
 | Model        | macro AUC | micro AUC | macro F1 | micro F1 | P@5      |
 |--------------|-----------|-----------|----------|----------|----------|
 | CAML         | 0.881043  | 0.908731  | 0.519399 | 0.610033 | 0.612955 |
+| MultiResCNN  | 0.899234  | 0.927863  | 0.589514 | 0.670533 | 0.640023 |
 | DCAN         | 0.913397  | 0.937868  | 0.611135 | 0.688379 | 0.649393 |
 
 
