@@ -1,3 +1,5 @@
+import itertools
+
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -5,15 +7,18 @@ from torch.nn.init import normal_, xavier_uniform_
 
 from src.utils.caml_utils import load_lookups, pad_desc_vecs
 from src.utils.mapper import ConfigMapper
+from src.utils.text_loggers import get_logger
+
+logger = get_logger(__name__)
 
 
 @ConfigMapper.map("models", "gatedcnn_nci")
-class GatedCNNEncoder(nn.Module):
+class GatedCNNNCI(nn.Module):
     def __init__(self, config):
-        super(GatedCNNEncoder, self).__init__()
+        super(GatedCNNNCI, self).__init__()
         self.max_length = config.max_length
         self.dropout = config.dropout
-        self.input_dim = config.embed_size
+        self.input_dim = config.input_dim
         self.hidden_dim = config.hidden_dim
         self.output_dim = config.output_dim
         self.bidirectional = config.bidirectional
@@ -24,6 +29,7 @@ class GatedCNNEncoder(nn.Module):
             dataset_dir=config.dataset_dir,
             mimic_dir=config.mimic_dir,
             static_dir=config.static_dir,
+            version=config.version,
             dropout=config.dropout,
             pad_token=config.pad_token,
             unk_token=config.unk_token,
@@ -43,15 +49,29 @@ class GatedCNNEncoder(nn.Module):
 
         if self.bidirectional:
             self.output_layer = OutputLayer(
+                embed_dir=config.embed_dir,
+                dataset_dir=config.dataset_dir,
+                mimic_dir=config.mimic_dir,
+                static_dir=config.static_dir,
+                version=config.version,
                 input_dim=2 * config.input_dim,
                 num_labels=config.output_dim,
-                embed_dir=config.embed_dir,
+                dropout=config.dropout,
+                pad_token=config.pad_token,
+                unk_token=config.unk_token,
             )
         else:
             self.output_layer = OutputLayer(
+                embed_dir=config.embed_dir,
+                dataset_dir=config.dataset_dir,
+                mimic_dir=config.mimic_dir,
+                static_dir=config.static_dir,
+                version=config.version,
                 input_dim=config.input_dim,
                 num_labels=config.num_labels,
-                embed_dir=config.embed_dir,
+                dropout=config.dropout,
+                pad_token=config.pad_token,
+                unk_token=config.unk_token,
             )
 
         self.variational_dropout = VariationalDropout(dropout=config.dropout)
@@ -85,12 +105,16 @@ class GatedCNNEncoder(nn.Module):
             padded_rev[i][: len(mat), :] = mat
         return padded_rev
 
-    def forward(self, data, desc):
+    def forward(self, data):
         """
         :param data: The input sequence, with dimesion (N, L)
         :param desc: Whether to use code description
         :return: logits, loss, hidden
         """
+        device = data.get_device()
+        if device == -1:
+            device = "cpu"
+
         # If this is the first forward pass, we will initialise the hidden
         # state.
         if self.hidden is None:
@@ -128,7 +152,7 @@ class GatedCNNEncoder(nn.Module):
             output = torch.cat([output, output_reverse], dim=2)
 
         if self.use_description:
-            logits = self.output_layer(output, self.desc_vecs)
+            logits = self.output_layer(output, self.desc_vecs.to(device))
         else:
             logits = self.output_layer(output, None)
         return logits
@@ -205,13 +229,14 @@ class WordEmbeddingLayer(nn.Module):
             # Pad and convert to torch tensor.
             self.desc_vecs = torch.Tensor(
                 list(zip(*itertools.zip_longest(*self.desc_vecs, fillvalue=0)))
-            )
+            ).long()
 
     def forward(self, x):
+        if self.return_pad_mask:
+            pad_mask = ~(x == self.pad_token_id)
         embedding = self.embed(x)
         x = self.dropout(embedding)
         if self.return_pad_mask:
-            pad_mask = ~(batch == pad_token_id)
             return x, pad_mask
         return x
 
@@ -307,12 +332,14 @@ class WeightShareConv1d(nn.Module):
             out_channels=out_channels,
             kernel_size=kernel_size,
         )
-        self.weight_2 = conv2.weight
-        self.bias_2 = conv2.bias
+        self.weight_2 = conv_layer_2.weight
+        self.bias_2 = conv_layer_2.bias
 
         self.init_conv_weights(init_mean, init_std)
 
         self.dropout = VariationalHidDropout(dropout=dropout)
+
+        self.dict = {}
 
     def init_conv_weights(self, init_mean, init_std):
         self.weight_1.data.normal_(mean=init_mean, std=init_std)
@@ -335,12 +362,12 @@ class WeightShareConv1d(nn.Module):
             (dilation, device)
         ] is None:
             self.dict[(dilation, device)] = F.conv1d(
-                input=x_1, weight=self.weight1, dilation=dilation
+                input=x_1, weight=self.weight_1, dilation=dilation
             )
 
         z_1 = self.dropout(z_1)
         injected = self.dict[(dilation, device)] + F.conv1d(
-            input=z_1, weight=self.weight2, bias=self.bias2, dilation=dilation
+            input=z_1, weight=self.weight_2, bias=self.bias_2, dilation=dilation
         )
         return injected
 
@@ -392,7 +419,7 @@ class GatedCNN(nn.Module):
         self.full_conv = WeightShareConv1d(
             input_dim=input_dim,
             hidden_dim=self.hidden_dim_for_conv,
-            output_channels=4 * self.hidden_dim_for_conv,
+            out_channels=4 * self.hidden_dim_for_conv,
             kernel_size=kernel_size,
             dropout=dropout,
             init_mean=init_mean,
@@ -447,7 +474,7 @@ class GatedCNN(nn.Module):
         for key in self.full_conv.dict:
             if key[1] == emb.get_device():
                 self.full_conv.dict[key] = None
-        self.full_conv.drop.reset_mask(Z[:, self.input_dim :])
+        self.full_conv.dropout.reset_mask(Z[:, self.input_dim :])
 
         for dilation_per_level in self.dilations:
             Z = self.gating(Z, dilation=dilation_per_level, hc=hc)
@@ -482,16 +509,37 @@ class VariationalDropout(nn.Module):
             # Dimension (N, L, C)
             m = x.data.new(x.size(0), 1, x.size(2)).bernoulli_(1 - self.dropout)
         with torch.no_grad():
-            mask = m / (1 - dropout)
+            mask = m / (1 - self.dropout)
             mask = mask.expand_as(x)
         return mask * x
 
 
 class OutputLayer(nn.Module):
-    def __init__(self, input_dim, num_labels, embed_dir, dropout):
+    def __init__(
+        self,
+        embed_dir,
+        dataset_dir,
+        mimic_dir,
+        static_dir,
+        version,
+        input_dim,
+        num_labels,
+        dropout=0.2,
+        pad_token="<pad>",
+        unk_token="<unk>",
+    ):
         super(OutputLayer, self).__init__()
 
-        self.word_embedding_layer = WordEmbeddingLayer(embed_dir, dropout)
+        self.word_embedding_layer = WordEmbeddingLayer(
+            embed_dir=embed_dir,
+            dataset_dir=dataset_dir,
+            mimic_dir=mimic_dir,
+            static_dir=static_dir,
+            version=version,
+            dropout=dropout,
+            pad_token=pad_token,
+            unk_token=unk_token,
+        )
 
         self.U = nn.Linear(input_dim, num_labels)
         self.final = nn.Linear(input_dim, num_labels)
