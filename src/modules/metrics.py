@@ -23,6 +23,7 @@ def to_np_array(array):
         array = np.array(array)
     return array
 
+
 def _auc_job(x):
     return roc_auc_score(x[0], x[1])
 

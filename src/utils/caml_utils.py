@@ -101,3 +101,18 @@ def pad_desc_vecs(desc_vecs):
     for vec in desc_vecs:
         pad_vecs.append(vec + [0] * (desc_len - len(vec)))
     return pad_vecs
+
+
+def load_description_tokens(lookup_dict, vocab_json):
+    # load description one-hot vectors from file
+    dv_dict = {}
+
+    with open("%s/description_vectors.vocab" % (data_dir), "r") as vfile:
+        r = csv.reader(vfile, delimiter=" ")
+        # header
+        next(r)
+        for row in r:
+            code = row[0]
+            vec = [int(x) for x in row[1:]]
+            dv_dict[code] = vec
+    return dv_dict

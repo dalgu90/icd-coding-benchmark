@@ -3,11 +3,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 from torch.nn.init import normal_, xavier_uniform_
 
-from src.utils.caml_utils import load_lookups, pad_desc_vecs
-from src.utils.mapper import ConfigMapper
 
-
-@ConfigMapper.map("models", "gatedcnn_nci")
 class GatedCNNEncoder(nn.Module):
     def __init__(self, config):
         super(GatedCNNEncoder, self).__init__()
@@ -44,7 +40,7 @@ class GatedCNNEncoder(nn.Module):
         if self.bidirectional:
             self.output_layer = OutputLayer(
                 input_dim=2 * config.input_dim,
-                num_labels=config.output_dim,
+                num_labels=config.num_labels,
                 embed_dir=config.embed_dir,
             )
         else:

@@ -415,7 +415,7 @@ class Fusion(nn.Module):
 
     def __init__(self, config):
         super(Fusion, self).__init__()
-        logger.info(f"Initialising %s", self.__class__.__name__)
+        logger.info("Initialising %s", self.__class__.__name__)
         logger.debug(
             "Initialising %s with config: %s", self.__class__.__name__, config
         )
