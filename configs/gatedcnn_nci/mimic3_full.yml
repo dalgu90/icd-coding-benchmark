@@ -1,9 +1,9 @@
 paths:
   mimic_dir: &mimic_dir datasets/mimic3/csv
   static_dir: &static_dir datasets/mimic3/static
-  dataset_dir: &dataset_dir datasets/mimic3_50_old
-  word2vec_dir: &word2vec_dir datasets/mimic3_50_old/word2vec
-  output_dir: &output_dir results/dcan_mimic3_50_old
+  dataset_dir: &dataset_dir datasets/mimic3_full
+  word2vec_dir: &word2vec_dir datasets/mimic3_full/word2vec
+  output_dir: &output_dir results/gatedcnn_nci_mimic3_full
 
 dataset:
   name: base_dataset
@@ -30,25 +30,26 @@ dataset:
       data_file: test.json
 
 model:
-  name: dcan
+  name: CAML
   params:
-    num_classes: 50
-    word_representation_layer:
-      params:
-        init_params:
-          embed_dir: *word2vec_dir
-          dropout: 0.2
-        freeze_layer: true
-    add_emb_size_to_channel_sizes: true
-    conv_channel_sizes: [[600, 600], [600, 600, 600], [600, 600, 600]]
-    kernel_sizes: [[2, 2], [2, 2], [2, 2]]
-    strides: [[1, 1], [1, 1], [1, 1]]
-    dilations: [[1, 1], [2, 2], [4, 4]]                 # 2^(temporal_conv_net_level)
-    paddings: [[1, 1], [2, 2], [4, 4]]                  # (kernel_size - 1) * dilation_size
+    version: mimic3
+    dataset_dir: *dataset_dir
+    mimic_dir: *mimic_dir
+    static_dir: *static_dir
+    embed_dir: *word2vec_dir
+    max_length: 2500
     dropout: 0.2
-    weight_norm: true
-    projection_size: 300
-    activation: "relu"
+    input_dim: 100
+    hidden_dim: 100
+    output_dim: 8922
+    bidirectional: false
+    use_description: true
+    pad_token: "<pad>"
+    unk_token: "<unk>"
+    kernel_size: 3
+    init_mean: 0
+    init_std: 0.01
+    levels: 3
 
 trainer:
   name: base_trainer
@@ -60,15 +61,14 @@ trainer:
       shuffle: false
       drop_last: true
     loss:
-      name: BinaryCrossEntropyWithLabelSmoothingLoss
-      params:
-        alpha: 0.1
+      name: BinaryCrossEntropyLoss
+      params: null
     optimizer:
       name: adam
       params:
         lr: 0.0001
         weight_decay: 0.0
-    max_epochs: 150
+    max_epochs: 200
     lr_scheduler: null
     stopping_criterion:
       metric:
@@ -90,14 +90,14 @@ trainer:
             k: 8
         desired: max
     eval_metrics: &eval_metrics
-      - name: prec_at_5
-        class: prec_at_k
-        params:
-          k: 5
       - name: prec_at_8
         class: prec_at_k
         params:
           k: 8
+      - name: prec_at_15
+        class: prec_at_k
+        params:
+          k: 15
       - name: macro_f1
       - name: micro_f1
       - name: macro_auc
@@ -117,12 +117,12 @@ trainer:
         interval_unit: epoch
         metric:
           - name: loss
-          - name: prec_at_5
           - name: prec_at_8
+          - name: prec_at_15
           - name: macro_f1
           - name: micro_f1
           - name: macro_auc
           - name: micro_auc
-    seed: 1
+    seed: 1337
     use_gpu: true
-    initialise_hidden_states: false
+    initialise_hidden_states: true

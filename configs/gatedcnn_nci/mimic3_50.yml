@@ -3,7 +3,7 @@ paths:
   static_dir: &static_dir datasets/mimic3/static
   dataset_dir: &dataset_dir datasets/mimic3_50
   word2vec_dir: &word2vec_dir datasets/mimic3_50/word2vec
-  output_dir: &output_dir results/CAML_mimic3_50
+  output_dir: &output_dir results/gatedcnn_nci_mimic3_50
 
 dataset:
   name: base_dataset
@@ -30,22 +30,26 @@ dataset:
       data_file: test.json
 
 model:
-  name: CAML
+  name: gatedcnn_nci
   params:
     version: mimic3
     dataset_dir: *dataset_dir
     mimic_dir: *mimic_dir
     static_dir: *static_dir
-    word2vec_dir: *word2vec_dir
-    num_classes: 50
-    embed_size: 100
-    kernel_size: 10
-    num_filter_maps: 50
+    embed_dir: *word2vec_dir
+    max_length: 2500
     dropout: 0.2
-    lmbda: 0.0  # Positive for DR-CAML
-    init_code_emb: false
+    input_dim: 100
+    hidden_dim: 100
+    output_dim: 50
+    bidirectional: false
+    use_description: true
     pad_token: "<pad>"
     unk_token: "<unk>"
+    kernel_size: 3
+    init_mean: 0
+    init_std: 0.01
+    levels: 3
 
 trainer:
   name: base_trainer
@@ -121,3 +125,4 @@ trainer:
           - name: micro_auc
     seed: 1337
     use_gpu: true
+    initialise_hidden_states: true

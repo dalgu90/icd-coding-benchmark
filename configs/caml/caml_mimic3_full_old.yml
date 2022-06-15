@@ -1,9 +1,9 @@
 paths:
   mimic_dir: &mimic_dir datasets/mimic3/csv
   static_dir: &static_dir datasets/mimic3/static
-  dataset_dir: &dataset_dir datasets/mimic3_50_old
-  word2vec_dir: &word2vec_dir datasets/mimic3_50_old/word2vec
-  output_dir: &output_dir results/CAML_mimic3_50_old
+  dataset_dir: &dataset_dir datasets/mimic3_full_old
+  word2vec_dir: &word2vec_dir datasets/mimic3_full_old/word2vec
+  output_dir: &output_dir results/CAML_mimic3_full_old
 
 dataset:
   name: base_dataset
@@ -37,7 +37,7 @@ model:
     mimic_dir: *mimic_dir
     static_dir: *static_dir
     word2vec_dir: *word2vec_dir
-    num_classes: 50
+    num_classes: 8922
     embed_size: 100
     kernel_size: 10
     num_filter_maps: 50
@@ -86,14 +86,14 @@ trainer:
             k: 8
         desired: max
     eval_metrics: &eval_metrics
-      - name: prec_at_5
-        class: prec_at_k
-        params:
-          k: 5
       - name: prec_at_8
         class: prec_at_k
         params:
           k: 8
+      - name: prec_at_15
+        class: prec_at_k
+        params:
+          k: 15
       - name: macro_f1
       - name: micro_f1
       - name: macro_auc
@@ -113,11 +113,12 @@ trainer:
         interval_unit: epoch
         metric:
           - name: loss
-          - name: prec_at_5
           - name: prec_at_8
+          - name: prec_at_15
           - name: macro_f1
           - name: micro_f1
           - name: macro_auc
           - name: micro_auc
     seed: 1337
     use_gpu: true
+    initialise_hidden_states: false
