@@ -117,3 +117,4 @@ trainer:
           - name: micro_auc
     seed: 1337
     use_gpu: true
+    initialise_hidden_states: false

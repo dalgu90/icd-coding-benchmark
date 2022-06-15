@@ -1,9 +1,9 @@
 paths:
   mimic_dir: &mimic_dir datasets/mimic3/csv
   static_dir: &static_dir datasets/mimic3/static
-  dataset_dir: &dataset_dir datasets/mimic3_50_old
-  word2vec_dir: &word2vec_dir datasets/mimic3_50_old/word2vec
-  output_dir: &output_dir results/gatedcnn_nci_mimic3_50_old
+  dataset_dir: &dataset_dir datasets/mimic3_full
+  word2vec_dir: &word2vec_dir datasets/mimic3_full/word2vec
+  output_dir: &output_dir results/gatedcnn_nci_mimic3_full
 
 dataset:
   name: base_dataset
@@ -30,7 +30,7 @@ dataset:
       data_file: test.json
 
 model:
-  name: gatedcnn_nci
+  name: CAML
   params:
     version: mimic3
     dataset_dir: *dataset_dir
@@ -41,8 +41,8 @@ model:
     dropout: 0.2
     input_dim: 100
     hidden_dim: 100
-    output_dim: 50
-    bidirectional: true
+    output_dim: 8922
+    bidirectional: false
     use_description: true
     pad_token: "<pad>"
     unk_token: "<unk>"
@@ -66,7 +66,7 @@ trainer:
     optimizer:
       name: adam
       params:
-        lr: 0.000001
+        lr: 0.0001
         weight_decay: 0.0
     max_epochs: 200
     lr_scheduler: null
@@ -90,14 +90,14 @@ trainer:
             k: 8
         desired: max
     eval_metrics: &eval_metrics
-      - name: prec_at_5
-        class: prec_at_k
-        params:
-          k: 5
       - name: prec_at_8
         class: prec_at_k
         params:
           k: 8
+      - name: prec_at_15
+        class: prec_at_k
+        params:
+          k: 15
       - name: macro_f1
       - name: micro_f1
       - name: macro_auc
@@ -117,11 +117,12 @@ trainer:
         interval_unit: epoch
         metric:
           - name: loss
-          - name: prec_at_5
           - name: prec_at_8
+          - name: prec_at_15
           - name: macro_f1
           - name: micro_f1
           - name: macro_auc
           - name: micro_auc
     seed: 1337
     use_gpu: true
+    initialise_hidden_states: true

@@ -42,7 +42,7 @@ model:
     input_dim: 100
     hidden_dim: 100
     output_dim: 8922
-    bidirectional: true
+    bidirectional: false
     use_description: true
     pad_token: "<pad>"
     unk_token: "<unk>"
@@ -125,3 +125,4 @@ trainer:
           - name: micro_auc
     seed: 1337
     use_gpu: true
+    initialise_hidden_states: true

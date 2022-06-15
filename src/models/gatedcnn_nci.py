@@ -68,7 +68,7 @@ class GatedCNNNCI(nn.Module):
                 static_dir=config.static_dir,
                 version=config.version,
                 input_dim=config.input_dim,
-                num_labels=config.num_labels,
+                num_labels=config.output_dim,
                 dropout=config.dropout,
                 pad_token=config.pad_token,
                 unk_token=config.unk_token,
@@ -85,7 +85,7 @@ class GatedCNNNCI(nn.Module):
     def init_hidden(self, batch_size):
         h_size = self.hidden_dim + self.output_dim
         weight = next(self.parameters()).data
-        return (
+        self.hidden = (
             weight.new(batch_size, h_size, 1).zero_(),
             weight.new(batch_size, h_size, 1).zero_(),
         )
@@ -95,12 +95,16 @@ class GatedCNNNCI(nn.Module):
         X -> batch, seq_len, dim
         mask -> batch, seq_len
         """
+        device = X.get_device()
+        if device == -1:
+            device = "cpu"
+
         mask_sum = torch.sum(mask, 1).int()
         xfs = []
         for x, c in zip(X, mask_sum):
             xf = torch.flip(x[:c], [0])
             xfs.append(xf)
-        padded_rev = torch.zeros((len(xfs), X.size(1), X.size(2))).cuda()
+        padded_rev = torch.zeros((len(xfs), X.size(1), X.size(2))).to(device)
         for i, mat in enumerate(xfs):
             padded_rev[i][: len(mat), :] = mat
         return padded_rev
@@ -552,11 +556,11 @@ class OutputLayer(nn.Module):
         if desc is not None:
             desc_vec, _ = self.word_embedding_layer(desc)
             desc_vec = torch.mean(desc_vec, dim=1).unsqueeze(0)
-            mmt = desc_vec.matmul(x.transpose(1, 2))
+            mmt = x.matmul(desc_vec)
         else:
             mmt = self.U.weight.matmul(x.transpose(1, 2))
 
-        m = mmt.matmul(x)
+        m = x.transpose(1, 2).matmul(mmt)
 
         y = self.final.weight.mul(m)
         logits = self.proj_layer(y).squeeze(-1).add(self.final.bias)

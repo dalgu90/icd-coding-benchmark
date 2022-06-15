@@ -174,6 +174,10 @@ class BaseTrainer:
                     batch_inputs = batch_inputs.cuda()
                     batch_labels = batch_labels.cuda()
 
+                # Initialise the hidden states.
+                if self.config.initialise_hidden_states:
+                    model.init_hidden(batch_inputs.size(0))
+
                 batch_outputs = model(batch_inputs)
                 batch_loss = self.loss_fn(
                     input=batch_outputs, target=batch_labels
