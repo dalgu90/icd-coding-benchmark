@@ -1,4 +1,6 @@
 """Metrics."""
+import multiprocessing
+
 import numpy as np
 from sklearn.metrics import (
     accuracy_score,
@@ -20,6 +22,9 @@ def to_np_array(array):
     if array is not None and not isinstance(array, np.ndarray):
         array = np.array(array)
     return array
+
+def _auc_job(x):
+    return roc_auc_score(x[0], x[1])
 
 
 class Metric:
@@ -76,13 +81,27 @@ class MacroF1(Metric):
 
 @ConfigMapper.map("metrics", "macro_auc")
 class MacroAUC(Metric):
+    def __init__(self, config):
+        super().__init__(config)
+        if self.config and "num_process" in self.config.as_dict():
+            self.num_process = self.config.num_process
+        else:
+            self.num_process = min(16, multiprocessing.cpu_count())
+
     def forward(self, y_true, y_pred=None, p_pred=None):
         assert p_pred is not None
         # Filter out the class without positive examples
         pos_flag = y_true.sum(axis=0) > 0
         y_true = y_true[:, pos_flag]
         p_pred = p_pred[:, pos_flag]
-        return roc_auc_score(y_true, p_pred, average="macro")
+        if self.num_process <= 1:
+            return roc_auc_score(y_true, p_pred, average="macro")
+        else:
+            pool = multiprocessing.Pool(self.num_process)
+            result = pool.map_async(_auc_job, list(zip(y_true.T, p_pred.T)))
+            pool.close()
+            pool.join()
+            return np.mean(result.get())
 
 
 ##########################################################################
