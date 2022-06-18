@@ -1,6 +1,6 @@
 """
-    ICD Coding from Clinical Text Using Multi-Filter Residual Convolutional Neural Network , 2020
-    https://github.com/foxlf823/Multi-Filter-Residual-Convolutional-Neural-Network
+ICD Coding from Clinical Text Using Multi-Filter Residual Convolutional Neural Network, 2020
+https://github.com/foxlf823/Multi-Filter-Residual-Convolutional-Neural-Network
 """
 
 from math import floor
@@ -86,7 +86,7 @@ class MultiCNN(nn.Module):
                 self.word_rep.feature_size,
                 config.num_filter_maps,
                 kernel_size=filter_size,
-                padding=int(floor(filter_size / 2)),
+                padding=floor(filter_size / 2),
             )
             xavier_uniform(self.conv.weight)
         else:
@@ -98,7 +98,7 @@ class MultiCNN(nn.Module):
                     self.word_rep.feature_size,
                     config.num_filter_maps,
                     kernel_size=filter_size,
-                    padding=int(floor(filter_size / 2)),
+                    padding=floor(filter_size / 2),
                 )
                 xavier_uniform(tmp.weight)
                 self.conv.add_module("conv-{}".format(filter_size), tmp)
@@ -122,10 +122,6 @@ class MultiCNN(nn.Module):
         y, loss = self.output_layer(x, target, text_inputs)
         return y, loss
 
-    def freeze_net(self):
-        for p in self.word_rep.embed.parameters():
-            p.requires_grad = False
-
 
 class ResidualBlock(nn.Module):
     def __init__(
@@ -139,7 +135,7 @@ class ResidualBlock(nn.Module):
                 outchannel,
                 kernel_size=kernel_size,
                 stride=stride,
-                padding=int(floor(kernel_size / 2)),
+                padding=floor(kernel_size / 2),
                 bias=False,
             ),
             nn.BatchNorm1d(outchannel),
@@ -149,7 +145,7 @@ class ResidualBlock(nn.Module):
                 outchannel,
                 kernel_size=kernel_size,
                 stride=1,
-                padding=int(floor(kernel_size / 2)),
+                padding=floor(kernel_size / 2),
                 bias=False,
             ),
             nn.BatchNorm1d(outchannel),
@@ -219,10 +215,6 @@ class ResCNN(nn.Module):
         y, loss = self.output_layer(x)
         return y, loss
 
-    def freeze_net(self):
-        for p in self.word_rep.embed.parameters():
-            p.requires_grad = False
-
 
 @ConfigMapper.map("models", "multirescnn")
 class MultiResCNN(nn.Module):
@@ -249,7 +241,7 @@ class MultiResCNN(nn.Module):
                 self.word_rep.feature_size,
                 self.word_rep.feature_size,
                 kernel_size=filter_size,
-                padding=int(floor(filter_size / 2)),
+                padding=floor(filter_size / 2),
             )
             xavier_uniform(tmp.weight)
             one_channel.add_module("baseconv", tmp)
@@ -287,7 +279,3 @@ class MultiResCNN(nn.Module):
         x = torch.cat(conv_result, dim=2)
         y = self.output_layer(x)
         return y
-
-    def freeze_net(self):
-        for p in self.word_rep.embed.parameters():
-            p.requires_grad = False

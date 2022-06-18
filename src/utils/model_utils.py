@@ -153,11 +153,6 @@ def _readFloat(f):
     return f_num
 
 
-def norm2one(vec):
-    root_sum_square = np.sqrt(np.sum(np.square(vec)))
-    return vec / root_sum_square
-
-
 def load_pretrain_emb(embedding_path):
     embedd_dim = -1
     embedd_dict = dict()
