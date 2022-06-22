@@ -68,6 +68,8 @@ class LDAMLoss(BCEWithLogitsLoss):
 
     def forward(self, input, target):
         device = input.get_device()
+        if device == -1:
+            device = "cpu"
         target = target.to(device)
         self.class_margin = self.class_margin.to(device)
         if target.dtype != torch.float:

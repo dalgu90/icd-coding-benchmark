@@ -72,7 +72,7 @@ trainer:
     lr_scheduler: null
     stopping_criterion:
       metric:
-        name: prec_at_8
+        name: prec_at_5
       desired: max
       patience: 3
     checkpoint_saver:
@@ -84,10 +84,10 @@ trainer:
         ckpt_fname_format: "ckpt-{}.pth"
         best_fname_format: "best-{}.pth"
         metric:
-          name: prec_at_8
+          name: prec_at_5
           class: prec_at_k
           params:
-            k: 8
+            k: 5
         desired: max
     eval_metrics: &eval_metrics
       - name: prec_at_5
