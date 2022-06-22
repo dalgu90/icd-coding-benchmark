@@ -11,7 +11,7 @@ repos:
     hooks:
       - id: black
         args: ["--config", "./pyproject.toml"]
-        language_version: python3.7
+        language_version: python3
 
   - repo: https://github.com/asottile/seed-isort-config
     rev: v2.2.0

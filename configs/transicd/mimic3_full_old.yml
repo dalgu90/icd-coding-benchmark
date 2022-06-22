@@ -42,7 +42,7 @@ model:
     num_layers: 2
     num_heads: 8
     transformer_ff_up_scale_factor_for_hidden_dim: 4
-    dropout: 0.2
+    dropout: 0.1
     # Label Attention Layer params
     attn_expansion: 2
     epsilon: !!float 1e-9
