@@ -74,7 +74,7 @@ trainer:
       metric:
         name: prec_at_5
       desired: max
-      patience: 3
+      patience: 5
     checkpoint_saver:
       name: base_saver
       params:
