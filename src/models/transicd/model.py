@@ -174,7 +174,8 @@ class PositionalEmbeddingLayer(nn.Module):
         super(PositionalEmbeddingLayer, self).__init__()
         logger.debug(
             f"Initialising {self.__class__.__name__} with "
-            f"d_model = {d_model}, dropout = {dropout}, max_len = {max_len}"
+            f"d_model = {d_model}, dropout = {dropout}, max_len = {max_len}, "
+            f"device = {device}"
         )
 
         self.device = device
