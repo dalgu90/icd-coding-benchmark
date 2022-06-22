@@ -66,9 +66,9 @@ trainer:
     optimizer:
       name: adam
       params:
-        lr: 0.000001
+        lr: 0.01
         weight_decay: 0.0
-    max_epochs: 200
+    max_epochs: 100
     lr_scheduler: null
     stopping_criterion:
       metric:
