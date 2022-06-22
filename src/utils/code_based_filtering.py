@@ -14,8 +14,9 @@ logger = get_logger(__name__)
 class TopKCodes:
     def __init__(self, k, labels_save_path, labels_freq_save_path=None):
         logger.debug(
-            "Finding top-k codes with the following args: k = {}, "
-            "label_save_path = {}".format(k, labels_save_path)
+            f"Finding top-k codes with the following args: k = {k}, "
+            f"labels_save_path = {labels_save_path}, "
+            f"labels_freq_save_path = {labels_freq_save_path}"
         )
         self.k = k
         self.top_k_codes = []
