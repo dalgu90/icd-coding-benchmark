@@ -52,7 +52,7 @@ class TopKCodes:
     def find_top_k_codes(self, label_col_name, code_df):
         counts = Counter()
         for _, row in code_df.iterrows():
-            for label in set(row[label_col_name].split(";")):
+            for label in row[label_col_name].split(";"):
                 counts[label] += 1
         if self.k == 0:
             self.top_k_codes = [code for code, _ in counts.items()]
