@@ -1,8 +1,8 @@
 paths:
   mimic_dir: &mimic_dir datasets/mimic3/csv
   static_dir: &static_dir datasets/mimic3/static
-  dataset_dir: &dataset_dir datasets/mimic3_full_old
-  word2vec_dir: &word2vec_dir datasets/mimic3_full_old/word2vec
+  dataset_dir: &dataset_dir datasets/mimic3_full_old_transicd
+  word2vec_dir: &word2vec_dir datasets/mimic3_full_old_transicd/word2vec
 
 preprocessing:
   name: mimic_iii_preprocessing_pipeline
@@ -59,7 +59,8 @@ preprocessing:
           stemmer_name: nltk.SnowballStemmer
       truncate:
         perform: false
-    incorrect_code_loading: true
+    incorrect_code_loading: false
+    count_duplicate_codes: true
     code_preprocessing:
       top_k: 0                       # enter 0 for all codes
       code_type: both

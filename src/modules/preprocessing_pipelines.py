@@ -138,7 +138,8 @@ class MimiciiiPreprocessingPipeline:
         else:
             code_df = pd.concat([diagnosis_code_df, procedure_code_df])
 
-        # Delete unnecessary columns. (When we are not reprocuding CAML's ver)
+        # Delete unnecessary columns (when we are not reproducing CAML's
+        # version).
         if not self.config.incorrect_code_loading:
             code_df = code_df[
                 [
@@ -224,14 +225,14 @@ class MimiciiiPreprocessingPipeline:
             self.cols.text
         ].progress_map(self.preprocess_clinical_note)
 
-        if not self.config.incorrect_code_loading:
+        if not self.config.count_duplicate_codes:
             codes_grouped = code_df.groupby(self.cols.hadm_id)[
                 self.cols.icd9_code
             ].apply(
                 lambda codes: ";".join(map(str, list(dict.fromkeys(codes))))
             )
         else:
-            # CAML's notebook counts duplicated ICD codes separately
+            # CAML's notebook counts duplicate ICD codes separately.
             codes_grouped = code_df.groupby(self.cols.hadm_id)[
                 self.cols.icd9_code
             ].apply(lambda codes: ";".join(codes))

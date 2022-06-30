@@ -199,9 +199,8 @@ class PositionalEmbeddingLayer(nn.Module):
         self.register_buffer("positional_emb", positional_emb)
 
     def forward(self, x):
-        x = x + Variable(
-            self.positional_emb[:, : x.size(1)], requires_grad=False
-        )
+        x = x + self.positional_emb[:, : x.size(1)]
+
         return self.dropout(x)
 
 

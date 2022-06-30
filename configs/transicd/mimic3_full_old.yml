@@ -1,8 +1,8 @@
 paths:
   mimic_dir: &mimic_dir datasets/mimic3/csv
   static_dir: &static_dir datasets/mimic3/static
-  dataset_dir: &dataset_dir datasets/mimic3_full_old
-  word2vec_dir: &word2vec_dir datasets/mimic3_full_old/word2vec
+  dataset_dir: &dataset_dir datasets/mimic3_full_old_transicd
+  word2vec_dir: &word2vec_dir datasets/mimic3_full_old_transicd/word2vec
   output_dir: &output_dir results/transicd_mimic3_full_old
 
 dataset:
