@@ -1,4 +1,4 @@
-" Method containing activation functions"
+"""Method containing activation functions"""
 from torch.optim import SGD, Adam, AdamW
 
 from src.utils.mapper import ConfigMapper

@@ -45,7 +45,7 @@ model:
     dropout: 0.1
     # Label Attention Layer params
     attn_expansion: 2
-    epsilon: !!float 1e-9
+    epsilon: !!float -1e9
     use_gpu: true
 
 trainer:
