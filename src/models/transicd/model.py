@@ -44,7 +44,6 @@ class TransICD(nn.Module):
 
         if config.freeze_embedding_layer:
             self.freeze_layer(self.word_embedding_layer)
-            self.freeze_layer(self.positional_embedding_layer)
 
         self.pad_idx = config.pad_idx
         self.num_classes = config.num_classes
