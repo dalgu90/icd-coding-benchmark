@@ -12,7 +12,7 @@ import torch.nn.functional as F
 from torch.autograd import Variable
 from torch.nn.init import xavier_uniform
 
-from src.utils.caml_utils import load_lookups, pad_desc_vecs
+from src.utils.model_utils import load_lookups, pad_desc_vecs
 from src.utils.mapper import ConfigMapper
 from src.utils.text_loggers import get_logger
 
