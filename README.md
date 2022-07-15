@@ -23,7 +23,7 @@ The benchmark encompasses all the procedures of ICD coding: dataset pre-processi
 
 We currently provide (items in parentheses are under development):
 - Four preset of preprocessed datasets: MIMIC-III full, top-50, full (old), top-50 (old), where we referred to (old) as the version of CAML[^2].
-- ICD coding models: CNN, CAML, DCAN, Fusion, (MultiResCNN, LAAT)
+- ICD coding models: CNN, CAML, DCAN, Fusion, MultiResCNN, TransICD, (LAAT)
 - (Interactive demo)
 
 
