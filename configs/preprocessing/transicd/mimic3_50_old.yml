@@ -1,8 +1,8 @@
 paths:
   mimic_dir: &mimic_dir datasets/mimic3/csv
   static_dir: &static_dir datasets/mimic3/static
-  dataset_dir: &dataset_dir datasets/mimic3_50_old
-  word2vec_dir: &word2vec_dir datasets/mimic3_50_old/word2vec
+  dataset_dir: &dataset_dir datasets/mimic3_50_old_transicd
+  word2vec_dir: &word2vec_dir datasets/mimic3_50_old_transicd/word2vec
 
 preprocessing:
   name: mimic_iii_preprocessing_pipeline
@@ -18,6 +18,7 @@ preprocessing:
       val_json_name: val.json           # will be saved
       test_json_name: test.json         # will be saved
       label_json_name: labels.json      # will be computed and saved
+      label_freq_json_name: label_freq.json
     dataset_metadata:
       column_names:
         subject_id: SUBJECT_ID
@@ -46,13 +47,20 @@ preprocessing:
         perform: true
       remove_numeric:
         perform: true
+        replace_numerics_with_letter: "n"
       remove_stopwords:
-        perform: false
+        perform: true
+        params:
+          stopwords_file_path: null
+          remove_common_medical_terms: true
       stem_or_lemmatize:
-        perform: false
+        perform: true
+        params:
+          stemmer_name: nltk.SnowballStemmer
       truncate:
         perform: false
-    incorrect_code_loading: true
+    incorrect_code_loading: false
+    count_duplicate_codes: true
     code_preprocessing:
       top_k: 50                       # enter 0 for all codes
       code_type: both
@@ -69,6 +77,8 @@ preprocessing:
         pad_token: "<pad>"
         unk_token: "<unk>"
         word2vec_params:
-          vector_size: 100
-          min_count: 3
-          epochs: 5
+          vector_size: 128
+          window: 5
+          min_count: 0
+          negative: 5
+          epochs: 30

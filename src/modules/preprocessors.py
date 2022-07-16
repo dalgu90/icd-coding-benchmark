@@ -101,7 +101,13 @@ class ClinicalNotePreprocessor:
             tokens = text.split(" ")
 
         if self._config.remove_numeric.perform:
-            tokens = self.remove_numeric(tokens)
+            if self._config.remove_numeric.replace_numerics_with_letter:
+                tokens = self.remove_numeric(
+                    tokens,
+                    self._config.remove_numeric.replace_numerics_with_letter,
+                )
+            else:
+                tokens = self.remove_numeric(tokens)
 
         if self._config.remove_stopwords.perform:
             tokens = self.remove_stopwords(tokens)
@@ -122,8 +128,19 @@ class ClinicalNotePreprocessor:
         tokens = self.punct_tokenizer.tokenize(text)
         return tokens
 
-    def remove_numeric(self, tokens):
-        return [t for t in tokens if not t.isnumeric()]
+    def remove_numeric(self, tokens, replace_numerics_with_letter=None):
+        if replace_numerics_with_letter is not None:
+            tokens = [
+                re.sub("\\d", replace_numerics_with_letter, t)
+                for t in tokens
+                if not t.isnumeric()
+            ]
+        else:
+            tokens = [t for t in tokens if not t.isnumeric()]
+        return tokens
+
+    def replace_numerics_with_letter(self, tokens, letter):
+        return [letter if t.isnumeric() else t for t in tokens]
 
     def remove_stopwords(self, tokens):
         return [t for t in tokens if t not in self.stopword_list]

@@ -23,7 +23,7 @@ The benchmark encompasses all the procedures of ICD coding: dataset pre-processi
 
 We currently provide (items in parentheses are under development):
 - Four preset of preprocessed datasets: MIMIC-III full, top-50, full (old), top-50 (old), where we referred to (old) as the version of CAML[^2].
-- ICD coding models: CNN, CAML, MultiResCNN, DCAN, Fusion, (LAAT)
+- ICD coding models: CNN, CAML, MultiResCNN, DCAN, Fusion, TransICD, (LAAT)
 - Interactive demo
 
 
@@ -64,6 +64,7 @@ $ python run.py --config_path configs/caml_mimic3_50.yml --test  # Test
 | MultiResCNN  | 0.926459  | 0.949508  | 0.644801 | 0.718600 | 0.672604 |
 | DCAN         | 0.933557  | 0.953008  | 0.658478 | 0.727083 | 0.681014 |
 | Fusion       | 0.932295  | 0.952335  | 0.660386 | 0.726407 | 0.678726 |
+| TransICD     | 0.918623  | 0.940373  | 0.603596 | 0.680459 | 0.644898 |
 
 - MIMIC-III full (old)
 
@@ -82,6 +83,7 @@ $ python run.py --config_path configs/caml_mimic3_50.yml --test  # Test
 | MultiResCNN  | 0.899234  | 0.927863  | 0.589514 | 0.670533 | 0.640023 |
 | DCAN         | 0.913397  | 0.937868  | 0.611135 | 0.688379 | 0.649393 |
 | Fusion       | 0.904610  | 0.929229  | 0.611743 | 0.674127 | 0.640023 |
+| TransICD     | 0.896408  | 0.924700  | 0.544390 | 0.639996 | 0.621862 |
 
 
 ## Run demo

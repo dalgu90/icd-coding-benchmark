@@ -3,6 +3,7 @@ import sys
 from collections import Counter
 
 import pandas as pd
+from sklearn.preprocessing import MultiLabelBinarizer
 
 from src.utils.file_loaders import save_json
 from src.utils.text_loggers import get_logger
@@ -11,21 +12,28 @@ logger = get_logger(__name__)
 
 
 class TopKCodes:
-    def __init__(self, k, labels_save_path):
+    def __init__(self, k, labels_save_path, labels_freq_save_path=None):
         logger.debug(
-            "Finding top-k codes with the following args: k = {}, "
-            "label_save_path = {}".format(k, labels_save_path)
+            f"Finding top-k codes with the following args: k = {k}, "
+            f"labels_save_path = {labels_save_path}, "
+            f"labels_freq_save_path = {labels_freq_save_path}"
         )
         self.k = k
         self.top_k_codes = []
         self.labels_save_path = labels_save_path
+        self.labels_freq_save_path = labels_freq_save_path
 
     def __call__(self, label_col_name, code_df):
-        self.find_top_k_codes(label_col_name, code_df)
+        label_counts = self.find_top_k_codes(label_col_name, code_df)
+
         save_json(
             {v: k for k, v in enumerate(self.top_k_codes)},
             self.labels_save_path,
         )
+
+        if self.labels_freq_save_path is not None:
+            save_json(label_counts, self.labels_freq_save_path)
+
         if self.k == 0:
             return code_df
         indices_to_delete = []
@@ -52,3 +60,8 @@ class TopKCodes:
             self.top_k_codes = [code for code, _ in counts.most_common(self.k)]
 
         logger.debug("top-k codes: {}".format(self.top_k_codes))
+
+        if self.k != 0:
+            counts = counts.most_common(self.k)
+        counts = dict(counts)
+        return counts

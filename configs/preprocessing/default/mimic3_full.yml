@@ -1,8 +1,8 @@
 paths:
   mimic_dir: &mimic_dir datasets/mimic3/csv
   static_dir: &static_dir datasets/mimic3/static
-  dataset_dir: &dataset_dir datasets/mimic3_50
-  word2vec_dir: &word2vec_dir datasets/mimic3_50/word2vec
+  dataset_dir: &dataset_dir datasets/mimic3_full
+  word2vec_dir: &word2vec_dir datasets/mimic3_full/word2vec
 
 preprocessing:
   name: mimic_iii_preprocessing_pipeline
@@ -18,6 +18,7 @@ preprocessing:
       val_json_name: val.json           # will be saved
       test_json_name: test.json         # will be saved
       label_json_name: labels.json      # will be computed and saved
+      label_freq_json_name: null
     dataset_metadata:
       column_names:
         subject_id: SUBJECT_ID
@@ -46,6 +47,7 @@ preprocessing:
         perform: true
       remove_numeric:
         perform: true
+        replace_numerics_with_letter: null
       remove_stopwords:
         perform: true
         params:
@@ -58,8 +60,9 @@ preprocessing:
       truncate:
         perform: false
     incorrect_code_loading: false
+    count_duplicates: false
     code_preprocessing:
-      top_k: 50                       # enter 0 for all codes
+      top_k: 0                       # enter 0 for all codes
       code_type: both
       add_period_in_correct_pos:
         perform: true
