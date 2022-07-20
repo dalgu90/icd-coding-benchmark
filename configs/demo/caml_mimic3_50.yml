@@ -17,6 +17,7 @@ clinical_note_preprocessing:
     perform: true
   remove_numeric:
     perform: true
+    replace_numerics_with_letter: null
   remove_stopwords:
     perform: true
     params:
