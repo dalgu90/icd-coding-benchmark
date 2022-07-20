@@ -89,7 +89,7 @@ class Config:
         """
         if path:
             self._config = load_yaml(path)
-        elif dict:
+        elif dic:
             self._config = dic
         else:
             raise Exception(
