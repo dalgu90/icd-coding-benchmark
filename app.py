@@ -131,6 +131,18 @@ st.set_page_config(
     layout="wide",
 )
 
+st.markdown("""
+<style>
+div.stButton > button:first-child {
+    background-color: rgb(255, 75, 75);
+    color: white;
+    width: 100%;
+    border: 0px;
+    padding-right: 20px;
+}
+.streamlit-expanderHeader { font-size: medium; }
+</style>""", unsafe_allow_html=True)
+
 # Title & status line
 st.title("🩺 ICD Coding Interactive Demo")
 status = st.empty()
@@ -149,13 +161,11 @@ info_str = """
   visualize the diagnosis code prediction with the importance score of the
   input.
 - To run the model, please put a discharge summary in the "Discharge summary
-  note" box and hit the Submit button.
+  note" box and hit the Submit button. Try different options of preprocessing
+  and visualization!
 - For more models, please specify available models (in `configs/demo/`.
   Corresponding checkpoints need to be downloaded) in the command-line argument,
   or train your own model.
-- This app is built in Streamlit, and the format is taken from a Streamlit demo
-  app ([BERT Keyword
-  Extractor](https://github.com/streamlit/example-app-bert-keyword-extractor)).
 - For more help, please checkout our
   [ICD Coding Benchmark](https://github.com/dalgu90/icd-coding-benchmark) repo.
   Thanks!
@@ -191,7 +201,8 @@ with st.form("my_form"):
             max_value=min(50, len(icd_desc)),
             value=config.demo.top_k,
             help="""The number of predictions with highest scores. Between 1 and
-                    maximum number of output codes""",
+                    maximum number of output codes (or 50 if label space is too
+                    too large)""",
         )
 
         # Input visualization selection
@@ -205,15 +216,14 @@ with st.form("my_form"):
         vis_score = st.radio(
             "Visualize input score",
             vis_score_options,
-            help="Visualizing input score."
-            # help="""Visualizing input score. Attention is available only for
-            # attention-based models"""
+            help="""Interpretability visualization methods. Attention score is
+            available only for attention-based models"""
         )
 
         vis_code_options = ["Choose ICD code"]
         vis_code_options += dataset.decode_labels(range(dataset.num_labels))
         vis_code = st.selectbox(
-            "Select ICD code to visualize score",
+            "ICD code to compute input score",
             vis_code_options,
             index=0,
             help="""Code to visualize the input. It will be used when the input
@@ -221,6 +231,8 @@ with st.form("my_form"):
         )
 
         # Preprocessing option selection (truncation is not controlled)
+        st.markdown("""<p style="font-size: small;"> Preprocessing </p>""",
+                    unsafe_allow_html=True)
         pp_config = config.clinical_note_preprocessing
         pp_lower_case = st.checkbox(
             "Lowercase",
@@ -243,10 +255,14 @@ with st.form("my_form"):
             value=pp_config.stem_or_lemmatize.perform,
         )
 
-        submitted = st.form_submit_button("🚀 Submit")
+        submitted = st.form_submit_button("🚀 SUBMIT!")
     with col2:
         # Input text
-        input_text = st.text_area(label="Discharge summary note", height=200)
+        css_str = "line-height:1; margin-top:1rem; margin-bottom:-2rem;"
+        st.markdown(f"""<div style="{css_str}">Discharge summary note</div>""",
+                    unsafe_allow_html=True)
+        input_text = st.text_area(label="", height=200)
+        # input_text = st.text_area(label="Discharge summary note", height=200)
         input_text = input_text.strip()
         if input_text:
             set_status("Processing...")
@@ -335,10 +351,9 @@ with st.form("my_form"):
                         raise ValueError(f"Wrong model selected")
 
                     assert len(attrs) == len(tokens)
-                    print(np.sum(attrs))
                     html_string = html_word_importance(tokens, attrs)
-                    st.markdown(f"**{vis_score}** for **{vis_code}**"
-                                 f" ({icd_desc[vis_code]})")
+                    st.markdown(f"**{vis_score}** for **{vis_code}** "
+                                f"({icd_desc[vis_code]})")
                     st.markdown(html_string, unsafe_allow_html=True)
                     st.markdown("")
         else:

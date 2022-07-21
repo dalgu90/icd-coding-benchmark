@@ -163,11 +163,13 @@ def _get_color(attr):
     if attr > 0:
         hue = 220
         sat = 100
-        lig = 100 - int(90 * attr)
+        lig = 100 - int(80 * attr)
     else:
-        hue = 220
+        hue = 10
+        # hue = 220
         sat = 100
-        lig = 100 - int(-125 * attr)
+        # lig = 100 - int(-125 * attr)
+        lig = 100 - int(-80 * attr)
     return "hsl({}, {}%, {}%)".format(hue, sat, lig)
 
 
@@ -199,11 +201,12 @@ def html_word_importance(words, importances):
             if ord(character) >= 128:
                 print(word)
                 break
-        color = _get_color(importance)
+        bg_color = _get_color(importance)
+        font_color = "white" if abs(importance) > 0.5 else "black"
 
-        unwrapped_tag = f'<mark style="background-color: {color}; opacity:1.0; \
-                    line-height:1.75"><font color="black"> {word}\
-                    </font></mark>'
+        unwrapped_tag = f"""<mark style="background-color:{bg_color};\
+                        opacity:1.0;line-height:1.75" title="{importance:.4f}">\
+                        <font color="{font_color}"> {word} </font></mark>"""
         tags.append(unwrapped_tag)
     tags.append("</div>")
 
