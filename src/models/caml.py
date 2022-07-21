@@ -196,10 +196,10 @@ class ConvAttnPool(BaseModel):
         # apply convolution and nonlinearity (tanh)
         x = F.tanh(self.conv(x).transpose(1, 2))
         # apply attention
-        alpha = F.softmax(self.U.weight.matmul(x.transpose(1, 2)), dim=2)
+        self.alpha = F.softmax(self.U.weight.matmul(x.transpose(1, 2)), dim=2)
         # document representations are weighted sums using the attention. Can
         # compute all at once as a matmul
-        m = alpha.matmul(x)
+        m = self.alpha.matmul(x)
         # final layer classification
         y = self.final.weight.mul(m).sum(dim=2).add(self.final.bias)
 
@@ -224,6 +224,10 @@ class ConvAttnPool(BaseModel):
         diff = torch.stack(diffs).mean()
 
         return diff
+
+    def get_input_attention(self):
+        # Use the attention score computed in the forward pass
+        return self.alpha[:, :, :-1].cpu().detach().numpy()
 
 
 @ConfigMapper.map("models", "CNN")

@@ -58,6 +58,7 @@ model:
     init_code_emb: false
     pad_token: "<pad>"
     unk_token: "<unk>"
+  embed_layer_name: "embed"
 
 checkpoint_saver:
   name: base_saver

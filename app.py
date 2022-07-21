@@ -6,8 +6,10 @@ import argparse
 import copy
 import csv
 
+from captum.attr import LayerIntegratedGradients
 import numpy as np
 import pandas as pd
+import seaborn as sns
 import streamlit as st
 import torch
 
@@ -18,11 +20,13 @@ from src.modules.preprocessors import ClinicalNotePreprocessor
 from src.utils.checkpoint_savers import *
 from src.utils.configuration import Config
 from src.utils.mapper import ConfigMapper
+from src.utils.misc import html_word_importance
 
 hash_funcs = {
     Config: lambda x: hash(str(x)),
     torch.nn.parameter.Parameter: lambda x: hash(x.shape),
 }
+
 
 
 @st.cache(hash_funcs=hash_funcs, allow_output_mutation=True)
@@ -101,7 +105,16 @@ def load_modules(config):
         model.cuda()
     model.eval()
 
-    return preprocessor, dataset, model
+    # 4. Captum attribute module
+    try:
+        embed_layer_name = getattr(config.model, "embed_layer_name", "embed")
+        embed_layer = getattr(model, embed_layer_name)
+    except:
+        raise ValueError(f"Config for {config.model.name} does not specify name"
+                          "of the embedding layer")
+    lig = LayerIntegratedGradients(model, embed_layer)
+
+    return preprocessor, dataset, model, lig
 
 
 @st.cache(hash_funcs=hash_funcs, allow_output_mutation=True)
@@ -110,7 +123,6 @@ def load_icd_desc(config):
     icd_desc = list(csv.reader(open(config.demo.icd_desc_file), delimiter="\t"))
     icd_desc = {r[0]: r[1] for r in icd_desc}
     return icd_desc
-
 
 # Page setup
 st.set_page_config(
@@ -154,7 +166,7 @@ with st.expander("ℹ️  About the app", expanded=False):
 
 # Load config, modules, and icd descriptions
 config = load_config()
-preprocessor, dataset, model = load_modules(config)
+preprocessor, dataset, model, lig = load_modules(config)
 icd_desc = load_icd_desc(config)
 set_status(f"Model loaded ({config.model.name})")
 
@@ -185,10 +197,10 @@ with st.form("my_form"):
         # Input visualization selection
         vis_score_options = [
             "NO",
-            "Integrated Gradient",
+            "Integrated Gradients",
         ]
-        # if hasattr(model, "get_input_attention"):
-        # vis_score_options.append("Attention score")
+        if hasattr(model, "get_input_attention"):
+            vis_score_options.append("Attention score")
 
         vis_score = st.radio(
             "Visualize input score",
@@ -198,12 +210,14 @@ with st.form("my_form"):
             # attention-based models"""
         )
 
+        vis_code_options = ["Choose ICD code"]
+        vis_code_options += dataset.decode_labels(range(dataset.num_labels))
         vis_code = st.selectbox(
             "Select ICD code to visualize score",
-            ["N/A"],
+            vis_code_options,
             index=0,
-            help="""Code to visualize the input. You can choose from top-k
-                    predictions which are available after the model run""",
+            help="""Code to visualize the input. It will be used when the input
+                    score method is other than "NO".""",
         )
 
         # Preprocessing option selection (truncation is not controlled)
@@ -238,39 +252,42 @@ with st.form("my_form"):
             set_status("Processing...")
 
         # Preprocess text
-        preprocessor._config.to_lower.set_value("perform", pp_lower_case)
-        preprocessor._config.remove_punctuation.set_value(
-            "perform", pp_remove_punc
-        )
-        preprocessor._config.remove_numeric.set_value(
-            "perform", pp_remove_numeric
-        )
-        preprocessor._config.remove_stopwords.set_value(
-            "perform", pp_remove_stopwords
-        )
-        preprocessor._config.stem_or_lemmatize.set_value("perform", pp_stem)
-        preprocessed_text = preprocessor(input_text)
-        st.text_area(
-            label="Preprocessed note",
-            value=preprocessed_text,
-            height=200,
-            disabled=True,
-        )
+        with st.expander("Preprocessed text / Input tokens", expanded=False):
+            preprocessor._config.to_lower.set_value("perform", pp_lower_case)
+            preprocessor._config.remove_punctuation.set_value(
+                "perform", pp_remove_punc
+            )
+            preprocessor._config.remove_numeric.set_value(
+                "perform", pp_remove_numeric
+            )
+            preprocessor._config.remove_stopwords.set_value(
+                "perform", pp_remove_stopwords
+            )
+            preprocessor._config.stem_or_lemmatize.set_value("perform", pp_stem)
+            preprocessed_text = preprocessor(input_text)
+            st.text_area(
+                label="Preprocessed note",
+                value=preprocessed_text,
+                height=200,
+                disabled=True,
+            )
 
-        # Tokenize text with vocab
-        token_idxs = dataset.encode_tokens(preprocessed_text.split())
-        token_text = " ".join(dataset.decode_tokens(token_idxs))
-        st.text_area(
-            label="Tokens", value=token_text, height=200, disabled=True
-        )
+            # Tokenize text with vocab
+            token_idxs = dataset.encode_tokens(preprocessed_text.split())
+            tokens = dataset.decode_tokens(token_idxs)
+            token_text = " ".join(tokens)
+            st.text_area(
+                label="Tokens", value=token_text, height=200, disabled=True
+            )
 
         # Model prediction
-        st.write("Output")
+        st.write("ICD code prediction")
         if token_idxs:
             # Forward pass
             batch_input = torch.tensor([token_idxs])
             if config.demo.use_gpu:
                 batch_input = batch_input.cuda()
+
             with torch.no_grad():
                 batch_output = model(batch_input)
             probs = torch.sigmoid(batch_output[0].cpu()).numpy()
@@ -282,13 +299,48 @@ with st.form("my_form"):
             # Output as table
             output_df = pd.DataFrame(
                 {
-                    "ICD-9 Code": top_k_codes,
+                    "ICD_Code": top_k_codes,
                     "Probability": top_k_probs,
                     "Description": top_k_descs,
                 }
             )
             output_df.index += 1
-            st.table(output_df.style.format({"Probability": "{:.4f}"}))
+            cmap = sns.light_palette('#AC304B', as_cmap=True)
+            output_df = output_df.style.background_gradient(
+                cmap=cmap, subset=["Probability"], vmin=0.0, vmax=1.0
+            ).format({"Probability": "{:.4f}"})
+            st.table(output_df)
+
+            # Input score:
+            target_label = vis_code_options.index(vis_code) - 1  # starts from 1
+            with st.expander(f"Input score", expanded=True):
+                if vis_score == "NO":
+                    st.markdown("**[No method selected]**")
+                elif target_label == -1:
+                    st.markdown("**[No ICD code selected]**")
+                else:
+                    if vis_score == "Integrated Gradients":
+                        attrs, approx_error = lig.attribute(
+                            batch_input,
+                            target=target_label,
+                            return_convergence_delta=True
+                        )
+                        attrs = attrs.sum(dim=2).squeeze(0)
+                        attrs = (attrs/torch.norm(attrs)).cpu().detach().numpy()
+                    elif vis_score == "Attention score":
+                        attrs = model.get_input_attention()
+                        attrs = attrs[:, target_label].squeeze(0)
+                        attrs /= np.linalg.norm(attrs)
+                    else:
+                        raise ValueError(f"Wrong model selected")
+
+                    assert len(attrs) == len(tokens)
+                    print(np.sum(attrs))
+                    html_string = html_word_importance(tokens, attrs)
+                    st.markdown(f"**{vis_score}** for **{vis_code}**"
+                                 f" ({icd_desc[vis_code]})")
+                    st.markdown(html_string, unsafe_allow_html=True)
+                    st.markdown("")
         else:
             st.markdown("**[No input]**")
 
