@@ -89,33 +89,46 @@ def load_modules(config):
     )
 
     # 3. Load model
-    model = ConfigMapper.get_object("models", config.model.name)(
-        config.model.params
-    )
-    # Load ckpt
-    ckpt_saver = ConfigMapper.get_object(
-        "checkpoint_savers", config.checkpoint_saver.name
-    )(config.checkpoint_saver.params)
-    best_ckpt = ckpt_saver.get_best_checkpoint()
-    if best_ckpt is None:
-        raise ValueError("Best ckpt not found")
-    ckpt_saver.load_ckpt(model, best_ckpt, optimizer=None)
+    model_dict = {}
+    lig_dict = {}
+    if hasattr(config, 'models'):
+        model_configs = config.models
+    else:
+        model_configs = [config]
 
-    # Set model GPU & eval mode
-    if config.demo.use_gpu:
-        model.cuda()
-    model.eval()
+    for model_config in model_configs:
+        model = ConfigMapper.get_object("models", model_config.model.name)(
+            model_config.model.params
+        )
+        # Load ckpt
+        ckpt_saver = ConfigMapper.get_object(
+            "checkpoint_savers", model_config.checkpoint_saver.name
+        )(model_config.checkpoint_saver.params)
+        best_ckpt = ckpt_saver.get_best_checkpoint()
+        if best_ckpt is None:
+            raise ValueError("Best ckpt not found.")
+        ckpt_saver.load_ckpt(model, best_ckpt, optimizer=None)
 
-    # 4. Captum attribute module
-    try:
-        embed_layer_name = getattr(config.model, "embed_layer_name", "embed")
-        embed_layer = getattr(model, embed_layer_name)
-    except:
-        raise ValueError(f"Config for {config.model.name} does not specify name"
-                          "of the embedding layer")
-    lig = LayerIntegratedGradients(model, embed_layer)
+        # Set model GPU & eval mode
+        if config.demo.use_gpu:
+            model.cuda()
+        model.eval()
 
-    return preprocessor, dataset, model, lig
+        # 4. Captum attribute module
+        try:
+            embed_layer_name = getattr(
+                model_config.model, "embed_layer_name", "embed"
+            )
+            embed_layer = getattr(model, embed_layer_name)
+        except:
+            raise ValueError(f"Config for {model_config.model.name} does not"
+                              "specify name of the embedding layer.")
+        lig = LayerIntegratedGradients(model, embed_layer)
+
+        model_dict[model_config.model.name] = model
+        lig_dict[model_config.model.name] = lig
+
+    return preprocessor, dataset, model_dict, lig_dict
 
 
 @st.cache(hash_funcs=hash_funcs, allow_output_mutation=True)
@@ -154,7 +167,7 @@ def set_status(text):
     status.text(f"💡 {text}")
 
 
-set_status("")
+set_status("Loading model...")
 
 # App info
 info_str = """
@@ -178,9 +191,9 @@ with st.expander("ℹ️  About the app", expanded=False):
 
 # Load config, modules, and icd descriptions
 config = load_config()
-preprocessor, dataset, model, lig = load_modules(config)
+preprocessor, dataset, model_dict, lig_dict = load_modules(config)
 icd_desc = load_icd_desc(config)
-set_status(f"Model loaded ({config.model.name})")
+set_status(f"Model loaded ({', '.join(model_dict.keys())})")
 
 # Main form
 with st.form("my_form"):
@@ -189,9 +202,9 @@ with st.form("my_form"):
     with col1:
         # Model selection
         # TODO: Support multiple models
-        model_type = st.radio(
+        model_name = st.radio(
             "Choose model",
-            [config.model.name],
+            list(model_dict.keys()),
             help="""Currently, running multiple models is not supported.""",
         )
 
@@ -211,7 +224,8 @@ with st.form("my_form"):
             "NO",
             "Integrated Gradients",
         ]
-        if hasattr(model, "get_input_attention"):
+        if any(hasattr(model, "get_input_attention") for model in
+               model_dict.values()):
             vis_score_options.append("Attention score")
 
         vis_score = st.radio(
@@ -301,6 +315,7 @@ with st.form("my_form"):
         # Model prediction
         st.write("ICD code prediction")
         if token_idxs:
+            model = model_dict[model_name]
             # Forward pass
             batch_input = torch.tensor([token_idxs])
             if config.demo.use_gpu:
@@ -333,11 +348,15 @@ with st.form("my_form"):
             target_label = vis_code_options.index(vis_code) - 1  # starts from 1
             with st.expander(f"Attribution score", expanded=True):
                 if vis_score == "NO":
-                    st.markdown("**[No method selected]**")
+                    st.markdown("**[No attribution method selected]**")
                 elif target_label == -1:
                     st.markdown("**[No ICD code selected]**")
+                elif (vis_score == "Attention score" and
+                      not hasattr(model, "get_input_attention")):
+                    st.markdown("**[Model does not support attention score]**")
                 else:
                     if vis_score == "Integrated Gradients":
+                        lig = lig_dict[model_name]
                         attrs, approx_error = lig.attribute(
                             batch_input,
                             target=target_label,
@@ -350,7 +369,7 @@ with st.form("my_form"):
                         attrs = attrs[:, target_label].squeeze(0)
                         attrs /= np.linalg.norm(attrs)
                     else:
-                        raise ValueError(f"Wrong model selected")
+                        raise ValueError(f"Wrong model selected.")
 
                     assert len(attrs) == len(tokens)
                     html_string = html_word_importance(tokens, attrs)
