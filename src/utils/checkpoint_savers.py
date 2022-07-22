@@ -186,7 +186,7 @@ class BaseCheckpointSaver(object):
     def load_ckpt(self, model, ckpt_fname, optimizer=None):
         ckpt_fpath = os.path.join(self.config.checkpoint_dir, ckpt_fname)
         logger.debug(f"Loading ckpt from {ckpt_fpath}")
-        checkpoint = torch.load(ckpt_fpath)
+        checkpoint = torch.load(ckpt_fpath, map_location='cpu')
         model.load_state_dict(checkpoint["model"])
         if optimizer:
             optimizer.load_state_dict(checkpoint["optimizer"])

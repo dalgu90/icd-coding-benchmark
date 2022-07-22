@@ -365,7 +365,9 @@ class EncoderHidden(nn.Module):
         self.dropout = nn.Dropout(p=dropout)
 
     def forward(self, output):
-        input_len = torch.LongTensor([x.shape[0] for x in output]).cuda()
+        input_len = torch.LongTensor([x.shape[0] for x in output])
+        if output.is_cuda:
+            input_len = input_len.cuda()
         output_pos, ind_pos = self.pos_embedding(input_len.unsqueeze(1))
         output += output_pos
         attentions = []
