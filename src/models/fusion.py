@@ -505,11 +505,17 @@ class Fusion(nn.Module):
             x = self.transfer(x)
 
         # Label attention part of OutputLayer
-        alpha = F.softmax(self.U.weight.matmul(x.transpose(1, 2)), dim=2)
-        m = alpha.matmul(x)
+        self.alpha = F.softmax(self.U.weight.matmul(x.transpose(1, 2)), dim=2)
+        m = self.alpha.matmul(x)
         y = self.final.weight.mul(m).sum(dim=2).add(self.final.bias)
         return y
 
     def freeze_net(self):
         for p in self.word_rep.embed.parameters():
             p.requires_grad = False
+
+    def get_input_attention(self):
+        # Use the attention score computed in the forward pass
+        # Here we repeat the attention since the input is pooled in the pass
+        attention = self.alpha.repeat_interleave(self.config.pool_size, dim=2)
+        return attention.cpu().detach().numpy()

@@ -163,9 +163,9 @@ info_str = """
 - To run the model, please put a discharge summary in the "Discharge summary
   note" box and hit the Submit button. Try different options of preprocessing
   and visualization!
-- For more models, please specify available models (in `configs/demo/`.
-  Corresponding checkpoints need to be downloaded) in the command-line argument,
-  or train your own model.
+- To run other models, please specify the config of an available model (in
+  `configs/demo/`. Corresponding checkpoints need to be downloaded) in the
+  command-line argument. Running multiple models in one app cannot be done yet.
 - For more help, please checkout our
   [ICD Coding Benchmark](https://github.com/dalgu90/icd-coding-benchmark) repo.
   Thanks!
@@ -190,8 +190,7 @@ with st.form("my_form"):
         model_type = st.radio(
             "Choose model",
             [config.model.name],
-            help="""You can add more models by adding configs when running the
-                    app""",
+            help="""Currently, running multiple models is not supported.""",
         )
 
         # K selection

@@ -1,0 +1,81 @@
+paths:
+  mimic_dir: &mimic_dir datasets/mimic3/csv
+  static_dir: &static_dir datasets/mimic3/static
+  dataset_dir: &dataset_dir datasets/mimic3_50
+  word2vec_dir: &word2vec_dir datasets/mimic3_50/word2vec
+  output_dir: &output_dir results/Fusion_mimic3_50
+
+demo:
+  icd_desc_file: datasets/mimic3/static/icd9_descriptions.txt
+  top_k: 10
+  use_gpu: true
+
+clinical_note_preprocessing:
+  to_lower:
+    perform: true
+  remove_punctuation:
+    perform: true
+  remove_numeric:
+    perform: true
+    replace_numerics_with_letter: null
+  remove_stopwords:
+    perform: true
+    params:
+      stopwords_file_path: null
+      remove_common_medical_terms: true
+  stem_or_lemmatize:
+    perform: true
+    params:
+      stemmer_name: nltk.WordNetLemmatizer
+  truncate:
+    perform: false
+
+dataset:
+  name: base_dataset
+  params:
+    dataset_dir: *dataset_dir
+    word2vec_dir: *word2vec_dir
+    pad_token: "<pad>"
+    unk_token: "<unk>"
+    max_length: 2500
+    label_file: labels.json
+    data_file: test.json  # not used
+
+model:
+  name: Fusion
+  params:
+    version: mimic3
+    dataset_dir: *dataset_dir
+    mimic_dir: *mimic_dir
+    static_dir: *static_dir
+    word2vec_dir: *word2vec_dir
+    num_classes: 50
+    dropout: 0.2
+    filter_size: [3, 5, 9, 15, 19, 25]
+    use_attention_pool: true
+    pool_size: 2
+    conv_layer: 1
+    use_layer_norm: true
+    use_relu: false
+    use_transformer: true
+    max_length: 2500
+    transfer_layer: 1
+    transfer_attention_head: 4
+    transfer_fsize: 1024
+    num_filter_maps: 50
+  embed_layer_name: "word_rep"
+
+checkpoint_saver:
+  name: base_saver
+  params:
+    checkpoint_dir: *output_dir
+    interval: 1
+    max_to_keep: 5
+    ckpt_fname_format: "ckpt-{}.pth"
+    best_fname_format: "best-{}.pth"
+    metric:
+      name: prec_at_8
+      class: prec_at_k
+      params:
+        k: 8
+    desired: max

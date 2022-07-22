@@ -111,7 +111,7 @@ class TransICD(nn.Module):
         encoded_inputs = encoded_inputs.permute(1, 0, 2)
 
         # `weighted_outputs` shape: (batch_size, num_classes, embed_size)
-        weighted_outputs, _ = self.label_attention_layer(
+        weighted_outputs, self.attn_weights = self.label_attention_layer(
             encoded_inputs, attn_mask
         )
 
@@ -120,6 +120,10 @@ class TransICD(nn.Module):
             outputs[:, code : code + 1] = ff_layer(weighted_outputs[:, code, :])
 
         return outputs
+
+    def get_input_attention(self):
+        # Use the attention score computed in the forward pass
+        return self.attn_weights.cpu().detach().numpy()
 
 
 class WordEmbeddingLayer(nn.Module):

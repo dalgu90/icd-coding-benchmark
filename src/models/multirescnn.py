@@ -57,8 +57,8 @@ class OutputLayer(nn.Module):
         xavier_uniform(self.final.weight)
 
     def forward(self, x):
-        alpha = F.softmax(self.U.weight.matmul(x.transpose(1, 2)), dim=2)
-        m = alpha.matmul(x)
+        self.alpha = F.softmax(self.U.weight.matmul(x.transpose(1, 2)), dim=2)
+        m = self.alpha.matmul(x)
         y = self.final.weight.mul(m).sum(dim=2).add(self.final.bias)
         return y
 
@@ -279,3 +279,7 @@ class MultiResCNN(nn.Module):
         x = torch.cat(conv_result, dim=2)
         y = self.output_layer(x)
         return y
+
+    def get_input_attention(self):
+        # Use the attention score computed in the forward pass
+        return self.output_layer.alpha.cpu().detach().numpy()
