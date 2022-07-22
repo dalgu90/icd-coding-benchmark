@@ -28,10 +28,11 @@ hash_funcs = {
 }
 
 
-
 @st.cache(hash_funcs=hash_funcs, allow_output_mutation=True)
 def load_config():
-    parser = argparse.ArgumentParser(description="Here we put app desc")
+    parser = argparse.ArgumentParser(
+        description="Demo app for automatic ICD coding"
+    )
     parser.add_argument(
         "--config_path",
         type=str,
@@ -59,7 +60,7 @@ def load_modules(config):
                 "params": Config(
                     dic={
                         "stopwords_file_path": None,
-                        "remove_common_medical_terms": False,
+                        "remove_common_medical_terms": True,
                     }
                 ),
             }
@@ -163,10 +164,11 @@ info_str = """
 - To run the model, please put a discharge summary in the "Discharge summary
   note" box and hit the Submit button. Try different options of preprocessing
   and visualization!
-- To run other models, please specify the config of an available model (in
-  `configs/demo/`. Corresponding checkpoints need to be downloaded) in the
-  command-line argument. Running multiple models in one app cannot be done yet.
-- For more help, please checkout our
+- To run other models, please specify the config (in `configs/demo/`) of an
+  available model from the command-line argument. Checkpoints of the
+  corresponding need to be downloaded. Running multiple models in one app
+  is not supported yet.
+- For more help, please check out our
   [ICD Coding Benchmark](https://github.com/dalgu90/icd-coding-benchmark) repo.
   Thanks!
 """
@@ -201,7 +203,7 @@ with st.form("my_form"):
             value=config.demo.top_k,
             help="""The number of predictions with highest scores. Between 1 and
                     maximum number of output codes (or 50 if label space is too
-                    too large)""",
+                    too large).""",
         )
 
         # Input visualization selection
@@ -213,16 +215,16 @@ with st.form("my_form"):
             vis_score_options.append("Attention score")
 
         vis_score = st.radio(
-            "Visualize input score",
+            "Visualize attribution score",
             vis_score_options,
             help="""Interpretability visualization methods. Attention score is
-            available only for attention-based models"""
+            available only for attention-based models."""
         )
 
         vis_code_options = ["Choose ICD code"]
         vis_code_options += dataset.decode_labels(range(dataset.num_labels))
         vis_code = st.selectbox(
-            "ICD code to compute input score",
+            "ICD code to compute attribution score",
             vis_code_options,
             index=0,
             help="""Code to visualize the input. It will be used when the input
@@ -267,7 +269,7 @@ with st.form("my_form"):
             set_status("Processing...")
 
         # Preprocess text
-        with st.expander("Preprocessed text / Input tokens", expanded=False):
+        with st.expander("Preprocessed text", expanded=False):
             preprocessor._config.to_lower.set_value("perform", pp_lower_case)
             preprocessor._config.remove_punctuation.set_value(
                 "perform", pp_remove_punc
@@ -287,6 +289,7 @@ with st.form("my_form"):
                 disabled=True,
             )
 
+        with st.expander("Input tokens", expanded=False):
             # Tokenize text with vocab
             token_idxs = dataset.encode_tokens(preprocessed_text.split())
             tokens = dataset.decode_tokens(token_idxs)
@@ -326,9 +329,9 @@ with st.form("my_form"):
             ).format({"Probability": "{:.4f}"})
             st.table(output_df)
 
-            # Input score:
+            # Attribution score:
             target_label = vis_code_options.index(vis_code) - 1  # starts from 1
-            with st.expander(f"Input score", expanded=True):
+            with st.expander(f"Attribution score", expanded=True):
                 if vis_score == "NO":
                     st.markdown("**[No method selected]**")
                 elif target_label == -1:
