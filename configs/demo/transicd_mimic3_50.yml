@@ -57,7 +57,6 @@ model:
     dropout: 0.1
     # Label Attention Layer params
     attn_expansion: 2
-    use_gpu: true
   embed_layer_name: "word_embedding_layer"
 
 checkpoint_saver:

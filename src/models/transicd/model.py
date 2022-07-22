@@ -19,11 +19,6 @@ class TransICD(nn.Module):
             f"Initialising {self.__class__.__name__} with " f"config: {config}"
         )
 
-        if config.use_gpu:
-            self.device = "cuda"
-        else:
-            self.device = "cpu"
-
         self.word_embedding_layer = WordEmbeddingLayer(
             embed_dir=config.embed_dir
         )
@@ -33,7 +28,6 @@ class TransICD(nn.Module):
             d_model=self.embed_size,
             dropout=config.dropout,
             max_len=config.max_len,
-            device=self.device,
         )
 
         if self.embed_size % config.num_heads != 0:
@@ -115,7 +109,7 @@ class TransICD(nn.Module):
             encoded_inputs, attn_mask
         )
 
-        outputs = torch.zeros(batch_size, self.num_classes).to(self.device)
+        outputs = torch.zeros(batch_size, self.num_classes).to(inputs.device)
         for code, ff_layer in enumerate(self.ff_layers):
             outputs[:, code : code + 1] = ff_layer(weighted_outputs[:, code, :])
 
@@ -172,15 +166,12 @@ class PositionalEmbeddingLayer(nn.Module):
         max_len (int): Maximum length of the input sequence.
     """
 
-    def __init__(self, d_model=128, dropout=0.1, max_len=2500, device="cuda"):
+    def __init__(self, d_model=128, dropout=0.1, max_len=2500):
         super(PositionalEmbeddingLayer, self).__init__()
         logger.debug(
             f"Initialising {self.__class__.__name__} with "
             f"d_model = {d_model}, dropout = {dropout}, max_len = {max_len}, "
-            f"device = {device}"
         )
-
-        self.device = device
 
         self.dropout = nn.Dropout(p=dropout)
 
