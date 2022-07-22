@@ -371,7 +371,7 @@ with st.form("my_form"):
                     else:
                         raise ValueError(f"Wrong model selected.")
 
-                    assert len(attrs) == len(tokens)
+                    assert len(attrs) >= len(tokens)
                     html_string = html_word_importance(tokens, attrs)
                     st.markdown(f"**{vis_score}** for **{vis_code}** "
                                 f"({icd_desc[vis_code]})")
