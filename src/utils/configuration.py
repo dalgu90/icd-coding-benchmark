@@ -121,6 +121,9 @@ class Config:
         if attr in self._config:
             if isinstance(self._config[attr], dict):
                 return Config(dic=self._config[attr])
+            elif isinstance(self._config[attr], list):
+                return [Config(dic=e) if isinstance(e, dict) else e
+                        for e in self._config[attr]]
             else:
                 return self._config[attr]
         else:

@@ -22,10 +22,10 @@ class BaseCheckpointSaver(object):
 
         self.config = config
         self.info_fname = "ckpt-info.json"
-        if hasattr(self.config.as_dict(), "info_fname"):
+        if hasattr(self.config, "info_fname"):
             self.info_fname = self.config.info_fname
 
-        self.metric = load_metric(self.config.metric.as_dict())
+        self.metric = load_metric(self.config.metric)
 
     def save_ckpt_info(self, info):
         info_fpath = os.path.join(self.config.checkpoint_dir, self.info_fname)
