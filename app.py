@@ -189,7 +189,7 @@ with st.form("my_form"):
         # TODO: Support multiple models
         model_type = st.radio(
             "Choose model",
-            ["CAML"],
+            [config.model.name],
             help="""You can add more models by adding configs when running the
                     app""",
         )
