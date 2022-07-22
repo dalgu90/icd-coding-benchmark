@@ -11,7 +11,7 @@ paths:
 demo:
   icd_desc_file: datasets/mimic3/static/icd9_descriptions.txt
   top_k: 10
-  use_gpu: false
+  use_gpu: true
 
 clinical_note_preprocessing:
   to_lower:
