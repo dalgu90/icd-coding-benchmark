@@ -19,11 +19,6 @@ class TransICD(nn.Module):
             f"Initialising {self.__class__.__name__} with " f"config: {config}"
         )
 
-        if config.use_gpu:
-            self.device = "cuda"
-        else:
-            self.device = "cpu"
-
         self.word_embedding_layer = WordEmbeddingLayer(
             embed_dir=config.embed_dir
         )
@@ -33,7 +28,6 @@ class TransICD(nn.Module):
             d_model=self.embed_size,
             dropout=config.dropout,
             max_len=config.max_len,
-            device=self.device,
         )
 
         if self.embed_size % config.num_heads != 0:
@@ -62,7 +56,6 @@ class TransICD(nn.Module):
             embed_size=self.embed_size,
             num_classes=config.num_classes,
             attn_expansion=config.attn_expansion,
-            epsilon=config.epsilon,
         )
 
         # The official code (and paper) has a separate linear layer for every
@@ -112,15 +105,19 @@ class TransICD(nn.Module):
         encoded_inputs = encoded_inputs.permute(1, 0, 2)
 
         # `weighted_outputs` shape: (batch_size, num_classes, embed_size)
-        weighted_outputs, _ = self.label_attention_layer(
+        weighted_outputs, self.attn_weights = self.label_attention_layer(
             encoded_inputs, attn_mask
         )
 
-        outputs = torch.zeros(batch_size, self.num_classes).to(self.device)
+        outputs = torch.zeros(batch_size, self.num_classes).to(inputs.device)
         for code, ff_layer in enumerate(self.ff_layers):
             outputs[:, code : code + 1] = ff_layer(weighted_outputs[:, code, :])
 
         return outputs
+
+    def get_input_attention(self):
+        # Use the attention score computed in the forward pass
+        return self.attn_weights.cpu().detach().numpy()
 
 
 class WordEmbeddingLayer(nn.Module):
@@ -169,15 +166,12 @@ class PositionalEmbeddingLayer(nn.Module):
         max_len (int): Maximum length of the input sequence.
     """
 
-    def __init__(self, d_model=128, dropout=0.1, max_len=2500, device="cuda"):
+    def __init__(self, d_model=128, dropout=0.1, max_len=2500):
         super(PositionalEmbeddingLayer, self).__init__()
         logger.debug(
             f"Initialising {self.__class__.__name__} with "
             f"d_model = {d_model}, dropout = {dropout}, max_len = {max_len}, "
-            f"device = {device}"
         )
-
-        self.device = device
 
         self.dropout = nn.Dropout(p=dropout)
 
@@ -220,21 +214,17 @@ class LabelAttentionLayer(nn.Module):
                           linear layer. Defaults to 50.
         attn_expansion (int): Factor for scaling up the input embeddings.
                               Defaults to 2.
-        epsilon (float): Small float value for filling the attention mask.
-                         Defaults to 1e-9.
     """
 
     def __init__(
-        self, embed_size=128, num_classes=50, attn_expansion=2, epsilon=1e-9
+        self, embed_size=128, num_classes=50, attn_expansion=2
     ):
         super(LabelAttentionLayer, self).__init__()
         logger.debug(
             f"Initialising {self.__class__.__name__} with "
             f"embed_size = {embed_size}, num_classes = {num_classes}, "
-            f"attn_expansion = {attn_expansion}, epsilon = {epsilon}"
+            f"attn_expansion = {attn_expansion}"
         )
-
-        self.epsilon = epsilon
 
         self.linear_layer_1 = nn.Linear(
             in_features=embed_size, out_features=embed_size * attn_expansion
@@ -259,9 +249,7 @@ class LabelAttentionLayer(nn.Module):
         # Masked fill to avoid softmaxing over padded words. The authors fill
         # the value with -1e9, which is probably incorrect. It should be 1e-9.
         if attn_mask is not None:
-            output_2 = output_2.masked_fill_(
-                mask=attn_mask == 0, value=self.epsilon
-            )
+            output_2 = output_2.masked_fill_(mask=attn_mask == 0, value=-1e9)
 
         # `attn_weights` shape: (batch_size, num_classes, seq_len)
         attn_weights = self.softmax_activation(output_2).transpose(1, 2)

@@ -22,10 +22,10 @@ class BaseCheckpointSaver(object):
 
         self.config = config
         self.info_fname = "ckpt-info.json"
-        if hasattr(self.config.as_dict(), "info_fname"):
+        if hasattr(self.config, "info_fname"):
             self.info_fname = self.config.info_fname
 
-        self.metric = load_metric(self.config.metric.as_dict())
+        self.metric = load_metric(self.config.metric)
 
     def save_ckpt_info(self, info):
         info_fpath = os.path.join(self.config.checkpoint_dir, self.info_fname)
@@ -186,7 +186,7 @@ class BaseCheckpointSaver(object):
     def load_ckpt(self, model, ckpt_fname, optimizer=None):
         ckpt_fpath = os.path.join(self.config.checkpoint_dir, ckpt_fname)
         logger.debug(f"Loading ckpt from {ckpt_fpath}")
-        checkpoint = torch.load(ckpt_fpath)
+        checkpoint = torch.load(ckpt_fpath, map_location='cpu')
         model.load_state_dict(checkpoint["model"])
         if optimizer:
             optimizer.load_state_dict(checkpoint["optimizer"])

@@ -35,6 +35,6 @@ class LabelWiseAttn(nn.Module):
 
     def forward(self, x):
         att = self.U.weight.matmul(x.transpose(1, 2))  # [bs, Y, seq_len]
-        alpha = F.softmax(att, dim=2)
-        m = alpha.matmul(x)  # [bs, Y, dim]
+        self.alpha = F.softmax(att, dim=2)
+        m = self.alpha.matmul(x)  # [bs, Y, dim]
         return m

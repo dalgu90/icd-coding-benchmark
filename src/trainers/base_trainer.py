@@ -45,7 +45,7 @@ class BaseTrainer:
         # Evaluation metrics
         self.eval_metrics = {}
         for config_dict in self.config.eval_metrics:
-            metric_name = config_dict["name"]
+            metric_name = config_dict.name
             self.eval_metrics[metric_name] = load_metric(config_dict)
 
     def train(self, model, train_dataset, val_dataset=None):
@@ -105,17 +105,17 @@ class BaseTrainer:
                 )
 
         # Add evaluation metrics for graph
-        for config_dict in (
+        for config in (
             self.config.graph.train.metric + self.config.graph.val.metric
         ):
-            metric_name = config_dict["name"]
+            metric_name = config.name
             if metric_name not in self.eval_metrics and metric_name != "loss":
-                self.eval_metrics[metric_name] = load_metric(config_dict)
+                self.eval_metrics[metric_name] = load_metric(config)
         train_metric_names = [
-            metric["name"] for metric in self.config.graph.train.metric
+            metric.name for metric in self.config.graph.train.metric
         ]
         val_metric_names = [
-            metric["name"] for metric in self.config.graph.val.metric
+            metric.name for metric in self.config.graph.val.metric
         ]
 
         # Stopping criterion: (metric, max/min, patience)
@@ -124,9 +124,9 @@ class BaseTrainer:
         if self.config.stopping_criterion is not None:
             sc_config = self.config.stopping_criterion
             # Load metric
-            sc_metric_config = sc_config.metric.as_dict()
-            if sc_metric_config["name"] in self.eval_metrics:
-                sc_metric = self.eval_metrics[sc_metric_config["name"]]
+            sc_metric_config = sc_config.metric
+            if sc_metric_config.name in self.eval_metrics:
+                sc_metric = self.eval_metrics[sc_metric_config.name]
             else:
                 sc_metric = load_metric(sc_metric_config)
             # Metric + max/min + patience
@@ -230,7 +230,7 @@ class BaseTrainer:
                 val_pred = val_prob.round()
                 logger.info("Evaluate on val dataset")
                 for metric_config in self.config.eval_metrics:
-                    metric_name = metric_config["name"]
+                    metric_name = metric_config.name
                     metric_val = self.eval_metrics[metric_name](
                         y_true=val_labels_np, y_pred=val_pred, p_pred=val_prob
                     )

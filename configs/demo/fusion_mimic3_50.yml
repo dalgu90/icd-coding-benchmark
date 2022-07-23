@@ -3,7 +3,7 @@ paths:
   static_dir: &static_dir datasets/mimic3/static
   dataset_dir: &dataset_dir datasets/mimic3_50
   word2vec_dir: &word2vec_dir datasets/mimic3_50/word2vec
-  output_dir: &output_dir results/CAML_mimic3_50
+  output_dir: &output_dir results/Fusion_mimic3_50
 
 demo:
   icd_desc_file: datasets/mimic3/static/icd9_descriptions.txt
@@ -42,7 +42,7 @@ dataset:
     data_file: test.json  # not used
 
 model:
-  name: CAML
+  name: Fusion
   params:
     version: mimic3
     dataset_dir: *dataset_dir
@@ -50,15 +50,20 @@ model:
     static_dir: *static_dir
     word2vec_dir: *word2vec_dir
     num_classes: 50
-    embed_size: 100
-    kernel_size: 10
-    num_filter_maps: 50
     dropout: 0.2
-    lmbda: 0.0  # Positive for DR-CAML
-    init_code_emb: false
-    pad_token: "<pad>"
-    unk_token: "<unk>"
-  embed_layer_name: "embed"
+    filter_size: [3, 5, 9, 15, 19, 25]
+    use_attention_pool: true
+    pool_size: 2
+    conv_layer: 1
+    use_layer_norm: true
+    use_relu: false
+    use_transformer: true
+    max_length: 2500
+    transfer_layer: 1
+    transfer_attention_head: 4
+    transfer_fsize: 1024
+    num_filter_maps: 50
+  embed_layer_name: "word_rep"
 
 checkpoint_saver:
   name: base_saver

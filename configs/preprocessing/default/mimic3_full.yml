@@ -60,7 +60,7 @@ preprocessing:
       truncate:
         perform: false
     incorrect_code_loading: false
-    count_duplicates: false
+    count_duplicate_codes: false
     code_preprocessing:
       top_k: 0                       # enter 0 for all codes
       code_type: both

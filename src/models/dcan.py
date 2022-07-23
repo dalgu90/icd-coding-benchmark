@@ -1,3 +1,5 @@
+import copy
+
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -88,7 +90,7 @@ class DCAN(nn.Module):
         num_levels = len(config.kernel_sizes)
         num_inner_conv_levels = len(config.kernel_sizes[0])
 
-        conv_channel_sizes = config.conv_channel_sizes
+        conv_channel_sizes = copy.deepcopy(config.conv_channel_sizes)
         if config.add_emb_size_to_channel_sizes:
             conv_channel_sizes[0] = [
                 self.word_embedding_layer.embedding_size
@@ -132,6 +134,10 @@ class DCAN(nn.Module):
     def freeze_layer(self, layer):
         for param in layer.parameters():
             param.requires_grad = False
+
+    def get_input_attention(self):
+        # Use the attention score computed in the forward pass
+        return self.output_layer.label_wise_attn.alpha.cpu().detach().numpy()
 
 
 class OutputLayer(nn.Module):

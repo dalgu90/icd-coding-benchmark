@@ -43,9 +43,9 @@ class Metric:
         raise NotImplementedError("This is the base class for metrics")
 
 
-def load_metric(config_dict):
-    metric_params = config_dict.get("params", None)
-    metric_class = config_dict.get("class", config_dict.get("name"))
+def load_metric(config):
+    metric_params = getattr(config, "params", None)
+    metric_class = getattr(config, "class", config.name)
     logger.debug(
         f"Loading metric {metric_class} with the following config: "
         f"{metric_params}"
@@ -83,7 +83,7 @@ class MacroF1(Metric):
 class MacroAUC(Metric):
     def __init__(self, config):
         super().__init__(config)
-        if self.config and "num_process" in self.config.as_dict():
+        if self.config and hasattr(self.config, "num_process"):
             self.num_process = self.config.num_process
         else:
             self.num_process = min(16, multiprocessing.cpu_count())

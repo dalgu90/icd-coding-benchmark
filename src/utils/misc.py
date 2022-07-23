@@ -153,3 +153,61 @@ def generate_grid_search_configs(main_config, grid_config, root="hyperparams"):
 
         result_configs.append(copy.deepcopy(main_config))
     return result_configs
+
+
+# HTML formatting for visualizing word importance
+# Source: https://github.com/gchhablani/toxic-spans-detection/
+def _get_color(attr):
+    # clip values to prevent CSS errors (Values should be from [-1,1])
+    attr = max(-1, min(1, attr))
+    if attr > 0:
+        hue = 10
+        sat = 100
+        lig = 100 - int(80 * attr)
+    else:
+        hue = 220
+        sat = 100
+        # lig = 100 - int(-125 * attr)
+        lig = 100 - int(-80 * attr)
+    return "hsl({}, {}%, {}%)".format(hue, sat, lig)
+
+
+def format_special_tokens(token):
+    """Convert <> to # if there are any HTML syntax tags.
+
+    Example: '<Hello>' will be converted to '#Hello' to avoid confusion
+    with HTML tags.
+
+    Args:
+        token (str): The token to be formatted.
+    Returns:
+        (str): The formatted token.
+    """
+    if token.startswith("<") and token.endswith(">"):
+        return "#" + token.strip("<>")
+    return token
+
+
+def html_word_importance(words, importances):
+    assert len(words) <= len(importances)
+    tags = ["<div>"]
+
+    for word_index, (word, importance) in enumerate(
+        zip(words, importances[: len(words)])
+    ):
+        word = format_special_tokens(word)
+        for character in word:  ## Printing Weird Words
+            if ord(character) >= 128:
+                print(word)
+                break
+        bg_color = _get_color(importance)
+        font_color = "white" if abs(importance) > 0.5 else "black"
+
+        unwrapped_tag = f"""<mark style="background-color:{bg_color};\
+                        opacity:1.0;line-height:1.75" title="{importance:.4f}">\
+                        <font color="{font_color}"> {word} </font></mark>"""
+        tags.append(unwrapped_tag)
+    tags.append("</div>")
+
+    return "".join(tags)
+
