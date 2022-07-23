@@ -179,8 +179,7 @@ info_str = """
   and visualization!
 - To run other models, please specify the config (in `configs/demo/`) of an
   available model from the command-line argument. Checkpoints of the
-  corresponding need to be downloaded. Running multiple models in one app
-  is not supported yet.
+  corresponding models need to be downloaded.
 - For more help, please check out our
   [ICD Coding Benchmark](https://github.com/dalgu90/icd-coding-benchmark) repo.
   Thanks!
@@ -241,8 +240,8 @@ with st.form("my_form"):
             "ICD code to compute attribution score",
             vis_code_options,
             index=0,
-            help="""Code to visualize the input. It will be used when the input
-                    score method is other than "NO".""",
+            help="""Code to visualize the attribution. It will be used when the
+                    interpretability method is other than "NO".""",
         )
 
         # Preprocessing option selection (truncation is not controlled)
