@@ -32,7 +32,7 @@ dataset:
 model:
   name: transicd
   params:
-    num_classes: 8922
+    num_classes: 8930
     max_len: 2500
     pad_idx: 0
     # Embedding Layer params
