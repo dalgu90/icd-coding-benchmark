@@ -109,8 +109,8 @@ trainer:
         interval_unit: epoch
         metric:
           - name: loss
-          - name: prec_at_5
           - name: prec_at_8
+          - name: prec_at_15
           - name: macro_f1
           - name: micro_f1
           - name: macro_auc
