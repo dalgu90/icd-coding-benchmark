@@ -1,4 +1,4 @@
-# ICD Coding Benchmark
+# AnEMIC: An Error-reduced MIMIC ICD Coding Benchmark
 
 [![GitHub contributors](https://img.shields.io/github/contributors/dalgu90/icd-coding-benchmark)](https://github.com/dalgu90/icd-coding-benchmark/graphs/contributors)
 [![GitHub license](https://img.shields.io/github/license/dalgu90/icd-coding-benchmark)](https://github.com/dalgu90/icd-coding-benchmark/blob/main/LICENSE)
@@ -11,7 +11,7 @@
 
 Automatic ICD coding benchmark based on the MIMIC dataset.
 
-**NOTE: 🚧 The repo is under construction. Please see below for available datasets/models.**
+**NOTE: 🚧 The repo is under active development. Please see below for available datasets/models.**
 
 Automatic diagnosis coding[^1] in clinical NLP is a task to predict the diagnoses and the procedures during a hospital stay given the summary of the stay (discharge summary).
 The labels of the task are mostly represented in ICD (international classification of disease) codes which are alpha-numeric codes widely adopted by hospitals in the US.
@@ -23,7 +23,7 @@ The benchmark encompasses all the procedures of ICD coding: dataset pre-processi
 
 We currently provide (items in parentheses are under development):
 - Four preset of preprocessed datasets: MIMIC-III full, top-50, full (old), top-50 (old), where we referred to (old) as the version of CAML[^2].
-- ICD coding models: CNN, CAML, MultiResCNN[^3], DCAN[^4], Fusion[^5], TransICD[^6], (LAAT)
+- ICD coding models: CNN, CAML, MultiResCNN[^3], DCAN[^4], TransICD[^5], Fusion[^6], (LAAT)
 - Interactive demo
 
 
@@ -48,58 +48,58 @@ Training is logged through TensorBoard graph (located in the output dir under `r
 Also, logging through text files is performed on pre-processing, training, and evaluation. Log files will be located under `logs/`.
 
 
-## Results
-- MIMIC-III full
-
-| Model        | macro AUC | micro AUC | macro F1 | micro F1 | P@8      | P@15     |
-|--------------|-----------|-----------|----------|----------|----------|----------|
-| CNN          | 0.833543  | 0.974153  | 0.032920 | 0.427462 | 0.619773 | 0.472282 |
-| CAML         | 0.890823  | 0.984352  | 0.048890 | 0.498832 | 0.703181 | 0.553875 |
-| MultiResCNN  | 0.914338  | 0.986860  | 0.084015 | 0.558163 | 0.739324 | 0.587169 |
-| DCAN         | 0.858853  | 0.980687  | 0.060191 | 0.526127 | 0.721456 | 0.572420 |
-| Fusion       | 0.912643  | 0.986653  | 0.078532 | 0.556019 | 0.743105 | 0.588988 |
-| TransICD     | 0.897434  | 0.984421  | 0.057159 | 0.498058 | 0.665703 | 0.524041 |
-
-- MIMIC-III top-50
-
-| Model        | macro AUC | micro AUC | macro F1 | micro F1 | P@5      |
-|--------------|-----------|-----------|----------|----------|----------|
-| CNN          | 0.914614  | 0.937504  | 0.627029 | 0.695571 | 0.649474 |
-| CAML         | 0.917969  | 0.942569  | 0.608479 | 0.688646 | 0.662709 |
-| MultiResCNN  | 0.926459  | 0.949508  | 0.644801 | 0.718600 | 0.672604 |
-| DCAN         | 0.934825  | 0.953576  | 0.659244 | 0.727007 | 0.685034 |
-| Fusion       | 0.932295  | 0.952335  | 0.660386 | 0.726407 | 0.678726 |
-| TransICD     | 0.918623  | 0.940373  | 0.603596 | 0.680459 | 0.644898 |
-
-- MIMIC-III full (old)
-
-| Model        | macro AUC | micro AUC | macro F1 | micro F1 | P@8      | P@15     |
-|--------------|-----------|-----------|----------|----------|----------|----------|
-| CNN          | 0.833935  | 0.973760  | 0.032343 | 0.421507 | 0.608244 | 0.465836 |
-| CAML         | 0.880379  | 0.983444  | 0.057407 | 0.500574 | 0.696582 | 0.546777 |
-| MultiResCNN  | 0.907786  | 0.986263  | 0.077205 | 0.550036 | 0.736099 | 0.583472 |
-| DCAN         | 0.842585  | 0.977854  | 0.062069 | 0.525559 | 0.720529 | 0.570977 |
-| Fusion       | 0.907964  | 0.986258  | 0.079416 | 0.559838 | 0.747628 | 0.591281 |
-| TransICD     | 0.889693  | 0.983436  | 0.050560 | 0.492136 | 0.660291 | 0.516528 |
-
-- MIMIC-III top-50 (old)
-
-| Model        | macro AUC | micro AUC | macro F1 | micro F1 | P@5      |
-|--------------|-----------|-----------|----------|----------|----------|
-| CNN          | 0.892395  | 0.918188  | 0.585288 | 0.645080 | 0.619433 |
-| CAML         | 0.881043  | 0.908731  | 0.519399 | 0.610033 | 0.612955 |
-| MultiResCNN  | 0.899234  | 0.927863  | 0.589514 | 0.670533 | 0.640023 |
-| DCAN         | 0.914818  | 0.939139  | 0.613484 | 0.691155 | 0.657259 |
-| Fusion       | 0.904610  | 0.929229  | 0.611743 | 0.674127 | 0.640023 |
-| TransICD     | 0.896408  | 0.924700  | 0.544390 | 0.639996 | 0.621862 |
-
-
 ## Run demo
 After you train a model, you can run an interactive demo app of it (CAML on MIMIC-III top-50, for example) by running
 ```
 $ streamlit run app.py -- --config_path configs/demo/multi_mimic3_50.yml  # CAML, MultiResCNN, DCAN, Fusion on MIMIC-III top-50
 ```
 You can write own config file specifying modules as same as in pre-processing and training
+
+
+## Results
+- MIMIC-III full
+
+| Model        |     macro AUC      |     micro AUC      |      macro F1      |      micro F1      |         P@8        |        P@15        |
+|--------------|--------------------|--------------------|--------------------|--------------------|--------------------|--------------------|
+| CNN          | 0.835&plusmn;0.001 | 0.974&plusmn;0.000 | 0.034&plusmn;0.001 | 0.420&plusmn;0.006 | 0.619&plusmn;0.002 | 0.474&plusmn;0.004 |
+| CAML         | 0.893&plusmn;0.002 | 0.985&plusmn;0.000 | 0.056&plusmn;0.006 | 0.506&plusmn;0.006 | 0.704&plusmn;0.001 | 0.555&plusmn;0.001 |
+| MultiResCNN  | 0.912&plusmn;0.004 | 0.987&plusmn;0.000 | 0.078&plusmn;0.005 | 0.555&plusmn;0.004 | 0.741&plusmn;0.002 | 0.589&plusmn;0.002 |
+| DCAN         | 0.848&plusmn;0.009 | 0.979&plusmn;0.001 | 0.066&plusmn;0.005 | 0.533&plusmn;0.006 | 0.721&plusmn;0.001 | 0.573&plusmn;0.000 |
+| TransICD     | 0.886&plusmn;0.010 | 0.983&plusmn;0.002 | 0.058&plusmn;0.001 | 0.497&plusmn;0.001 | 0.666&plusmn;0.000 | 0.524&plusmn;0.001 |
+| Fusion       | 0.910&plusmn;0.003 | 0.986&plusmn;0.000 | 0.081&plusmn;0.002 | 0.560&plusmn;0.003 | 0.744&plusmn;0.002 | 0.589&plusmn;0.001 |
+
+- MIMIC-III top-50
+
+| Model        |     macro AUC      |     micro AUC      |      macro F1      |      micro F1      |         P@5        |
+|--------------|--------------------|--------------------|--------------------|--------------------|--------------------|
+| CNN          | 0.913&plusmn;0.002 | 0.936&plusmn;0.002 | 0.627&plusmn;0.001 | 0.693&plusmn;0.003 | 0.649&plusmn;0.001 |
+| CAML         | 0.918&plusmn;0.000 | 0.942&plusmn;0.000 | 0.614&plusmn;0.005 | 0.690&plusmn;0.001 | 0.661&plusmn;0.002 |
+| MultiResCNN  | 0.928&plusmn;0.001 | 0.950&plusmn;0.000 | 0.652&plusmn;0.006 | 0.720&plusmn;0.002 | 0.674&plusmn;0.001 |
+| DCAN         | 0.934&plusmn;0.001 | 0.953&plusmn;0.001 | 0.651&plusmn;0.010 | 0.724&plusmn;0.005 | 0.682&plusmn;0.003 |
+| TransICD     | 0.917&plusmn;0.002 | 0.939&plusmn;0.001 | 0.602&plusmn;0.002 | 0.679&plusmn;0.001 | 0.643&plusmn;0.001 |
+| Fusion       | 0.932&plusmn;0.001 | 0.952&plusmn;0.000 | 0.664&plusmn;0.003 | 0.727&plusmn;0.003 | 0.679&plusmn;0.001 |
+
+- MIMIC-III full (old)
+
+| Model        |     macro AUC      |     micro AUC      |      macro F1      |      micro F1      |         P@8        |        P@15        |
+|--------------|--------------------|--------------------|--------------------|--------------------|--------------------|--------------------|
+| CNN          | 0.833&plusmn;0.003 | 0.974&plusmn;0.000 | 0.027&plusmn;0.005 | 0.419&plusmn;0.006 | 0.612&plusmn;0.004 | 0.467&plusmn;0.001 |
+| CAML         | 0.880&plusmn;0.003 | 0.983&plusmn;0.000 | 0.057&plusmn;0.000 | 0.502&plusmn;0.002 | 0.698&plusmn;0.002 | 0.548&plusmn;0.001 |
+| MultiResCNN  | 0.905&plusmn;0.003 | 0.986&plusmn;0.000 | 0.076&plusmn;0.002 | 0.551&plusmn;0.005 | 0.738&plusmn;0.003 | 0.586&plusmn;0.003 |
+| DCAN         | 0.837&plusmn;0.005 | 0.977&plusmn;0.001 | 0.063&plusmn;0.002 | 0.527&plusmn;0.002 | 0.721&plusmn;0.001 | 0.572&plusmn;0.001 |
+| TransICD     | 0.882&plusmn;0.010 | 0.982&plusmn;0.001 | 0.059&plusmn;0.008 | 0.495&plusmn;0.005 | 0.663&plusmn;0.007 | 0.521&plusmn;0.006 |
+| Fusion       | 0.910&plusmn;0.003 | 0.986&plusmn;0.000 | 0.076&plusmn;0.007 | 0.555&plusmn;0.008 | 0.744&plusmn;0.003 | 0.588&plusmn;0.003 |
+
+- MIMIC-III top-50 (old)
+
+| Model        |     macro AUC      |     micro AUC      |      macro F1      |      micro F1      |         P@5        |
+|--------------|--------------------|--------------------|--------------------|--------------------|--------------------|
+| CNN          | 0.892&plusmn;0.003 | 0.920&plusmn;0.003 | 0.583&plusmn;0.006 | 0.652&plusmn;0.008 | 0.627&plusmn;0.007 |
+| CAML         | 0.865&plusmn;0.017 | 0.899&plusmn;0.008 | 0.495&plusmn;0.035 | 0.593&plusmn;0.020 | 0.597&plusmn;0.016 |
+| MultiResCNN  | 0.898&plusmn;0.006 | 0.928&plusmn;0.003 | 0.590&plusmn;0.012 | 0.666&plusmn;0.013 | 0.638&plusmn;0.005 |
+| DCAN         | 0.915&plusmn;0.002 | 0.938&plusmn;0.001 | 0.614&plusmn;0.001 | 0.690&plusmn;0.002 | 0.653&plusmn;0.004 |
+| TransICD     | 0.895&plusmn;0.003 | 0.924&plusmn;0.002 | 0.541&plusmn;0.010 | 0.637&plusmn;0.003 | 0.617&plusmn;0.005 |
+| Fusion       | 0.904&plusmn;0.002 | 0.930&plusmn;0.001 | 0.606&plusmn;0.009 | 0.677&plusmn;0.003 | 0.640&plusmn;0.001 |
 
 
 ## Authors
@@ -125,5 +125,5 @@ You can write own config file specifying modules as same as in pre-processing an
 [^2]: Mullenbach, et al., Explainable Prediction of Medical Codes from Clinical Text, NAACL 2018 ([paper](https://arxiv.org/abs/1802.05695), [code](https://github.com/jamesmullenbach/caml-mimic))
 [^3]: Li and Yu, ICD Coding from Clinical Text Using Multi-Filter Residual Convolutional Neural Network, AAAI 2020 ([paper](https://arxiv.org/abs/1912.00862), [code](https://github.com/foxlf823/Multi-Filter-Residual-Convolutional-Neural-Network))
 [^4]: Ji, et al., Dilated Convolutional Attention Network for Medical Code Assignment from Clinical Text, Clinical NLP Workshop 2020 ([paper](https://aclanthology.org/2020.clinicalnlp-1.8/), [code](https://github.com/shaoxiongji/DCAN))
-[^5]: Luo, et al., Fusion: Towards Automated ICD Coding via Feature Compression, ACL 2020 Findings ([paper](https://aclanthology.org/2021.findings-acl.184/), [code](https://github.com/machinelearning4health/Fusion-Towards-Automated-ICD-Coding))
-[^6]: Biswas, et al., TransICD: Transformer Based Code-wise Attention Model for Explainable ICD Coding, AIME 2021 ([paper](https://arxiv.org/abs/2104.10652), [code](https://github.com/AIMedLab/TransICD))
+[^5]: Biswas, et al., TransICD: Transformer Based Code-wise Attention Model for Explainable ICD Coding, AIME 2021 ([paper](https://arxiv.org/abs/2104.10652), [code](https://github.com/AIMedLab/TransICD))
+[^6]: Luo, et al., Fusion: Towards Automated ICD Coding via Feature Compression, ACL 2020 Findings ([paper](https://aclanthology.org/2021.findings-acl.184/), [code](https://github.com/machinelearning4health/Fusion-Towards-Automated-ICD-Coding))
