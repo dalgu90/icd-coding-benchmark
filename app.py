@@ -313,7 +313,7 @@ with st.form("my_form"):
 
         # Model prediction
         st.write("ICD code prediction")
-        if token_idxs:
+        if token_idxs and len(token_idxs) >= config.demo.min_input_len:
             model = model_dict[model_name]
             # Forward pass
             batch_input = torch.tensor([token_idxs])
@@ -376,6 +376,8 @@ with st.form("my_form"):
                                 f"({icd_desc[vis_code]})")
                     st.markdown(html_string, unsafe_allow_html=True)
                     st.markdown("")
+        elif token_idxs and len(token_idxs) < config.demo.min_input_len:
+            st.markdown(f"**[Input too short(<{config.demo.min_input_len})]**")
         else:
             st.markdown("**[No input]**")
 

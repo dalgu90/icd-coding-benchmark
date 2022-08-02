@@ -11,8 +11,10 @@ paths:
 
 demo:
   icd_desc_file: datasets/mimic3/static/icd9_descriptions.txt
+  min_input_len: 4
   top_k: 10
   use_gpu: true
+  min_input_len: 4
 
 clinical_note_preprocessing:
   to_lower:
