@@ -1,13 +1,13 @@
 paths:
   mimic_dir: &mimic_dir datasets/mimic3/csv
   static_dir: &static_dir datasets/mimic3/static
-  dataset_dir: &dataset_dir datasets/mimic3_50
-  word2vec_dir: &word2vec_dir datasets/mimic3_50/word2vec
-  cnn_output_dir: &cnn_output_dir results/CNN_mimic3_50
-  caml_output_dir: &caml_output_dir results/CAML_mimic3_50
-  multirescnn_output_dir: &multirescnn_output_dir results/MultiResCNN_mimic3_50
-  fusion_output_dir: &fusion_output_dir results/Fusion_mimic3_50
-  dcan_output_dir: &dcan_output_dir results/dcan_mimic3_50
+  dataset_dir: &dataset_dir datasets/mimic3_50_old
+  word2vec_dir: &word2vec_dir datasets/mimic3_50_old/word2vec
+  cnn_output_dir: &cnn_output_dir results/CNN_mimic3_50_old
+  caml_output_dir: &caml_output_dir results/CAML_mimic3_50_old
+  multirescnn_output_dir: &multirescnn_output_dir results/MultiResCNN_mimic3_50_old
+  fusion_output_dir: &fusion_output_dir results/Fusion_mimic3_50_old
+  dcan_output_dir: &dcan_output_dir results/dcan_mimic3_50_old
 
 demo:
   icd_desc_file: datasets/mimic3/static/icd9_descriptions.txt
@@ -23,14 +23,9 @@ clinical_note_preprocessing:
     perform: true
     replace_numerics_with_letter: null
   remove_stopwords:
-    perform: true
-    params:
-      stopwords_file_path: null
-      remove_common_medical_terms: true
+    perform: false
   stem_or_lemmatize:
-    perform: true
-    params:
-      stemmer_name: nltk.WordNetLemmatizer
+    perform: false
   truncate:
     perform: false
 
@@ -69,10 +64,7 @@ models:
         ckpt_fname_format: "ckpt-{}.pth"
         best_fname_format: "best-{}.pth"
         metric:
-          name: prec_at_8
-          class: prec_at_k
-          params:
-            k: 8
+          name: micro_f1
         desired: max
 
   - model:
