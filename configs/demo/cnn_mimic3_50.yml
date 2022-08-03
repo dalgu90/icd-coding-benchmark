@@ -3,7 +3,7 @@ paths:
   static_dir: &static_dir datasets/mimic3/static
   dataset_dir: &dataset_dir datasets/mimic3_50
   word2vec_dir: &word2vec_dir datasets/mimic3_50/word2vec
-  output_dir: &output_dir results/MultiResCNN_mimic3_50
+  output_dir: &output_dir results/CNN_mimic3_50
 
 demo:
   icd_desc_file: datasets/mimic3/static/icd9_descriptions.txt
@@ -43,22 +43,19 @@ dataset:
     data_file: test.json  # not used
 
 model:
-  name: multirescnn
+  name: CNN
   params:
     version: mimic3
     dataset_dir: *dataset_dir
     mimic_dir: *mimic_dir
     static_dir: *static_dir
     word2vec_dir: *word2vec_dir
-    embed_file: processed_full.embed
-    conv_layer: 1
     num_classes: 50
-    filter_size: [3, 5, 9, 15, 19, 25]
-    test_model: None
-    num_filter_maps: 50
+    embed_size: 100
+    kernel_size: 4
+    num_filter_maps: 500
     dropout: 0.2
-    use_ext_emb: false
-  embed_layer_name: "word_rep"
+  embed_layer_name: "embed"
 
 checkpoint_saver:
   name: base_saver

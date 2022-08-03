@@ -61,12 +61,15 @@ class TransICD(nn.Module):
         # The official code (and paper) has a separate linear layer for every
         # code. This is different from the convention; generally, a shared
         # linear layer is used.
-        self.ff_layers = nn.ModuleList(
-            [
-                nn.Linear(self.embed_size, 1)
-                for code in range(config.num_classes)
-            ]
-        )
+        # self.ff_layers = nn.ModuleList(
+        #     [
+        #         nn.Linear(self.embed_size, 1)
+        #         for code in range(config.num_classes)
+        #     ]
+        # )
+
+        # Trick: Use one linear layer as per-code linear layers
+        self.ff_layer = nn.Linear(self.embed_size, config.num_classes)
 
     def freeze_layer(self, layer):
         for param in layer.parameters():
@@ -109,9 +112,13 @@ class TransICD(nn.Module):
             encoded_inputs, attn_mask
         )
 
-        outputs = torch.zeros(batch_size, self.num_classes).to(inputs.device)
-        for code, ff_layer in enumerate(self.ff_layers):
-            outputs[:, code : code + 1] = ff_layer(weighted_outputs[:, code, :])
+        # outputs = torch.zeros(batch_size, self.num_classes).to(inputs.device)
+        # for code, ff_layer in enumerate(self.ff_layers):
+            # outputs[:, code : code + 1] = ff_layer(weighted_outputs[:, code, :])
+
+        # Trick: Use one linear layer as per-code linear layers
+        outputs = (weighted_outputs * self.ff_layer.weight).sum(axis=2)
+        outputs += self.ff_layer.bias
 
         return outputs
 

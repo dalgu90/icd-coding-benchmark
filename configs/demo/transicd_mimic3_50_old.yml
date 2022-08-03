@@ -1,9 +1,9 @@
 paths:
   mimic_dir: &mimic_dir datasets/mimic3/csv
   static_dir: &static_dir datasets/mimic3/static
-  dataset_dir: &dataset_dir datasets/mimic3_50
-  word2vec_dir: &word2vec_dir datasets/mimic3_50/word2vec
-  output_dir: &output_dir results/MultiResCNN_mimic3_50
+  dataset_dir: &dataset_dir datasets/mimic3_50_old_transicd
+  word2vec_dir: &word2vec_dir datasets/mimic3_50_old_transicd/word2vec
+  output_dir: &output_dir results/transicd_mimic3_50_old
 
 demo:
   icd_desc_file: datasets/mimic3/static/icd9_descriptions.txt
@@ -18,7 +18,7 @@ clinical_note_preprocessing:
     perform: true
   remove_numeric:
     perform: true
-    replace_numerics_with_letter: null
+    replace_numerics_with_letter: "n"
   remove_stopwords:
     perform: true
     params:
@@ -27,7 +27,7 @@ clinical_note_preprocessing:
   stem_or_lemmatize:
     perform: true
     params:
-      stemmer_name: nltk.WordNetLemmatizer
+      stemmer_name: nltk.SnowballStemmer
   truncate:
     perform: false
 
@@ -43,22 +43,22 @@ dataset:
     data_file: test.json  # not used
 
 model:
-  name: multirescnn
+  name: transicd
   params:
-    version: mimic3
-    dataset_dir: *dataset_dir
-    mimic_dir: *mimic_dir
-    static_dir: *static_dir
-    word2vec_dir: *word2vec_dir
-    embed_file: processed_full.embed
-    conv_layer: 1
     num_classes: 50
-    filter_size: [3, 5, 9, 15, 19, 25]
-    test_model: None
-    num_filter_maps: 50
-    dropout: 0.2
-    use_ext_emb: false
-  embed_layer_name: "word_rep"
+    max_len: 2500
+    pad_idx: 0
+    # Embedding Layer params
+    embed_dir: *word2vec_dir
+    freeze_embedding_layer: true
+    # Transformer Layer params
+    num_layers: 2
+    num_heads: 8
+    transformer_ff_up_scale_factor_for_hidden_dim: 4
+    dropout: 0.1
+    # Label Attention Layer params
+    attn_expansion: 2
+  embed_layer_name: "word_embedding_layer"
 
 checkpoint_saver:
   name: base_saver
