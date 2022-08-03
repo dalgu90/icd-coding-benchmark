@@ -8,6 +8,7 @@
 ![Python](https://img.shields.io/badge/python-v3.7.0+-success.svg)
 [![contributions welcome](https://img.shields.io/badge/contributions-welcome-brightgreen.svg?style=flat)](https://github.com/dalgu90/icd-coding-benchmark/issues)
 
+[![Try Interactive Demo](https://shields.io/badge/Try_Interactive_Demo-green?logo=jekyll&style=for-the-badge)](https://tinyurl.com/icd-coding-demo)
 
 Automatic ICD coding benchmark based on the MIMIC dataset.
 
