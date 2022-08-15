@@ -1,1 +1,1 @@
-from src.trainers.base_trainer import BaseTrainer
+from . import base_trainer

@@ -5,7 +5,6 @@ import torch.nn as nn
 import torch.nn.functional as F
 from torch.nn.init import xavier_uniform_
 
-from src.modules.activations import *
 from src.modules.layers.label_wise_attn import LabelWiseAttn
 from src.modules.layers.temporal_conv_net import TemporalConvNet
 from src.modules.layers.word_embedding_layer import WordEmbeddingLayer

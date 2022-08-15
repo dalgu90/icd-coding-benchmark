@@ -1,1 +1,1 @@
-from src.datasets.base_dataset import BaseDataset
+from . import base_dataset

@@ -2,7 +2,6 @@
 
 import torch.nn as nn
 
-from src.modules.activations import *
 from src.modules.layers.temporal_block import TemporalBlock
 from src.utils.text_loggers import get_logger
 

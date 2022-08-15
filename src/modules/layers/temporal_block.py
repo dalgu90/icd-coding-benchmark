@@ -4,7 +4,6 @@ import torch.nn as nn
 from torch.nn.init import xavier_uniform_
 from torch.nn.utils import weight_norm as weight_norm_
 
-from src.modules.activations import *
 from src.utils.mapper import ConfigMapper
 from src.utils.text_loggers import get_logger
 

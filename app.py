@@ -13,11 +13,7 @@ import seaborn as sns
 import streamlit as st
 import torch
 
-from src.datasets import *
-from src.models import *
-from src.modules.embeddings import *
 from src.modules.preprocessors import ClinicalNotePreprocessor
-from src.utils.checkpoint_savers import *
 from src.utils.configuration import Config
 from src.utils.mapper import ConfigMapper
 from src.utils.misc import html_word_importance

@@ -7,18 +7,10 @@ from torch.optim.lr_scheduler import ReduceLROnPlateau
 from torch.utils.data import DataLoader
 from tqdm import tqdm
 
-from src.modules.embeddings import *
-from src.modules.losses import *
-from src.modules.metrics import *
-from src.modules.optimizers import *
-from src.modules.schedulers import *
-from src.modules.tokenizers import *
-from src.utils.checkpoint_savers import *
+from src.modules.metrics import load_metric
 from src.utils.configuration import Config
 from src.utils.file_loaders import save_json
-from src.utils.graph_writers import *
 from src.utils.mapper import ConfigMapper
-from src.utils.misc import *
 from src.utils.text_loggers import get_logger
 
 logger = get_logger(__name__)

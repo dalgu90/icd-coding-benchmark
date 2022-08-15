@@ -1,6 +1,5 @@
 import argparse
 
-from src.modules.preprocessing_pipelines import *
 from src.utils.configuration import Config
 from src.utils.mapper import ConfigMapper
 
