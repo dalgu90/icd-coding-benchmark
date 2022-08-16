@@ -6,10 +6,10 @@ import pandas
 import torch
 from torchsummaryX import summary
 
-from src.utils.configuration import Config
-from src.utils.import_related_ops import pandas_related_ops
-from src.utils.mapper import ConfigMapper
-from src.utils.misc import seed
+from anemic.utils.configuration import Config
+from anemic.utils.import_related_ops import pandas_related_ops
+from anemic.utils.mapper import ConfigMapper
+from anemic.utils.misc import seed
 
 pandas_related_ops()
 
