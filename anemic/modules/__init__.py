@@ -2,7 +2,6 @@ from anemic.modules import (
     activations,
     dataset_splitters,
     embeddings,
-    layers,
     losses,
     metrics,
     optimizers,
