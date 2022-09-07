@@ -1,1 +1,1 @@
-from . import base_dataset
+from anemic.datasets import base_dataset
