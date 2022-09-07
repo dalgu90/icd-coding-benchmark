@@ -6,21 +6,17 @@ import argparse
 import copy
 import csv
 
-from captum.attr import LayerIntegratedGradients
 import numpy as np
 import pandas as pd
 import seaborn as sns
 import streamlit as st
 import torch
+from captum.attr import LayerIntegratedGradients
 
-from src.datasets import *
-from src.models import *
-from src.modules.embeddings import *
-from src.modules.preprocessors import ClinicalNotePreprocessor
-from src.utils.checkpoint_savers import *
-from src.utils.configuration import Config
-from src.utils.mapper import ConfigMapper
-from src.utils.misc import html_word_importance
+from anemic.modules.preprocessors import ClinicalNotePreprocessor
+from anemic.utils.configuration import Config
+from anemic.utils.mapper import ConfigMapper
+from anemic.utils.misc import html_word_importance
 
 hash_funcs = {
     Config: lambda x: hash(str(x)),
@@ -91,7 +87,7 @@ def load_modules(config):
     # 3. Load model
     model_dict = {}
     lig_dict = {}
-    if hasattr(config, 'models'):
+    if hasattr(config, "models"):
         model_configs = config.models
     else:
         model_configs = [config]
@@ -121,8 +117,10 @@ def load_modules(config):
             )
             embed_layer = getattr(model, embed_layer_name)
         except:
-            raise ValueError(f"Config for {model_config.model.name} does not"
-                              "specify name of the embedding layer.")
+            raise ValueError(
+                f"Config for {model_config.model.name} does not"
+                "specify name of the embedding layer."
+            )
         lig = LayerIntegratedGradients(model, embed_layer)
 
         model_dict[model_config.model.name] = model
@@ -138,6 +136,7 @@ def load_icd_desc(config):
     icd_desc = {r[0]: r[1] for r in icd_desc}
     return icd_desc
 
+
 # Page setup
 st.set_page_config(
     page_title="ICD Coding Interactive Demo",
@@ -145,7 +144,8 @@ st.set_page_config(
     layout="wide",
 )
 
-st.markdown("""
+st.markdown(
+    """
 <style>
 div.stButton > button:first-child {
     background-color: rgb(255, 75, 75);
@@ -155,7 +155,9 @@ div.stButton > button:first-child {
     padding-right: 20px;
 }
 .streamlit-expanderHeader { font-size: medium; }
-</style>""", unsafe_allow_html=True)
+</style>""",
+    unsafe_allow_html=True,
+)
 
 # Title & status line
 st.title("🩺 ICD Coding Interactive Demo")
@@ -223,15 +225,17 @@ with st.form("my_form"):
             "NO",
             "Integrated Gradients",
         ]
-        if any(hasattr(model, "get_input_attention") for model in
-               model_dict.values()):
+        if any(
+            hasattr(model, "get_input_attention")
+            for model in model_dict.values()
+        ):
             vis_score_options.append("Attention score")
 
         vis_score = st.radio(
             "Visualize attribution score",
             vis_score_options,
             help="""Interpretability visualization methods. Attention score is
-            available only for attention-based models."""
+            available only for attention-based models.""",
         )
 
         vis_code_options = ["Choose ICD code"]
@@ -245,8 +249,10 @@ with st.form("my_form"):
         )
 
         # Preprocessing option selection (truncation is not controlled)
-        st.markdown("""<p style="font-size: small;"> Preprocessing </p>""",
-                    unsafe_allow_html=True)
+        st.markdown(
+            """<p style="font-size: small;"> Preprocessing </p>""",
+            unsafe_allow_html=True,
+        )
         pp_config = config.clinical_note_preprocessing
         pp_lower_case = st.checkbox(
             "Lowercase",
@@ -273,8 +279,10 @@ with st.form("my_form"):
     with col2:
         # Input text
         css_str = "line-height:1; margin-top:1rem; margin-bottom:-2rem;"
-        st.markdown(f"""<div style="{css_str}">Discharge summary note</div>""",
-                    unsafe_allow_html=True)
+        st.markdown(
+            f"""<div style="{css_str}">Discharge summary note</div>""",
+            unsafe_allow_html=True,
+        )
         input_text = st.text_area(label="", height=200)
         # input_text = st.text_area(label="Discharge summary note", height=200)
         input_text = input_text.strip()
@@ -337,7 +345,7 @@ with st.form("my_form"):
                 }
             )
             output_df.index += 1
-            cmap = sns.light_palette('#AC304B', as_cmap=True)
+            cmap = sns.light_palette("#AC304B", as_cmap=True)
             output_df = output_df.style.background_gradient(
                 cmap=cmap, subset=["Probability"], vmin=0.0, vmax=1.0
             ).format({"Probability": "{:.4f}"})
@@ -350,8 +358,9 @@ with st.form("my_form"):
                     st.markdown("**[No attribution method selected]**")
                 elif target_label == -1:
                     st.markdown("**[No ICD code selected]**")
-                elif (vis_score == "Attention score" and
-                      not hasattr(model, "get_input_attention")):
+                elif vis_score == "Attention score" and not hasattr(
+                    model, "get_input_attention"
+                ):
                     st.markdown("**[Model does not support attention score]**")
                 else:
                     if vis_score == "Integrated Gradients":
@@ -359,10 +368,12 @@ with st.form("my_form"):
                         attrs, approx_error = lig.attribute(
                             batch_input,
                             target=target_label,
-                            return_convergence_delta=True
+                            return_convergence_delta=True,
                         )
                         attrs = attrs.sum(dim=2).squeeze(0)
-                        attrs = (attrs/torch.norm(attrs)).cpu().detach().numpy()
+                        attrs = (
+                            (attrs / torch.norm(attrs)).cpu().detach().numpy()
+                        )
                     elif vis_score == "Attention score":
                         attrs = model.get_input_attention()
                         attrs = attrs[:, target_label].squeeze(0)
@@ -372,8 +383,10 @@ with st.form("my_form"):
 
                     assert len(attrs) >= len(tokens)
                     html_string = html_word_importance(tokens, attrs)
-                    st.markdown(f"**{vis_score}** for **{vis_code}** "
-                                f"({icd_desc[vis_code]})")
+                    st.markdown(
+                        f"**{vis_score}** for **{vis_code}** "
+                        f"({icd_desc[vis_code]})"
+                    )
                     st.markdown(html_string, unsafe_allow_html=True)
                     st.markdown("")
         elif token_idxs and len(token_idxs) < config.demo.min_input_len:

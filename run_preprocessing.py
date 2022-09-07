@@ -1,8 +1,7 @@
 import argparse
 
-from src.modules.preprocessing_pipelines import *
-from src.utils.configuration import Config
-from src.utils.mapper import ConfigMapper
+from anemic.utils.configuration import Config
+from anemic.utils.mapper import ConfigMapper
 
 # Command line arguments
 parser = argparse.ArgumentParser(description="Preprocessing datasets")
