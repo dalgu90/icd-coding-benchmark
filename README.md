@@ -9,8 +9,10 @@
 [![contributions welcome](https://img.shields.io/badge/contributions-welcome-brightgreen.svg?style=flat)](https://github.com/dalgu90/icd-coding-benchmark/issues)
 
 [![Try Interactive Demo](https://shields.io/badge/Try_Interactive_Demo-green?logo=jekyll&style=for-the-badge)](https://tinyurl.com/icd-coding-demo)
+[![Checkpoints Available Here](https://shields.io/badge/Model_checkpoints-download-lightgray?logo=pytorch&style=for-the-badge)](https://drive.google.com/drive/folders/1kextbHf6DYnnD8cXkU9Z0iK0Zh7Vao68?usp=sharing)
 
-Automatic ICD coding benchmark based on the MIMIC dataset.
+Automatic ICD coding benchmark based on the MIMIC dataset.  
+Please check our paper on EMNLP 2022 (demo track): [AnEMIC: A Framework for Benchmarking ICD Coding Models](#) (Available soon)
 
 **NOTE: 🚧 The repo is under active development. Please see below for available datasets/models.**
 
@@ -112,13 +114,13 @@ You can write own config file specifying modules as same as in pre-processing an
 
 ## Cite this work
 ```
-@misc{juyong2022icdcodinggithub,
-  author = {Juyong Kim and Abheesht Sharma and Suhas Shanbhogue},
-  title = {dalgu90/icd-coding-benchmark},
+@InProceeding{juyong2022anemic,
+  title = {AnEMIC: A Framework for Benchmarking ICD Coding Models},
+  author = {Kim, Juyong and Sharma, Abheesht and Shanbhogue, Suhas and Ravikumar, Pradeep and Weiss, Jeremy C},
+  booktitle = {Conference on Empirical Methods in Natural Language Processing (EMNLP), System Demonstrations},
   year = {2022},
-  publisher = {GitHub},
-  journal = {GitHub repository},
-  howpublished = {\url{https://github.com/dalgu90/icd-coding-benchmark}},
+  publisher = {ACL},
+  url = {https://github.com/dalgu90/icd-coding-benchmark},
 }
 ```
 
