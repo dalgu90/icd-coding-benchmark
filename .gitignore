@@ -146,6 +146,8 @@ logs/*.log
 datasets/*
 !datasets/mimic3/static
 !datasets/mimic3/csv/README.md
+!datasets/mimic4/static
+!datasets/mimic4/csv/README.md
 
 # temporary files
 temp.py
