@@ -12,7 +12,7 @@
 [![Checkpoints Available Here](https://shields.io/badge/Model_checkpoints-download-lightgray?logo=pytorch&style=for-the-badge)](https://drive.google.com/drive/folders/1kextbHf6DYnnD8cXkU9Z0iK0Zh7Vao68?usp=sharing)
 
 Automatic ICD coding benchmark based on the MIMIC dataset.  
-Please check our paper on EMNLP 2022 (demo track): [AnEMIC: A Framework for Benchmarking ICD Coding Models](#) (Available soon)
+Please check our paper on EMNLP 2022 (demo track): [AnEMIC: A Framework for Benchmarking ICD Coding Models](https://aclanthology.org/2022.emnlp-demos.11/)
 
 **NOTE: 🚧 The repo is under active development. Please see below for available datasets/models.**
 
